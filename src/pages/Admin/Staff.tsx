@@ -148,10 +148,15 @@ const Staff: React.FC = () => {
       fields={staffFields}
       entityName="Staff"
       entityKey="staff"
-      idField="_id"
+      idField="id"
       mobileCardConfig={{
         titleField: 'name',
-        fields: staffCardFields
+        fields: [
+          { key: 'role', label: 'Role', value: 'role' },
+          { key: 'phone', label: 'Phone', value: 'phone' },
+          { key: 'salary', label: 'Salary', value: 'salary', render: (value: number) => `₹${value.toLocaleString()}` },
+          { key: 'status', label: 'Status', value: 'status' }
+        ]
       }}
       customSubmitLogic={customSubmitLogic}
     />

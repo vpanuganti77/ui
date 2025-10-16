@@ -29,33 +29,56 @@ const ContactUsDialog: React.FC<ContactUsDialogProps> = ({ open, onClose }) => {
     message: ''
   });
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+
+  const validateForm = () => {
+    if (!formData.name.trim()) return 'Name is required';
+    if (!formData.email.trim()) return 'Email is required';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) return 'Invalid email format';
+    if (!formData.phone.trim()) return 'Phone is required';
+    if (!/^\d{10}$/.test(formData.phone)) return 'Phone must be 10 digits';
+    if (!formData.hostelName.trim()) return 'Hostel name is required';
+    if (!formData.address.trim()) return 'Address is required';
+    return null;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     
-    const request = {
-      ...formData,
-      status: 'pending',
-      isRead: false,
-      submittedAt: new Date().toISOString()
-    };
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+    
+    try {
+      const request = {
+        ...formData,
+        status: 'pending',
+        isRead: false,
+        submittedAt: new Date().toISOString()
+      };
 
-    await create('hostelRequests', request);
-    setSuccess(true);
-    
-    setTimeout(() => {
-      setSuccess(false);
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        hostelName: '',
-        address: '',
-        planType: 'free_trial',
-        message: ''
-      });
-      onClose();
-    }, 2000);
+      await create('hostelRequests', request);
+      setSuccess(true);
+      
+      setTimeout(() => {
+        setSuccess(false);
+        setFormData({
+          name: '',
+          email: '',
+          phone: '',
+          hostelName: '',
+          address: '',
+          planType: 'free_trial',
+          message: ''
+        });
+        onClose();
+      }, 2000);
+    } catch (err: any) {
+      setError(err.message || 'Failed to submit request');
+    }
   };
 
   const handleChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -72,6 +95,8 @@ const ContactUsDialog: React.FC<ContactUsDialogProps> = ({ open, onClose }) => {
               Request submitted successfully! We'll contact you soon.
             </Alert>
           ) : (
+            <>
+              {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <Typography variant="body2" color="text.secondary">
                 Fill out this form and we'll help you set up your hostel management system.
@@ -82,7 +107,6 @@ const ContactUsDialog: React.FC<ContactUsDialogProps> = ({ open, onClose }) => {
                   label="Your Name"
                   value={formData.name}
                   onChange={handleChange('name')}
-                  required
                   fullWidth
                   size="small"
                 />
@@ -91,7 +115,6 @@ const ContactUsDialog: React.FC<ContactUsDialogProps> = ({ open, onClose }) => {
                   label="Phone Number"
                   value={formData.phone}
                   onChange={handleChange('phone')}
-                  required
                   fullWidth
                   size="small"
                 />
@@ -100,10 +123,8 @@ const ContactUsDialog: React.FC<ContactUsDialogProps> = ({ open, onClose }) => {
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                 <TextField
                   label="Email"
-                  type="email"
                   value={formData.email}
                   onChange={handleChange('email')}
-                  required
                   fullWidth
                   size="small"
                 />
@@ -112,7 +133,6 @@ const ContactUsDialog: React.FC<ContactUsDialogProps> = ({ open, onClose }) => {
                   label="Hostel Name"
                   value={formData.hostelName}
                   onChange={handleChange('hostelName')}
-                  required
                   fullWidth
                   size="small"
                 />
@@ -122,7 +142,6 @@ const ContactUsDialog: React.FC<ContactUsDialogProps> = ({ open, onClose }) => {
                 label="Hostel Address"
                 value={formData.address}
                 onChange={handleChange('address')}
-                required
                 fullWidth
                 size="small"
               />
@@ -145,6 +164,7 @@ const ContactUsDialog: React.FC<ContactUsDialogProps> = ({ open, onClose }) => {
                 size="small"
               />
             </Box>
+            </>
           )}
         </DialogContent>
         <DialogActions>

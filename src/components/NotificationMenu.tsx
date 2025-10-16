@@ -22,17 +22,24 @@ const NotificationMenu: React.FC = () => {
 
   const loadNotifications = async () => {
     try {
-      const [requests, hostels] = await Promise.all([
-        getAll('hostelRequests'),
-        getAll('hostels')
-      ]);
+      const userData = localStorage.getItem('user');
+      if (!userData) return;
+      
+      const user = JSON.parse(userData);
+      
+      // Only master_admin should see hostel requests
+      if (user.role !== 'master_admin') {
+        setNotifications([]);
+        return;
+      }
 
+      const requests = await getAll('hostelRequests');
       const pendingRequests = requests.filter((req: any) => req.status === 'pending');
       const notificationList = pendingRequests.map((req: any) => ({
         id: req.id,
         type: 'hostel_request',
         title: 'New Hostel Request',
-        message: `${req.ownerName} requested to add ${req.hostelName}`,
+        message: `${req.ownerName || 'Someone'} requested to add ${req.hostelName || 'a hostel'}`,
         timestamp: req.createdAt
       }));
 

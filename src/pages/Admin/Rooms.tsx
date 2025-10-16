@@ -150,7 +150,13 @@ const Rooms: React.FC = () => {
       onItemClick={handleItemClick}
       mobileCardConfig={{
         titleField: 'roomNumber',
-        fields: roomCardFields
+        fields: [
+          { key: 'type', label: 'Type', value: 'type', render: (value: string) => value ? value.charAt(0).toUpperCase() + value.slice(1) : '-' },
+          { key: 'occupancy', label: 'Occupancy', value: 'occupancy', render: (value: number, item: any) => `${value || 0}/${item?.capacity || 0}` },
+          { key: 'rent', label: 'Rent', value: 'rent', render: (value: number) => value ? `₹${value.toLocaleString()}` : '₹0' },
+          { key: 'status', label: 'Status', value: 'status' },
+          { key: 'floor', label: 'Floor', value: 'floor' }
+        ]
       }}
       customSubmitLogic={customSubmitLogic}
     />

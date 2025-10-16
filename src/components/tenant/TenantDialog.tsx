@@ -50,13 +50,27 @@ const TenantDialog: React.FC<TenantDialogProps> = ({
 
   useEffect(() => {
     if (open) {
-      const initialData: Record<string, any> = {};
-      tenantFields.forEach(field => {
-        initialData[field.name] = editingItem?.[field.name] || '';
-      });
-      setFormData(initialData);
-      setErrors({});
-      setActiveTab(0);
+      const initializeForm = async () => {
+        const initialData: Record<string, any> = {};
+        
+        for (const field of tenantFields) {
+          if (field.loadOptions && field.name === 'roomId') {
+            try {
+              const options = await field.loadOptions();
+              field.options = options;
+            } catch (error) {
+              console.error('Failed to load options for', field.name, error);
+            }
+          }
+          initialData[field.name] = editingItem?.[field.name] || '';
+        }
+        
+        setFormData(initialData);
+        setErrors({});
+        setActiveTab(0);
+      };
+      
+      initializeForm();
     }
   }, [open, editingItem]);
 
@@ -75,10 +89,46 @@ const TenantDialog: React.FC<TenantDialogProps> = ({
       
       return newData;
     });
+    
+    // Clear error for this field when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
   const handleClearError = (name: string) => {
     setErrors(prev => ({ ...prev, [name]: '' }));
+  };
+
+  const validateField = (name: string, value: any) => {
+    const field = tenantFields.find(f => f.name === name);
+    if (!field) return '';
+
+    if (field.required && (!value || (typeof value === 'string' && !value.trim()))) {
+      return `${field.label} is required`;
+    }
+
+    if (field.validation && value) {
+      const error = field.validation(value);
+      if (error) return error;
+    }
+
+    if (value && typeof value === 'string') {
+      switch (field.type) {
+        case 'email':
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+            return 'Please enter a valid email address';
+          }
+          break;
+        case 'number':
+          if (isNaN(Number(value)) || Number(value) <= 0) {
+            return `${field.label} must be a valid positive number`;
+          }
+          break;
+      }
+    }
+
+    return '';
   };
 
   const handleAadharPhoto = (type: 'front' | 'back') => {
@@ -147,11 +197,57 @@ const TenantDialog: React.FC<TenantDialogProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
+  const validateBasicFields = () => {
+    const newErrors: Record<string, string> = {};
+
+    basicFields.forEach(field => {
+      const value = formData[field.name];
+      
+      if (field.required && (!value || (typeof value === 'string' && !value.trim()))) {
+        newErrors[field.name] = `${field.label} is required`;
+        return;
+      }
+
+      if (field.validation && value) {
+        const error = field.validation(value);
+        if (error) {
+          newErrors[field.name] = error;
+        }
+      }
+
+      if (value && typeof value === 'string') {
+        switch (field.type) {
+          case 'email':
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+              newErrors[field.name] = 'Please enter a valid email address';
+            }
+            break;
+          case 'number':
+            if (isNaN(Number(value)) || Number(value) <= 0) {
+              newErrors[field.name] = `${field.label} must be a valid positive number`;
+            }
+            break;
+        }
+      }
+    });
+
+    setErrors(prev => ({ ...prev, ...newErrors }));
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // If on first tab, just move to next tab
+    // If on first tab, validate basic fields and move to next tab
     if (activeTab === 0) {
+      if (!validateBasicFields()) {
+        setSnackbar({
+          open: true,
+          message: 'Please fix the validation errors',
+          severity: 'error'
+        });
+        return;
+      }
       setActiveTab(1);
       return;
     }
@@ -340,7 +436,7 @@ const TenantDialog: React.FC<TenantDialogProps> = ({
           <DialogActions sx={{ borderTop: '1px solid #e0e0e0', pt: 2 }}>
             <Button onClick={handleClose}>Cancel</Button>
             {activeTab === 0 && (
-              <Button onClick={() => setActiveTab(1)} variant="contained">
+              <Button type="submit" variant="contained">
                 Next
               </Button>
             )}

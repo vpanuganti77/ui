@@ -163,7 +163,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       isGroup: true,
       items: [
         { text: 'Users', icon: <AccountCircle />, path: '/admin/users' },
-        { text: 'Settings', icon: <Settings />, path: '/admin/settings' },
+        { text: 'Send Notices', icon: <Announcement />, path: '/admin/notices' },
+        { text: 'Profile', icon: <Settings />, path: '/admin/profile' },
       ]
     }
   ];
@@ -265,7 +266,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           >
             <MenuItem onClick={() => {
               handleProfileMenuClose();
-              navigate(user?.role === 'admin' ? '/admin/settings' : '/tenant/profile');
+              navigate(user?.role === 'admin' ? '/admin/profile' : '/tenant/profile');
             }} sx={{ borderRadius: 1, mx: 1 }}>
               <ListItemIcon>
                 <AccountCircle fontSize="small" />

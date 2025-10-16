@@ -141,8 +141,14 @@ const Payments: React.FC = () => {
       entityKey="payments"
       onItemClick={handleItemClick}
       mobileCardConfig={{
-        titleField: 'tenantName',
-        fields: paymentCardFields
+        titleField: 'tenantId',
+        fields: [
+          { key: 'amount', label: 'Amount', value: 'amount', render: (value: number) => `₹${value.toLocaleString()}` },
+          { key: 'month', label: 'Month', value: 'month' },
+          { key: 'year', label: 'Year', value: 'year' },
+          { key: 'status', label: 'Status', value: 'status' },
+          { key: 'createdAt', label: 'Date', value: 'createdAt', render: (value: string) => new Date(value).toLocaleDateString() }
+        ]
       }}
       customSubmitLogic={customSubmitLogic}
       additionalActions={additionalActions}

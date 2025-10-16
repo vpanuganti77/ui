@@ -7,9 +7,25 @@ import {
   Button,
   Snackbar,
   Alert,
+  useTheme,
+  useMediaQuery,
 } from '@mui/material';
 import { DataGrid, GridColDef, DataGridProps, GridActionsCellItem } from '@mui/x-data-grid';
 import { Add, Edit, Delete } from '@mui/icons-material';
+import MobileCard from './MobileCard';
+
+interface CardField {
+  key: string;
+  label: string;
+  value: any;
+  render?: (value: any, item?: any) => React.ReactNode;
+  condition?: (item: any) => boolean;
+}
+
+interface MobileCardConfig {
+  titleField: string;
+  fields: CardField[];
+}
 
 interface StyledDataGridProps extends Omit<DataGridProps, 'rows' | 'columns'> {
   title?: string;
@@ -34,6 +50,8 @@ interface StyledDataGridProps extends Omit<DataGridProps, 'rows' | 'columns'> {
   headerCard?: React.ReactNode;
   onDataChange?: () => void;
   enableCrud?: boolean;
+  mobileCardConfig?: MobileCardConfig;
+  onItemClick?: (id: string) => void;
 }
 
 const StyledDataGrid: React.FC<StyledDataGridProps> = ({
@@ -48,8 +66,12 @@ const StyledDataGrid: React.FC<StyledDataGridProps> = ({
   headerCard,
   onDataChange,
   enableCrud = false,
+  mobileCardConfig,
+  onItemClick,
   ...props
 }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [open, setOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [snackbar, setSnackbar] = useState({ 
@@ -130,7 +152,34 @@ const StyledDataGrid: React.FC<StyledDataGridProps> = ({
     },
   ] : columns;
 
-  const content = (
+  // Mobile card view
+  const mobileContent = mobileCardConfig && (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {data.length === 0 ? (
+        <Box sx={{ textAlign: 'center', py: 4 }}>
+          <Typography variant="body1" color="text.secondary">
+            No data available
+          </Typography>
+        </Box>
+      ) : (
+        data.map((item) => (
+          <MobileCard
+            key={getRowId(item)}
+            item={item}
+            titleField={mobileCardConfig.titleField}
+            fields={mobileCardConfig.fields}
+            onEdit={enableCrud ? handleEdit : () => {}}
+            onDelete={enableCrud ? handleDelete : () => {}}
+            onItemClick={onItemClick}
+            idField={getRowId(item) === item.id ? 'id' : '_id'}
+          />
+        ))
+      )}
+    </Box>
+  );
+
+  // Desktop table view
+  const desktopContent = (
     <Box sx={{ height, width: '100%' }}>
       <DataGrid
         rows={data}
@@ -215,21 +264,26 @@ const StyledDataGrid: React.FC<StyledDataGridProps> = ({
     </Box>
   );
 
+  const content = isMobile && mobileCardConfig ? mobileContent : desktopContent;
+
   if (!enableCrud) {
-    return content;
+    return <>{content}</>;
   }
 
   return (
     <Box>
       {title && (
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-          <Typography variant="h4">{title}</Typography>
+          <Typography variant={isMobile ? "h5" : "h4"} sx={{ fontWeight: 600 }}>
+            {title}
+          </Typography>
           <Button
             variant="contained"
             startIcon={<Add />}
             onClick={handleAdd}
+            size={isMobile ? "small" : "medium"}
           >
-            Add {title.slice(0, -1)}
+            {isMobile ? "Add" : `Add ${title.slice(0, -1)}`}
           </Button>
         </Box>
       )}

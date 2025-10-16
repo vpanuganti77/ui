@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://api-production-79b8.up.railway.app/api';
 
 interface DataStructure {
   hostels: any[];
@@ -10,6 +10,7 @@ interface DataStructure {
   expenses: any[];
   staff: any[];
   hostelRequests: any[];
+  notices: any[];
 }
 
 // API helper function
@@ -23,7 +24,8 @@ const apiCall = async (endpoint: string, options?: RequestInit) => {
   });
   
   if (!response.ok) {
-    throw new Error(`API call failed: ${response.statusText}`);
+    const errorData = await response.json().catch(() => ({ error: response.statusText }));
+    throw new Error(errorData.error || `API call failed: ${response.statusText}`);
   }
   
   return response.json();
@@ -40,7 +42,7 @@ export const getAll = async (entityType: keyof DataStructure): Promise<any[]> =>
       const user = JSON.parse(userData);
       if (user.role === 'admin' && user.hostelId) {
         // Filter data by hostelId for admin users
-        const entitiesWithHostelId = ['rooms', 'tenants', 'payments', 'complaints', 'expenses', 'staff'];
+        const entitiesWithHostelId = ['rooms', 'tenants', 'payments', 'complaints', 'expenses', 'staff', 'notices'];
         if (entitiesWithHostelId.includes(entityType)) {
           return data.filter((item: any) => item.hostelId === user.hostelId);
         }
@@ -69,10 +71,17 @@ export const create = async (entityType: keyof DataStructure, item: any): Promis
     updatedAt: new Date().toISOString()
   };
   
-  return await apiCall(`/${entityType}`, {
-    method: 'POST',
-    body: JSON.stringify(newItem),
-  });
+  try {
+    return await apiCall(`/${entityType}`, {
+      method: 'POST',
+      body: JSON.stringify(newItem),
+    });
+  } catch (error: any) {
+    if (error.message.includes('already exists') || error.message.includes('UNIQUE constraint')) {
+      throw new Error(error.message);
+    }
+    throw error;
+  }
 };
 
 export const update = async (entityType: keyof DataStructure, id: string, updates: any): Promise<any> => {
@@ -115,7 +124,8 @@ export const exportData = async (): Promise<string> => {
     users: await getAll('users'),
     expenses: await getAll('expenses'),
     staff: await getAll('staff'),
-    hostelRequests: await getAll('hostelRequests')
+    hostelRequests: await getAll('hostelRequests'),
+    notices: await getAll('notices')
   };
   return JSON.stringify(data, null, 2);
 };
@@ -142,7 +152,7 @@ export const importData = async (jsonData: string): Promise<void> => {
 export const clearAllData = async (): Promise<void> => {
   const entityTypes: (keyof DataStructure)[] = [
     'hostels', 'tenants', 'rooms', 'payments', 'complaints', 
-    'users', 'expenses', 'staff', 'hostelRequests'
+    'users', 'expenses', 'staff', 'hostelRequests', 'notices'
   ];
   
   for (const entityType of entityTypes) {

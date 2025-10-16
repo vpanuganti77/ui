@@ -13,15 +13,14 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Alert,
   List,
   ListItem,
   ListItemText,
   ListItemIcon,
   IconButton,
   TextField,
-  FormControl,
-  InputLabel,
-  Select,
+  Snackbar,
 } from '@mui/material';
 import { Fab, Menu, MenuItem } from '@mui/material';
 import {
@@ -47,12 +46,17 @@ import {
   Close,
   Build,
   ContactMail,
+  Send,
+  Announcement,
 } from '@mui/icons-material';
 
 
 import { adminService } from '../../services/adminService';
 import { DashboardStats } from '../../types';
 import { useNavigate } from 'react-router-dom';
+import { create, getAll } from '../../services/fileDataService';
+import TenantDialog from '../../components/tenant/TenantDialog';
+import { tenantFields } from '../../components/common/FormConfigs';
 
 import TrialStatus from '../../components/TrialStatus';
 
@@ -203,13 +207,14 @@ const Dashboard: React.FC = () => {
   const [selectedAlert, setSelectedAlert] = useState<string>('');
   const [fabMenuAnchor, setFabMenuAnchor] = useState<null | HTMLElement>(null);
   const [tenantDialogOpen, setTenantDialogOpen] = useState(false);
-  const [tenantFormData, setTenantFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    roomType: 'single',
-    aadharNumber: ''
+  const [noticeDialogOpen, setNoticeDialogOpen] = useState(false);
+  const [noticeFormData, setNoticeFormData] = useState({
+    title: '',
+    message: '',
+    priority: 'normal' as 'low' | 'normal' | 'high'
   });
+  const [noticeError, setNoticeError] = useState('');
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
 
 
 
@@ -296,10 +301,12 @@ const Dashboard: React.FC = () => {
           )}
         </Box>
         <Box display="flex" gap={1} flexWrap="wrap">
-          <Button variant="outlined" size="small" startIcon={<Phone />}>
-            Emergency
-          </Button>
-          <Button variant="outlined" size="small" startIcon={<Email />}>
+          <Button 
+            variant="outlined" 
+            size="small" 
+            startIcon={<Email />}
+            onClick={() => setNoticeDialogOpen(true)}
+          >
             Send Notice
           </Button>
         </Box>
@@ -688,61 +695,122 @@ const Dashboard: React.FC = () => {
       </Dialog>
 
       {/* Add Tenant Dialog */}
-      <Dialog open={tenantDialogOpen} onClose={() => setTenantDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add New Tenant</DialogTitle>
-        <form onSubmit={(e) => {
-          e.preventDefault();
-          console.log('Add tenant:', tenantFormData);
-          setTenantDialogOpen(false);
-          setTenantFormData({ name: '', email: '', phone: '', roomType: 'single', aadharNumber: '' });
-        }}>
-          <DialogContent>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <TextField
-                label="Full Name"
-                value={tenantFormData.name}
-                onChange={(e) => setTenantFormData({...tenantFormData, name: e.target.value})}
-                required
-              />
-              <TextField
-                label="Email"
-                type="email"
-                value={tenantFormData.email}
-                onChange={(e) => setTenantFormData({...tenantFormData, email: e.target.value})}
-                required
-              />
-              <TextField
-                label="Phone Number"
-                value={tenantFormData.phone}
-                onChange={(e) => setTenantFormData({...tenantFormData, phone: e.target.value})}
-                required
-              />
-              <TextField
-                label="Aadhar Number"
-                value={tenantFormData.aadharNumber}
-                onChange={(e) => setTenantFormData({...tenantFormData, aadharNumber: e.target.value})}
-                required
-              />
-              <FormControl>
-                <InputLabel>Room Type</InputLabel>
-                <Select
-                  value={tenantFormData.roomType}
-                  label="Room Type"
-                  onChange={(e) => setTenantFormData({...tenantFormData, roomType: e.target.value})}
-                >
-                  <MenuItem value="single">Single</MenuItem>
-                  <MenuItem value="double">Double</MenuItem>
-                  <MenuItem value="triple">Triple</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setTenantDialogOpen(false)}>Cancel</Button>
-            <Button type="submit" variant="contained">Add Tenant</Button>
-          </DialogActions>
-        </form>
+      <TenantDialog
+        open={tenantDialogOpen}
+        onClose={() => setTenantDialogOpen(false)}
+        onSubmit={async (formData: any) => {
+          try {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            await create('tenants', {
+              ...formData,
+              hostelId: user.hostelId,
+              status: 'active',
+              createdAt: new Date().toISOString(),
+              lastModifiedBy: user.name,
+              lastModifiedDate: new Date().toISOString()
+            });
+            setTenantDialogOpen(false);
+            setSnackbar({ open: true, message: 'Tenant added successfully!', severity: 'success' });
+            // Refresh dashboard data
+            window.location.reload();
+          } catch (error: any) {
+            setSnackbar({ open: true, message: error.message || 'Failed to add tenant', severity: 'error' });
+          }
+        }}
+      />
+
+      {/* Send Notice Dialog */}
+      <Dialog open={noticeDialogOpen} onClose={() => setNoticeDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Announcement color="primary" />
+          Send New Notice
+        </DialogTitle>
+        <DialogContent>
+          {noticeError && <Alert severity="error" sx={{ mb: 2 }}>{noticeError}</Alert>}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+            <TextField
+              label="Notice Title"
+              value={noticeFormData.title}
+              onChange={(e) => setNoticeFormData({ ...noticeFormData, title: e.target.value })}
+              fullWidth
+            />
+            <TextField
+              label="Message"
+              value={noticeFormData.message}
+              onChange={(e) => setNoticeFormData({ ...noticeFormData, message: e.target.value })}
+              multiline
+              rows={4}
+              fullWidth
+            />
+            <TextField
+              select
+              label="Priority"
+              value={noticeFormData.priority}
+              onChange={(e) => setNoticeFormData({ ...noticeFormData, priority: e.target.value as any })}
+              SelectProps={{ native: true }}
+              fullWidth
+            >
+              <option value="low">Low</option>
+              <option value="normal">Normal</option>
+              <option value="high">High</option>
+            </TextField>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setNoticeDialogOpen(false)}>Cancel</Button>
+          <Button 
+            variant="contained" 
+            startIcon={<Send />} 
+            onClick={async () => {
+              setNoticeError('');
+              
+              // Validate form
+              if (!noticeFormData.title.trim()) {
+                setNoticeError('Notice title is required');
+                return;
+              }
+              if (!noticeFormData.message.trim()) {
+                setNoticeError('Message is required');
+                return;
+              }
+              
+              try {
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                await create('notices', {
+                  ...noticeFormData,
+                  hostelId: user.hostelId,
+                  createdBy: user.name,
+                  createdAt: new Date().toISOString(),
+                  status: 'active'
+                });
+                setNoticeDialogOpen(false);
+                setNoticeFormData({ title: '', message: '', priority: 'normal' });
+                setSnackbar({ open: true, message: 'Notice sent successfully!', severity: 'success' });
+              } catch (error: any) {
+                setNoticeError(error.message || 'Failed to send notice');
+              }
+            }}
+          >
+            Send Notice
+          </Button>
+        </DialogActions>
       </Dialog>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          variant="filled"
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

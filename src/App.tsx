@@ -23,6 +23,9 @@ import UserManagement from './pages/Admin/UserManagement';
 import Reports from './pages/Admin/Reports';
 import Expenses from './pages/Admin/Expenses';
 import Staff from './pages/Admin/Staff';
+import Profile from './pages/Admin/Profile';
+import Notices from './pages/Admin/Notices';
+import CustomerNotices from './pages/Customer/Notices';
 import HostelManagement from './pages/MasterAdmin/HostelManagement';
 import HostelRequests from './pages/MasterAdmin/HostelRequests';
 import MasterAdminDashboard from './pages/MasterAdmin/Dashboard';
@@ -92,7 +95,8 @@ function App() {
                       <Route path="reports" element={<Reports />} />
                       <Route path="expenses" element={<Expenses />} />
                       <Route path="staff" element={<Staff />} />
-                      <Route path="settings" element={<div>Settings Page (Coming Soon)</div>} />
+                      <Route path="notices" element={<Notices />} />
+                      <Route path="profile" element={<Profile />} />
                     </Routes>
                   </Layout>
                 </ProtectedRoute>
@@ -128,7 +132,7 @@ function App() {
                       <Route path="room" element={<MyRoom />} />
                       <Route path="payments" element={<MyPayments />} />
                       <Route path="complaints" element={<MyComplaints />} />
-                      <Route path="notices" element={<div>Notices Page (Coming Soon)</div>} />
+                      <Route path="notices" element={<CustomerNotices />} />
                       <Route path="profile" element={<div>Profile Page (Coming Soon)</div>} />
                     </Routes>
                   </Layout>

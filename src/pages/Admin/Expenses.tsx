@@ -20,7 +20,7 @@ const Expenses: React.FC = () => {
       renderCell: (params) => (
         <Box>
           <Typography variant="subtitle2">{params.value}</Typography>
-          {params.row.description && (
+          {params.row?.description && (
             <Typography variant="caption" color="text.secondary">
               {params.row.description}
             </Typography>
@@ -62,7 +62,11 @@ const Expenses: React.FC = () => {
       field: 'addedBy',
       headerName: 'Added By',
       width: 150,
-      valueGetter: (params: any) => params.row.addedBy?.name || '',
+      renderCell: (params: any) => (
+        <Typography variant="body2">
+          {params.row?.addedBy?.name || 'N/A'}
+        </Typography>
+      ),
     },
   ];
 
@@ -88,6 +92,14 @@ const Expenses: React.FC = () => {
       fields={expenseFields}
       entityName="Expense"
       entityKey="expenses"
+      mobileCardConfig={{
+        titleField: 'title',
+        fields: [
+          { key: 'category', label: 'Category', value: 'category' },
+          { key: 'amount', label: 'Amount', value: 'amount', render: (value: number) => `₹${value.toLocaleString()}` },
+          { key: 'date', label: 'Date', value: 'date', render: (value: string) => new Date(value).toLocaleDateString() }
+        ]
+      }}
       customSubmitLogic={customSubmitLogic}
     />
   );

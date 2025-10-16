@@ -111,7 +111,7 @@ export const expenseCardFields = [
   { key: 'category', label: 'Category', value: 'category', render: (value: string) => statusRenderer(value, getCategoryColor) },
   { key: 'amount', label: 'Amount', value: 'amount', render: currencyRenderer },
   { key: 'date', label: 'Date', value: 'date', render: (value: string) => new Date(value).toLocaleDateString() },
-  { key: 'addedBy', label: 'Added By', value: 'addedBy', render: (value: any) => value?.name || '-' }
+  { key: 'addedBy', label: 'Added By', value: 'addedBy', render: (value: any) => value?.name || 'N/A' }
 ];
 
 export const getStaffStatusColor = (status: string) => {

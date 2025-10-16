@@ -373,7 +373,13 @@ const Complaints: React.FC = () => {
         entityKey="complaints"
         mobileCardConfig={{
           titleField: 'title',
-          fields: complaintCardFields
+          fields: [
+            { key: 'category', label: 'Category', value: 'category' },
+            { key: 'priority', label: 'Priority', value: 'priority' },
+            { key: 'status', label: 'Status', value: 'status' },
+            { key: 'tenantId', label: 'Tenant', value: 'tenantId' },
+            { key: 'createdAt', label: 'Created', value: 'createdAt', render: (value: string) => new Date(value).toLocaleDateString() }
+          ]
         }}
         customSubmitLogic={customSubmitLogic}
         additionalActions={additionalActions}

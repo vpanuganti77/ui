@@ -137,7 +137,13 @@ const Tenants: React.FC = () => {
       onItemClick={handleItemClick}
       mobileCardConfig={{
         titleField: 'name',
-        fields: tenantCardFields
+        fields: [
+          { key: 'phone', label: 'Phone', value: 'phone' },
+          { key: 'roomId', label: 'Room', value: 'roomId' },
+          { key: 'rent', label: 'Rent', value: 'rent', render: (value: any) => value ? `₹${Number(value).toLocaleString()}` : '₹0' },
+          { key: 'status', label: 'Status', value: 'status' },
+          { key: 'pendingDues', label: 'Dues', value: 'pendingDues', render: (value: any) => value && value > 0 ? `₹${Number(value).toLocaleString()}` : '-' }
+        ]
       }}
       customSubmitLogic={customSubmitLogic}
       additionalValidation={additionalValidation}

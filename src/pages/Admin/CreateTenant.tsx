@@ -30,8 +30,25 @@ const CreateTenant: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  const validateForm = () => {
+    if (!formData.name.trim()) return 'Name is required';
+    if (!formData.email.trim()) return 'Email is required';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) return 'Invalid email format';
+    if (!formData.phone.trim()) return 'Phone is required';
+    if (!/^\d{10}$/.test(formData.phone)) return 'Phone must be 10 digits';
+    if (!formData.gender) return 'Gender is required';
+    if (!formData.password.trim()) return 'Password is required';
+    if (formData.password.length < 6) return 'Password must be at least 6 characters';
+    return null;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
     try {
       await adminService.createTenant(formData);
       setSuccess('Tenant created successfully! Credentials sent to tenant.');
@@ -64,28 +81,24 @@ const CreateTenant: React.FC = () => {
         <Box component="form" onSubmit={handleSubmit}>
           <Stack spacing={2}>
             <TextField
-              required
               fullWidth
               label="Full Name"
               value={formData.name}
               onChange={(e) => setFormData({...formData, name: e.target.value})}
             />
             <TextField
-              required
               fullWidth
               label="Email"
-              type="email"
               value={formData.email}
               onChange={(e) => setFormData({...formData, email: e.target.value})}
             />
             <TextField
-              required
               fullWidth
               label="Phone"
               value={formData.phone}
               onChange={(e) => setFormData({...formData, phone: e.target.value})}
             />
-            <FormControl fullWidth required>
+            <FormControl fullWidth>
               <InputLabel>Gender</InputLabel>
               <Select
                 value={formData.gender}
@@ -96,7 +109,6 @@ const CreateTenant: React.FC = () => {
               </Select>
             </FormControl>
             <TextField
-              required
               fullWidth
               label="Temporary Password"
               type="password"

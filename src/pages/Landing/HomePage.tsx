@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -14,6 +14,7 @@ import {
   Menu,
   MenuItem
 } from '@mui/material';
+import ContactUsDialog from '../../components/ContactUsDialog';
 import {
   Business,
   People,
@@ -33,6 +34,7 @@ const HomePage: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const [contactDialogOpen, setContactDialogOpen] = useState(false);
 
   const scrollToContact = () => {
     const contactSection = document.getElementById('contact-section');
@@ -161,7 +163,7 @@ const HomePage: React.FC = () => {
               variant="outlined" 
               size="large" 
               sx={{ borderColor: 'white', color: 'white' }}
-              onClick={scrollToContact}
+              onClick={() => setContactDialogOpen(true)}
             >
               Setup Your Hostel
             </Button>
@@ -302,6 +304,11 @@ const HomePage: React.FC = () => {
           </Box>
         </Container>
       </Box>
+
+      <ContactUsDialog 
+        open={contactDialogOpen} 
+        onClose={() => setContactDialogOpen(false)} 
+      />
     </Box>
   );
 };

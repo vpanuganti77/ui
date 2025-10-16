@@ -25,6 +25,7 @@ export interface FieldConfig {
   type: 'text' | 'email' | 'password' | 'number' | 'date' | 'month' | 'select' | 'multiselect' | 'radio' | 'checkbox' | 'switch' | 'textarea' | 'file' | 'camera';
   required?: boolean;
   options?: { value: string; label: string; rent?: number }[];
+  loadOptions?: (editingItem?: any) => Promise<{ value: string; label: string; rent?: number }[]>;
   placeholder?: string;
   rows?: number;
   accept?: string;

@@ -44,7 +44,7 @@ Email: ${userDetails.email}
 Password: ${userDetails.password}
 Role: ${userDetails.role}
 
-Login URL: ${window.location.origin}/login
+Login URL: ${process.env.REACT_APP_FRONTEND_URL || window.location.origin}/login
 
 Please keep these credentials safe and change the password after first login.
     `.trim();

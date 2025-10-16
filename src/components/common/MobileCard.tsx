@@ -38,30 +38,60 @@ const MobileCard: React.FC<MobileCardProps> = ({
   idField = 'id'
 }) => {
   return (
-    <Card key={item[idField]} sx={{ mb: 2 }}>
-      <CardContent sx={{ pb: '16px !important' }}>
-        <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
+    <Card 
+      key={item[idField]} 
+      sx={{ 
+        mb: 2,
+        boxShadow: 2,
+        borderRadius: 3,
+        border: '1px solid',
+        borderColor: 'divider',
+        transition: 'all 0.2s ease-in-out',
+        '&:hover': {
+          boxShadow: 4,
+          transform: 'translateY(-2px)'
+        }
+      }}
+    >
+      <CardContent sx={{ pb: '16px !important', p: 2 }}>
+        <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
           <Typography 
             variant="h6" 
             sx={{ 
               fontWeight: 600, 
+              fontSize: '1.1rem',
               color: onItemClick ? 'primary.main' : 'text.primary',
-              cursor: onItemClick ? 'pointer' : 'default'
+              cursor: onItemClick ? 'pointer' : 'default',
+              '&:hover': onItemClick ? { textDecoration: 'underline' } : {}
             }}
             onClick={() => onItemClick?.(item[idField])}
           >
             {item[titleField]}
           </Typography>
           <Box display="flex" gap={0.5}>
-            <IconButton size="small" onClick={() => onEdit(item[idField])}>
+            <IconButton 
+              size="small" 
+              onClick={() => onEdit(item[idField])}
+              sx={{ 
+                bgcolor: 'primary.50',
+                '&:hover': { bgcolor: 'primary.100' }
+              }}
+            >
               <Edit fontSize="small" color="primary" />
             </IconButton>
-            <IconButton size="small" onClick={() => onDelete(item[idField])}>
+            <IconButton 
+              size="small" 
+              onClick={() => onDelete(item[idField])}
+              sx={{ 
+                bgcolor: 'error.50',
+                '&:hover': { bgcolor: 'error.100' }
+              }}
+            >
               <Delete fontSize="small" color="error" />
             </IconButton>
           </Box>
         </Box>
-        <Stack spacing={1}>
+        <Stack spacing={1.5}>
           {fields.map(field => {
             // Check condition if provided
             if (field.condition && !field.condition(item)) {
@@ -71,12 +101,29 @@ const MobileCard: React.FC<MobileCardProps> = ({
             const value = item[field.key];
             
             return (
-              <Box key={field.key} display="flex" justifyContent="space-between" alignItems="center">
-                <Typography variant="body2" color="text.secondary">
+              <Box 
+                key={field.key} 
+                display="flex" 
+                justifyContent="space-between" 
+                alignItems="center"
+                sx={{
+                  py: 0.5,
+                  borderBottom: '1px solid',
+                  borderColor: 'grey.100',
+                  '&:last-child': { borderBottom: 'none' }
+                }}
+              >
+                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
                   {field.label}:
                 </Typography>
-                <Typography variant="body2" sx={{ fontWeight: field.key === 'rent' || field.key === 'amount' ? 600 : 400 }}>
-                  {field.render ? field.render(value) : value}
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontWeight: field.key === 'rent' || field.key === 'amount' ? 600 : 500,
+                    color: field.key === 'rent' || field.key === 'amount' ? 'success.main' : 'text.primary'
+                  }}
+                >
+                  {field.render ? field.render(value) : value || '-'}
                 </Typography>
               </Box>
             );

@@ -72,11 +72,32 @@ export const tenantFields: FieldConfig[] = [
     label: 'Select Room',
     type: 'select',
     required: true,
-    options: [
-      { value: 'R002', label: 'R002 - Double (₹6,000) - Available', rent: 6000 },
-      { value: 'R004', label: 'R004 - Single (₹8,000) - Available', rent: 8000 },
-      { value: 'R005', label: 'R005 - Shared (₹4,000) - Available', rent: 4000 },
-    ],
+    options: [],
+    loadOptions: async (editingItem?: any) => {
+      try {
+        const { getAll } = await import('../../services/fileDataService');
+        const rooms = await getAll('rooms');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        
+        const hostelRooms = rooms.filter((room: any) => room.hostelId === user.hostelId);
+        
+        const filteredRooms = hostelRooms.filter((room: any) => {
+          if (editingItem && room.roomNumber === editingItem.room) {
+            return true;
+          }
+          return room.status === 'available';
+        });
+        
+        return filteredRooms.map((room: any) => ({
+          value: room.roomNumber,
+          label: `${room.roomNumber} - ${room.type} (₹${room.rent.toLocaleString()}) - ${room.status === 'available' ? 'Available' : 'Current'}`,
+          rent: room.rent
+        }));
+      } catch (error) {
+        console.error('Failed to load rooms:', error);
+        return [];
+      }
+    },
   },
   {
     name: 'rent',
