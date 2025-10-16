@@ -1,0 +1,750 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Grid,
+  Card,
+  CardContent,
+  Typography,
+  Box,
+  Paper,
+  CircularProgress,
+  Button,
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  IconButton,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+} from '@mui/material';
+import { Fab, Menu, MenuItem } from '@mui/material';
+import {
+  People,
+  Hotel,
+  AttachMoney,
+  ReportProblem,
+  PersonAdd,
+  Bed,
+  ExitToApp,
+  Schedule,
+  CheckCircle,
+  Warning,
+  TrendingUp,
+  TrendingDown,
+  Notifications,
+  Add,
+  Receipt,
+  Assignment,
+  CalendarToday,
+  Phone,
+  Email,
+  Close,
+  Build,
+  ContactMail,
+} from '@mui/icons-material';
+
+
+import { adminService } from '../../services/adminService';
+import { DashboardStats } from '../../types';
+import { useNavigate } from 'react-router-dom';
+
+import TrialStatus from '../../components/TrialStatus';
+
+const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
+  const [stats, setStats] = useState({
+    totalRooms: 0,
+    occupiedRooms: 0,
+    vacantRooms: 0,
+    totalTenants: 0,
+    totalIncome: 0,
+    totalDues: 0,
+    openComplaints: 0,
+    occupancyRate: 0,
+    totalExpenses: 0
+  });
+
+  useEffect(() => {
+    const fetchDashboardStats = async () => {
+      try {
+        // Get user from localStorage to get hostelId
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (!user.hostelId) {
+          console.warn('No hostelId found for user');
+          return;
+        }
+        
+        console.log('Fetching data for hostelId:', user.hostelId);
+
+        // Fetch real data from database
+        const [hostels, rooms, tenants, payments, complaints, expenses] = await Promise.all([
+          adminService.getAll('hostels'),
+          adminService.getAll('rooms'),
+          adminService.getAll('tenants'), 
+          adminService.getAll('payments'),
+          adminService.getAll('complaints'),
+          adminService.getAll('expenses')
+        ]);
+
+        // Get hostel info
+        const currentHostel = hostels.find((h: any) => h.id === user.hostelId);
+        setHostelInfo(currentHostel);
+
+        // Filter data by hostelId
+        const hostelRooms = rooms.filter((r: any) => r.hostelId === user.hostelId);
+        const hostelTenants = tenants.filter((t: any) => t.hostelId === user.hostelId);
+        const hostelPayments = payments.filter((p: any) => p.hostelId === user.hostelId);
+        const hostelComplaints = complaints.filter((c: any) => c.hostelId === user.hostelId);
+        const hostelExpenses = expenses.filter((e: any) => e.hostelId === user.hostelId);
+
+        // Set real room data
+        const availableRoomsList = hostelRooms.filter((r: any) => r.status === 'available');
+        setAvailableRooms(availableRoomsList);
+
+        // Set real tenant data (recent joinings)
+        const recentTenants = hostelTenants
+          .filter((t: any) => {
+            const joinDate = new Date(t.createdAt || t.joiningDate);
+            const weekAgo = new Date();
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            return joinDate >= weekAgo;
+          })
+          .slice(0, 5);
+        setNewJoinings(recentTenants);
+
+        // Calculate stats first
+        const totalRooms = hostelRooms.length;
+        const occupiedRooms = hostelRooms.filter((r: any) => r.status === 'occupied').length;
+        const totalTenants = hostelTenants.length;
+        const openComplaintsCount = hostelComplaints.filter((c: any) => c.status === 'open').length;
+        
+        // Set alerts based on real data
+        const alertsList = [];
+        const overduePayments = hostelPayments.filter((p: any) => p.status === 'overdue').length;
+        
+        if (overduePayments > 0) {
+          alertsList.push({ type: 'overdue', message: `Rent overdue: ${overduePayments} tenants`, count: overduePayments, color: 'error' });
+        }
+        if (openComplaintsCount > 0) {
+          alertsList.push({ type: 'maintenance', message: 'Maintenance requests pending', count: openComplaintsCount, color: 'warning' });
+        }
+        
+        setAlerts(alertsList);
+        const totalExpenses = hostelExpenses.reduce((sum: number, e: any) => sum + (e.amount || 0), 0);
+        
+        // Calculate income and dues from payments
+        const currentMonth = new Date().getMonth() + 1;
+        const currentYear = new Date().getFullYear();
+        const monthlyPayments = hostelPayments.filter((p: any) => 
+          p.month === currentMonth && p.year === currentYear
+        );
+        const totalIncome = monthlyPayments.filter((p: any) => p.status === 'paid').reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+        const totalDues = monthlyPayments.filter((p: any) => p.status === 'pending').reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+
+        setStats({
+          totalRooms,
+          occupiedRooms,
+          vacantRooms: totalRooms - occupiedRooms,
+          totalTenants,
+          totalIncome,
+          totalDues,
+          openComplaints: openComplaintsCount,
+          occupancyRate: totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0,
+          totalExpenses
+        });
+      } catch (error) {
+        console.error('Failed to fetch dashboard stats:', error);
+      }
+    };
+    fetchDashboardStats();
+  }, []);
+
+  const [newJoinings, setNewJoinings] = useState<any[]>([]);
+  const [availableRooms, setAvailableRooms] = useState<any[]>([]);
+  const [upcomingVacancies, setUpcomingVacancies] = useState<any[]>([]);
+  const [hostelInfo, setHostelInfo] = useState<any>(null);
+
+  const [alerts, setAlerts] = useState<any[]>([]);
+
+  // Detailed alert data
+  const alertDetails = {
+    overdue: [
+      { name: 'Michael Johnson', room: 'R205', amount: 8000, daysOverdue: 15, phone: '9876543210' },
+      { name: 'Sarah Wilson', room: 'R301', amount: 8000, daysOverdue: 8, phone: '9876543211' },
+      { name: 'Robert Davis', room: 'R108', amount: 6000, daysOverdue: 22, phone: '9876543212' }
+    ],
+    maintenance: [
+      { title: 'AC not working', room: 'R205', tenant: 'John Doe', priority: 'High', date: '2024-03-15' },
+      { title: 'Water leakage', room: 'R301', tenant: 'Jane Smith', priority: 'Medium', date: '2024-03-14' },
+      { title: 'Door lock issue', room: 'R108', tenant: 'Mike Wilson', priority: 'High', date: '2024-03-13' },
+      { title: 'WiFi not working', room: 'R202', tenant: 'Sarah Brown', priority: 'Low', date: '2024-03-12' },
+      { title: 'Light bulb replacement', room: 'R405', tenant: 'Tom Anderson', priority: 'Low', date: '2024-03-11' }
+    ],
+    applications: [
+      { name: 'Alex Thompson', phone: '9876543213', email: 'alex@email.com', preferredRoom: 'Single', date: '2024-03-16' },
+      { name: 'Lisa Garcia', phone: '9876543214', email: 'lisa@email.com', preferredRoom: 'Double', date: '2024-03-15' }
+    ]
+  };
+
+  const handleAlertClick = (alertType: string) => {
+    setSelectedAlert(alertType);
+    setAlertDialogOpen(true);
+  };
+
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
+  const [loading] = useState(false);
+  const [alertDialogOpen, setAlertDialogOpen] = useState(false);
+  const [selectedAlert, setSelectedAlert] = useState<string>('');
+  const [fabMenuAnchor, setFabMenuAnchor] = useState<null | HTMLElement>(null);
+  const [tenantDialogOpen, setTenantDialogOpen] = useState(false);
+  const [tenantFormData, setTenantFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    roomType: 'single',
+    aadharNumber: ''
+  });
+
+
+
+  const statCards = [
+    {
+      title: 'Total Rooms',
+      value: stats?.totalRooms || 0,
+      icon: <Hotel />,
+      color: '#1976d2',
+    },
+    {
+      title: 'Occupied Rooms',
+      value: stats?.occupiedRooms || 0,
+      icon: <Hotel />,
+      color: '#388e3c',
+    },
+    {
+      title: 'Total Tenants',
+      value: stats?.totalTenants || 0,
+      icon: <People />,
+      color: '#f57c00',
+    },
+    {
+      title: 'Monthly Income',
+      value: `₹${(stats?.totalIncome || 0).toLocaleString()}`,
+      icon: <AttachMoney />,
+      color: '#388e3c',
+    },
+    {
+      title: 'Pending Dues',
+      value: `₹${(stats?.totalDues || 0).toLocaleString()}`,
+      icon: <AttachMoney />,
+      color: '#d32f2f',
+    },
+    {
+      title: 'Occupancy Rate',
+      value: `${stats?.occupancyRate || 0}%`,
+      icon: <TrendingUp />,
+      color: '#9c27b0',
+    },
+  ];
+
+  // const roomOccupancyData = [
+  //   { name: 'Occupied', value: stats?.occupiedRooms || 0, color: '#388e3c' },
+  //   { name: 'Vacant', value: stats?.vacantRooms || 0, color: '#1976d2' },
+  // ];
+
+  return (
+    <Box>
+      <TrialStatus />
+      
+      <Box display="flex" flexDirection={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} mb={3} gap={2}>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
+            {hostelInfo?.name || 'Dashboard Overview'}
+          </Typography>
+          {hostelInfo && (
+            <Box display="flex" gap={1} mt={1} flexWrap="wrap">
+              <Chip 
+                label={hostelInfo.planType === 'free_trial' ? 'Free Trial' : hostelInfo.planType.toUpperCase()}
+                color={hostelInfo.planType === 'free_trial' ? 'info' : 'primary'}
+                size="small"
+              />
+              {hostelInfo.trialExpiryDate && (
+                <Chip 
+                  label={`Expires: ${new Date(hostelInfo.trialExpiryDate).toLocaleDateString()}`}
+                  color={(() => {
+                    const today = new Date();
+                    const expiry = new Date(hostelInfo.trialExpiryDate);
+                    const daysLeft = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                    return daysLeft <= 0 ? 'error' : daysLeft <= 7 ? 'warning' : 'success';
+                  })()} 
+                  size="small"
+                  variant="outlined"
+                />
+              )}
+              <Chip 
+                label={`Status: ${hostelInfo.status}`}
+                color={hostelInfo.status === 'active' ? 'success' : 'error'}
+                size="small"
+                variant="outlined"
+              />
+            </Box>
+          )}
+        </Box>
+        <Box display="flex" gap={1} flexWrap="wrap">
+          <Button variant="outlined" size="small" startIcon={<Phone />}>
+            Emergency
+          </Button>
+          <Button variant="outlined" size="small" startIcon={<Email />}>
+            Send Notice
+          </Button>
+        </Box>
+      </Box>
+
+      {/* Alerts Bar */}
+      {alerts.length > 0 && (
+        <Box sx={{ mb: 3 }}>
+          <Box display="flex" gap={2} flexWrap="wrap">
+            {alerts.map((alert, index) => (
+              <Card 
+                key={index} 
+                elevation={2} 
+                sx={{ 
+                  flex: '1 1 250px', 
+                  borderLeft: `4px solid`, 
+                  borderLeftColor: `${alert.color}.main`,
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
+                  }
+                }}
+                onClick={() => handleAlertClick(alert.type)}
+              >
+                <CardContent sx={{ py: 1.5 }}>
+                  <Box display="flex" alignItems="center" justifyContent="space-between">
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <Notifications color={alert.color as any} fontSize="small" />
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {alert.message}
+                      </Typography>
+                    </Box>
+                    <Chip label={alert.count} color={alert.color as any} size="small" />
+                  </Box>
+                </CardContent>
+              </Card>
+            ))}
+          </Box>
+        </Box>
+      )}
+
+
+
+      {/* Quick View Cards */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 2, mb: 4 }}>
+        {/* New Joinings */}
+        <Card elevation={2} sx={{ height: 240 }}>
+          <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Box display="flex" alignItems="center" gap={1} mb={2}>
+              <PersonAdd color="primary" />
+              <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem' }}>
+                New Joinings (This Week)
+              </Typography>
+            </Box>
+            <Box sx={{ flex: 1, overflow: 'auto' }}>
+              {newJoinings.length > 0 ? newJoinings.map((tenant, index) => (
+                <Box key={index} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 1, borderBottom: index < newJoinings.length - 1 ? '1px solid #eee' : 'none' }}>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>{tenant.name}</Typography>
+                    <Typography variant="caption" color="text.secondary">Room {tenant.roomNumber || 'N/A'} • {new Date(tenant.createdAt || tenant.joiningDate).toLocaleDateString()}</Typography>
+                  </Box>
+                  <Box sx={{ color: tenant.status === 'active' ? 'success.main' : 'warning.main' }}>
+                    {tenant.status === 'active' ? <CheckCircle fontSize="small" /> : <Schedule fontSize="small" />}
+                  </Box>
+                </Box>
+              )) : (
+                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
+                  No new joinings this week
+                </Typography>
+              )}
+            </Box>
+          </CardContent>
+        </Card>
+
+        {/* Available Rooms */}
+        <Card elevation={2} sx={{ height: 240 }}>
+          <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Box display="flex" alignItems="center" gap={1} mb={2}>
+              <Bed color="primary" />
+              <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem' }}>
+                Available Rooms ({availableRooms.length})
+              </Typography>
+            </Box>
+            <Box sx={{ flex: 1, overflow: 'auto' }}>
+              {availableRooms.length > 0 ? availableRooms.map((room, index) => (
+                <Box key={index} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 1, borderBottom: index < availableRooms.length - 1 ? '1px solid #eee' : 'none' }}>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>{room.roomNumber} - {room.type}</Typography>
+                    <Typography variant="caption" color="text.secondary">Floor {room.floor || 'N/A'} • {room.capacity} bed(s)</Typography>
+                  </Box>
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: 'success.main' }}>
+                    ₹{(room.rent || 0).toLocaleString()}
+                  </Typography>
+                </Box>
+              )) : (
+                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
+                  No rooms available. <Button size="small" onClick={() => navigate('/admin/rooms')}>Add Rooms</Button>
+                </Typography>
+              )}
+            </Box>
+          </CardContent>
+        </Card>
+
+        {/* Upcoming Vacancies */}
+        <Card elevation={2} sx={{ height: 240 }}>
+          <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Box display="flex" alignItems="center" gap={1} mb={2}>
+              <ExitToApp color="primary" />
+              <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem' }}>
+                Upcoming Vacancies
+              </Typography>
+            </Box>
+            <Box sx={{ flex: 1, overflow: 'auto' }}>
+              {upcomingVacancies.map((tenant, index) => (
+                <Box key={index} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 1, borderBottom: index < upcomingVacancies.length - 1 ? '1px solid #eee' : 'none' }}>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>{tenant.name}</Typography>
+                    <Typography variant="caption" color="text.secondary">Room {tenant.room} • {new Date(tenant.vacateDate).toLocaleDateString()}</Typography>
+                  </Box>
+                  <Box sx={{ color: tenant.noticeGiven ? 'success.main' : 'warning.main' }}>
+                    {tenant.noticeGiven ? <CheckCircle fontSize="small" /> : <Warning fontSize="small" />}
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+          </CardContent>
+        </Card>
+      </Box>
+
+      {/* Bottom Detailed Stats */}
+      <Box sx={{ mb: 4, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, gap: 2 }}>
+        <Card elevation={2} sx={{ transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-2px)' } }}>
+          <CardContent>
+            <Box display="flex" alignItems="center" justifyContent="space-between">
+              <Box>
+                <Typography color="textSecondary" gutterBottom sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                  Total Rooms
+                </Typography>
+                <Typography variant="h4" component="div" sx={{ fontWeight: 700, mb: 0.5 }}>
+                  {stats?.totalRooms || 0}
+                </Typography>
+                <Box display="flex" alignItems="center" gap={0.5}>
+                  <TrendingUp fontSize="small" color="success" />
+                  <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
+                    +5.2% from last month
+                  </Typography>
+                </Box>
+              </Box>
+              <Box sx={{ color: '#1976d2', bgcolor: '#1976d220', p: 1.5, borderRadius: 2 }}>
+                <Hotel />
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
+        
+        <Card elevation={2} sx={{ transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-2px)' } }}>
+          <CardContent>
+            <Box display="flex" alignItems="center" justifyContent="space-between">
+              <Box>
+                <Typography color="textSecondary" gutterBottom sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                  Occupied Rooms
+                </Typography>
+                <Typography variant="h4" component="div" sx={{ fontWeight: 700, mb: 0.5 }}>
+                  {stats?.occupiedRooms || 0}
+                </Typography>
+                <Box display="flex" alignItems="center" gap={0.5}>
+                  <TrendingUp fontSize="small" color="success" />
+                  <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
+                    +5.2% from last month
+                  </Typography>
+                </Box>
+              </Box>
+              <Box sx={{ color: '#388e3c', bgcolor: '#388e3c20', p: 1.5, borderRadius: 2 }}>
+                <Hotel />
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
+        
+        <Card elevation={2} sx={{ transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-2px)' } }}>
+          <CardContent>
+            <Box display="flex" alignItems="center" justifyContent="space-between">
+              <Box>
+                <Typography color="textSecondary" gutterBottom sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                  Total Tenants
+                </Typography>
+                <Typography variant="h4" component="div" sx={{ fontWeight: 700, mb: 0.5 }}>
+                  {stats?.totalTenants || 0}
+                </Typography>
+                <Box display="flex" alignItems="center" gap={0.5}>
+                  <TrendingUp fontSize="small" color="success" />
+                  <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
+                    +5.2% from last month
+                  </Typography>
+                </Box>
+              </Box>
+              <Box sx={{ color: '#f57c00', bgcolor: '#f57c0020', p: 1.5, borderRadius: 2 }}>
+                <People />
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
+
+        <Card elevation={2} sx={{ transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-2px)' } }}>
+          <CardContent>
+            <Box display="flex" alignItems="center" justifyContent="space-between">
+              <Box>
+                <Typography color="textSecondary" gutterBottom sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                  Monthly Income
+                </Typography>
+                <Typography variant="h4" component="div" sx={{ fontWeight: 700, mb: 0.5 }}>
+                  ₹{(stats?.totalIncome || 0).toLocaleString()}
+                </Typography>
+                <Box display="flex" alignItems="center" gap={0.5}>
+                  <TrendingUp fontSize="small" color="success" />
+                  <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
+                    +5.2% from last month
+                  </Typography>
+                </Box>
+              </Box>
+              <Box sx={{ color: '#388e3c', bgcolor: '#388e3c20', p: 1.5, borderRadius: 2 }}>
+                <AttachMoney />
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
+        
+        <Card elevation={2} sx={{ transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-2px)' } }}>
+          <CardContent>
+            <Box display="flex" alignItems="center" justifyContent="space-between">
+              <Box>
+                <Typography color="textSecondary" gutterBottom sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                  Pending Dues
+                </Typography>
+                <Typography variant="h4" component="div" sx={{ fontWeight: 700, mb: 0.5 }}>
+                  ₹{(stats?.totalDues || 0).toLocaleString()}
+                </Typography>
+                <Box display="flex" alignItems="center" gap={0.5}>
+                  <TrendingUp fontSize="small" color="success" />
+                  <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
+                    +5.2% from last month
+                  </Typography>
+                </Box>
+              </Box>
+              <Box sx={{ color: '#d32f2f', bgcolor: '#d32f2f20', p: 1.5, borderRadius: 2 }}>
+                <AttachMoney />
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
+
+        <Card elevation={2} sx={{ transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-2px)' } }}>
+          <CardContent>
+            <Box display="flex" alignItems="center" justifyContent="space-between">
+              <Box>
+                <Typography color="textSecondary" gutterBottom sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                  Occupancy Rate
+                </Typography>
+                <Typography variant="h4" component="div" sx={{ fontWeight: 700, mb: 0.5 }}>
+                  {stats?.occupancyRate || 0}%
+                </Typography>
+                <Box display="flex" alignItems="center" gap={0.5}>
+                  <TrendingUp fontSize="small" color="success" />
+                  <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
+                    +5.2% from last month
+                  </Typography>
+                </Box>
+              </Box>
+              <Box sx={{ color: '#9c27b0', bgcolor: '#9c27b020', p: 1.5, borderRadius: 2 }}>
+                <TrendingUp />
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
+
+        <Card elevation={2} sx={{ transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-2px)' } }}>
+          <CardContent>
+            <Box display="flex" alignItems="center" justifyContent="space-between">
+              <Box>
+                <Typography color="textSecondary" gutterBottom sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                  Monthly Expenses
+                </Typography>
+                <Typography variant="h4" component="div" sx={{ fontWeight: 700, mb: 0.5 }}>
+                  ₹{(stats?.totalExpenses || 0).toLocaleString()}
+                </Typography>
+                <Box display="flex" alignItems="center" gap={0.5}>
+                  <TrendingDown fontSize="small" color="error" />
+                  <Typography variant="caption" color="error.main" sx={{ fontWeight: 600 }}>
+                    Track daily expenses
+                  </Typography>
+                </Box>
+              </Box>
+              <Box sx={{ color: '#ff9800', bgcolor: '#ff980020', p: 1.5, borderRadius: 2 }}>
+                <AttachMoney />
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
+      </Box>
+
+
+
+
+
+      {/* Floating Action Button */}
+      <Fab
+        color="primary"
+        sx={{ position: 'fixed', bottom: 24, right: 24, zIndex: 1000 }}
+        onClick={(e) => setFabMenuAnchor(e.currentTarget)}
+      >
+        <Add />
+      </Fab>
+
+      {/* Quick Actions Menu */}
+      <Menu
+        anchorEl={fabMenuAnchor}
+        open={Boolean(fabMenuAnchor)}
+        onClose={() => setFabMenuAnchor(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
+        transformOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <MenuItem onClick={() => { setFabMenuAnchor(null); setTenantDialogOpen(true); }}>
+          <ListItemIcon><PersonAdd /></ListItemIcon>
+          <ListItemText>Add New Tenant</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => { setFabMenuAnchor(null); navigate('/admin/payments'); }}>
+          <ListItemIcon><Receipt /></ListItemIcon>
+          <ListItemText>Generate Bills</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => { setFabMenuAnchor(null); navigate('/admin/reports'); }}>
+          <ListItemIcon><Assignment /></ListItemIcon>
+          <ListItemText>View Reports</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => { setFabMenuAnchor(null); navigate('/admin/complaints'); }}>
+          <ListItemIcon><CalendarToday /></ListItemIcon>
+          <ListItemText>Schedule Maintenance</ListItemText>
+        </MenuItem>
+      </Menu>
+
+      {/* Alert Details Dialog */}
+      <Dialog open={alertDialogOpen} onClose={() => setAlertDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          <Box display="flex" alignItems="center" justifyContent="space-between">
+            <Typography variant="h6">
+              {selectedAlert === 'overdue' && 'Rent Overdue Tenants'}
+              {selectedAlert === 'maintenance' && 'Pending Maintenance Requests'}
+              {selectedAlert === 'applications' && 'New Applications'}
+            </Typography>
+            <IconButton onClick={() => setAlertDialogOpen(false)} size="small">
+              <Close />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <List>
+            {selectedAlert && alertDetails[selectedAlert as keyof typeof alertDetails]?.map((item: any, index: number) => (
+              <ListItem key={index} divider={index < alertDetails[selectedAlert as keyof typeof alertDetails].length - 1}>
+                <ListItemIcon>
+                  {selectedAlert === 'overdue' && <AttachMoney color="error" />}
+                  {selectedAlert === 'maintenance' && <Build color="warning" />}
+                  {selectedAlert === 'applications' && <ContactMail color="info" />}
+                </ListItemIcon>
+                <ListItemText
+                  primary={
+                    selectedAlert === 'overdue' ? `${item.name} - Room ${item.room}` :
+                    selectedAlert === 'maintenance' ? `${item.title} - Room ${item.room}` :
+                    `${item.name} - ${item.preferredRoom} Room`
+                  }
+                  secondary={
+                    selectedAlert === 'overdue' ? `₹${item.amount.toLocaleString()} overdue for ${item.daysOverdue} days | ${item.phone}` :
+                    selectedAlert === 'maintenance' ? `Tenant: ${item.tenant} | Priority: ${item.priority} | Date: ${new Date(item.date).toLocaleDateString()}` :
+                    `${item.email} | ${item.phone} | Applied: ${new Date(item.date).toLocaleDateString()}`
+                  }
+                />
+              </ListItem>
+            ))}
+          </List>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAlertDialogOpen(false)} variant="contained">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Add Tenant Dialog */}
+      <Dialog open={tenantDialogOpen} onClose={() => setTenantDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Add New Tenant</DialogTitle>
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          console.log('Add tenant:', tenantFormData);
+          setTenantDialogOpen(false);
+          setTenantFormData({ name: '', email: '', phone: '', roomType: 'single', aadharNumber: '' });
+        }}>
+          <DialogContent>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <TextField
+                label="Full Name"
+                value={tenantFormData.name}
+                onChange={(e) => setTenantFormData({...tenantFormData, name: e.target.value})}
+                required
+              />
+              <TextField
+                label="Email"
+                type="email"
+                value={tenantFormData.email}
+                onChange={(e) => setTenantFormData({...tenantFormData, email: e.target.value})}
+                required
+              />
+              <TextField
+                label="Phone Number"
+                value={tenantFormData.phone}
+                onChange={(e) => setTenantFormData({...tenantFormData, phone: e.target.value})}
+                required
+              />
+              <TextField
+                label="Aadhar Number"
+                value={tenantFormData.aadharNumber}
+                onChange={(e) => setTenantFormData({...tenantFormData, aadharNumber: e.target.value})}
+                required
+              />
+              <FormControl>
+                <InputLabel>Room Type</InputLabel>
+                <Select
+                  value={tenantFormData.roomType}
+                  label="Room Type"
+                  onChange={(e) => setTenantFormData({...tenantFormData, roomType: e.target.value})}
+                >
+                  <MenuItem value="single">Single</MenuItem>
+                  <MenuItem value="double">Double</MenuItem>
+                  <MenuItem value="triple">Triple</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setTenantDialogOpen(false)}>Cancel</Button>
+            <Button type="submit" variant="contained">Add Tenant</Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+    </Box>
+  );
+};
+
+export default Dashboard;

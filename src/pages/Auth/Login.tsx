@@ -1,0 +1,186 @@
+import React, { useState } from 'react';
+import {
+  Container,
+  Paper,
+  TextField,
+  Button,
+  Typography,
+  Box,
+  Alert,
+  Link,
+  CircularProgress,
+  FormControlLabel,
+  Checkbox,
+} from '@mui/material';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import ContactUsDialog from '../../components/ContactUsDialog';
+import { ArrowBack } from '@mui/icons-material';
+
+const Login: React.FC = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
+  const [error, setError] = useState('');
+  const [contactOpen, setContactOpen] = useState(false);
+  const { login, isLoading } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    try {
+      await login(email, password);
+      // Navigation will be handled by the auth context
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const redirectPath = user.role === 'admin' ? '/admin/dashboard' : '/tenant/dashboard';
+      navigate(redirectPath);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Login failed');
+    }
+  };
+
+  return (
+    <Box
+      sx={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 2,
+        position: 'relative',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundImage: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.1"%3E%3Crect width="11" height="11" rx="2"/%3E%3Crect x="20" width="11" height="11" rx="2"/%3E%3Crect x="40" width="11" height="11" rx="2"/%3E%3Crect y="20" width="11" height="11" rx="2"/%3E%3Crect x="20" y="20" width="11" height="11" rx="2"/%3E%3Crect x="40" y="20" width="11" height="11" rx="2"/%3E%3Crect y="40" width="11" height="11" rx="2"/%3E%3Crect x="20" y="40" width="11" height="11" rx="2"/%3E%3Crect x="40" y="40" width="11" height="11" rx="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+          opacity: 0.3
+        }
+      }}
+    >
+      <Container component="main" maxWidth="sm" sx={{ position: 'relative', zIndex: 1 }}>
+        <Paper elevation={24} sx={{ 
+          padding: 4, 
+          width: '100%',
+          borderRadius: 3,
+          background: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(10px)',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.1)'
+        }}>
+          <Box sx={{ textAlign: 'center', mb: 3 }}>
+            <Box sx={{ 
+              width: 80, 
+              height: 80, 
+              mx: 'auto', 
+              mb: 2,
+              background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 8px 24px rgba(25, 118, 210, 0.3)'
+            }}>
+              <svg width="40" height="40" viewBox="0 0 32 32" fill="white">
+                <rect x="6" y="8" width="20" height="16" rx="2" fill="white"/>
+                <rect x="8" y="10" width="4" height="3" fill="#1976d2"/>
+                <rect x="14" y="10" width="4" height="3" fill="#1976d2"/>
+                <rect x="20" y="10" width="4" height="3" fill="#1976d2"/>
+                <rect x="8" y="15" width="4" height="3" fill="#1976d2"/>
+                <rect x="14" y="15" width="4" height="3" fill="#1976d2"/>
+                <rect x="20" y="15" width="4" height="3" fill="#1976d2"/>
+                <rect x="8" y="20" width="4" height="2" fill="#1976d2"/>
+                <rect x="14" y="20" width="4" height="2" fill="#1976d2"/>
+                <rect x="20" y="20" width="4" height="2" fill="#1976d2"/>
+              </svg>
+            </Box>
+            <Typography component="h1" variant="h4" align="center" gutterBottom sx={{ fontWeight: 700, color: '#1976d2' }}>
+              Hostel Management
+            </Typography>
+            <Typography component="h2" variant="h6" align="center" gutterBottom sx={{ color: 'text.secondary', fontWeight: 400 }}>
+              Hostel & Co-Living Management System
+            </Typography>
+          </Box>
+
+          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              id="email"
+              label="Email Address"
+              name="email"
+              autoComplete="email"
+              autoFocus
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              name="password"
+              label="Password"
+              type="password"
+              id="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  value={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  color="primary"
+                />
+              }
+              label="Remember me"
+              sx={{ mt: 1 }}
+            />
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              sx={{ mt: 3, mb: 2 }}
+              disabled={isLoading}
+            >
+              {isLoading ? <CircularProgress size={24} /> : 'Sign In'}
+            </Button>
+            
+            <Box textAlign="center">
+              <Button
+                variant="outlined"
+                fullWidth
+                onClick={() => setContactOpen(true)}
+                sx={{ mb: 2 }}
+              >
+                Setup Your Hostel
+              </Button>
+              <Button
+                startIcon={<ArrowBack />}
+                onClick={() => navigate('/')}
+                sx={{ mt: 1 }}
+              >
+                Back to Home
+              </Button>
+            </Box>
+          </Box>
+
+          <ContactUsDialog
+            open={contactOpen}
+            onClose={() => setContactOpen(false)}
+          />
+        </Paper>
+      </Container>
+    </Box>
+  );
+};
+
+export default Login;
