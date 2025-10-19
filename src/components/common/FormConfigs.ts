@@ -32,6 +32,13 @@ export const validations = {
     }
     return '';
   },
+  roomNumber: (value: string | number) => {
+    const strValue = String(value);
+    if (!strValue || !/^[0-9]+$/.test(strValue)) {
+      return 'Room number must contain only digits (e.g., 101, 102)';
+    }
+    return '';
+  },
 };
 
 // Common field configurations
@@ -146,8 +153,9 @@ export const roomFields: FieldConfig[] = [
     label: 'Room Number',
     type: 'text',
     required: true,
+    validation: validations.roomNumber,
+    placeholder: '101, 102, 201...',
   },
-
   {
     name: 'capacity',
     label: 'Bed Capacity',
@@ -178,9 +186,10 @@ export const roomFields: FieldConfig[] = [
   },
   {
     name: 'amenities',
-    label: 'Amenities (comma separated)',
+    label: 'Amenities',
     type: 'textarea',
-    placeholder: 'WiFi, AC, Attached Bathroom',
+    placeholder: 'WiFi, AC, Attached Bathroom, Balcony, Window, Ceiling Fan, Study Table, Chair, Wardrobe, Bed',
+    rows: 2,
     flex: '1 1 100%',
   },
 ];
@@ -252,13 +261,6 @@ export const userFields: FieldConfig[] = [
     type: 'text',
     required: true,
     validation: validations.minLength(2),
-  },
-  {
-    name: 'email',
-    label: 'Email',
-    type: 'email',
-    required: true,
-    validation: validations.email,
   },
   {
     name: 'phone',

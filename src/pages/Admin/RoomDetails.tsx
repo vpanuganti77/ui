@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { getById, getAll, update } from '../../services/fileDataService';
+import DynamicDialog from '../../components/common/DynamicDialog';
+import { roomFields } from '../../components/common/FormConfigs';
 import {
   Box,
   Typography,
@@ -35,54 +38,80 @@ import { ArrowBack, Edit, Home, Person, Save, Cancel, Bed, Close, History, Repor
 const RoomDetails: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const [room, setRoom] = useState({
-    id: 'R001',
-    number: 'R001',
-    type: 'single',
-    capacity: 1,
-    currentOccupancy: 1,
-    rent: 8000,
-    deposit: 16000,
-    status: 'occupied',
-    floor: 1,
-    amenities: 'AC, WiFi, Attached Bathroom',
-    tenant: 'John Doe',
-    tenantId: 'T001',
-    lastModifiedBy: 'Admin',
-    lastModifiedDate: '2024-03-15T10:30:00Z'
-  });
-  const [editData, setEditData] = useState({ ...room });
+  const [room, setRoom] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [editData, setEditData] = useState<any>({});
   const [editOpen, setEditOpen] = useState(false);
+
+  useEffect(() => {
+    loadRoomData();
+  }, [id]);
+
+  const loadRoomData = async () => {
+    try {
+      if (!id) return;
+      const [roomData, tenants, complaints] = await Promise.all([
+        getById('rooms', id),
+        getAll('tenants'),
+        getAll('complaints')
+      ]);
+      
+      // Find tenant assigned to this room
+      const assignedTenant = tenants.find(tenant => 
+        tenant.room === roomData.roomNumber || tenant.roomId === roomData.id
+      );
+      
+      // Get room complaints
+      const roomComplaints = complaints.filter(complaint => 
+        complaint.room === roomData.roomNumber || complaint.roomId === roomData.id
+      );
+      
+      // Get room history from tenants
+      const roomHistory = tenants.filter(tenant => 
+        tenant.room === roomData.roomNumber || tenant.roomId === roomData.id
+      ).map(tenant => ({
+        id: tenant.id,
+        tenantName: tenant.name,
+        phone: tenant.phone,
+        checkIn: tenant.joiningDate,
+        checkOut: tenant.vacatingDate || null,
+        status: tenant.vacatingDate ? 'vacated' : 'current'
+      }));
+      
+      const roomWithTenant = {
+        ...roomData,
+        roomNumber: roomData.roomNumber || roomData.number || 'N/A',
+        rent: Number(roomData.rent) || 0,
+        deposit: Number(roomData.deposit) || 0,
+        capacity: Number(roomData.capacity) || 1,
+        floor: Number(roomData.floor) || 1,
+        tenant: assignedTenant?.name || null,
+        tenantId: assignedTenant?.id || null,
+        currentOccupancy: assignedTenant ? 1 : 0,
+        status: assignedTenant ? 'occupied' : 'vacant',
+        history: roomHistory,
+        complaints: roomComplaints
+      };
+      
+      setRoom(roomWithTenant);
+      setEditData(roomWithTenant);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error loading room data:', error);
+      setLoading(false);
+    }
+  };
   const [historyOpen, setHistoryOpen] = useState(false);
   const [complaintsOpen, setComplaintsOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [complaintsPage, setComplaintsPage] = useState(1);
   const itemsPerPage = 6;
 
-  // Mock room history data
-  const roomHistory = [
-    { id: '1', tenantName: 'John Doe', phone: '9876543210', checkIn: '2024-01-15', checkOut: null, duration: '2 months 15 days', status: 'current' },
-    { id: '2', tenantName: 'Mike Johnson', phone: '9876543211', checkIn: '2023-10-01', checkOut: '2024-01-10', duration: '3 months 10 days', status: 'vacated' },
-    { id: '3', tenantName: 'Sarah Wilson', phone: '9876543212', checkIn: '2023-07-15', checkOut: '2023-09-30', duration: '2 months 15 days', status: 'vacated' },
-    { id: '4', tenantName: 'David Brown', phone: '9876543213', checkIn: '2023-04-01', checkOut: '2023-07-10', duration: '3 months 10 days', status: 'vacated' },
-    { id: '5', tenantName: 'Lisa Davis', phone: '9876543214', checkIn: '2023-01-15', checkOut: '2023-03-30', duration: '2 months 15 days', status: 'vacated' },
-    { id: '6', tenantName: 'Tom Anderson', phone: '9876543215', checkIn: '2022-11-01', checkOut: '2023-01-10', duration: '2 months 10 days', status: 'vacated' },
-    { id: '7', tenantName: 'Emma Taylor', phone: '9876543216', checkIn: '2022-08-15', checkOut: '2022-10-30', duration: '2 months 15 days', status: 'vacated' },
-    { id: '8', tenantName: 'James Wilson', phone: '9876543217', checkIn: '2022-05-01', checkOut: '2022-08-10', duration: '3 months 10 days', status: 'vacated' },
-  ];
 
-  // Mock complaints data for this room
-  const roomComplaints = [
-    { id: '1', tenantName: 'John Doe', category: 'Maintenance', title: 'AC not working', description: 'Air conditioner stopped working since yesterday', status: 'open', priority: 'high', date: '2024-03-10', resolvedDate: null },
-    { id: '2', tenantName: 'John Doe', category: 'Cleanliness', title: 'Bathroom cleaning', description: 'Bathroom needs deep cleaning', status: 'resolved', priority: 'medium', date: '2024-03-05', resolvedDate: '2024-03-06' },
-    { id: '3', tenantName: 'Mike Johnson', category: 'Electrical', title: 'Power socket issue', description: 'One power socket not working', status: 'resolved', priority: 'low', date: '2024-01-20', resolvedDate: '2024-01-22' },
-    { id: '4', tenantName: 'Mike Johnson', category: 'Plumbing', title: 'Water pressure low', description: 'Water pressure is very low in shower', status: 'resolved', priority: 'medium', date: '2024-01-15', resolvedDate: '2024-01-18' },
-    { id: '5', tenantName: 'Sarah Wilson', category: 'Noise', title: 'Loud neighbors', description: 'Neighbors making noise late at night', status: 'resolved', priority: 'medium', date: '2023-08-10', resolvedDate: '2023-08-12' },
-    { id: '6', tenantName: 'Sarah Wilson', category: 'Maintenance', title: 'Door lock issue', description: 'Room door lock is loose', status: 'resolved', priority: 'high', date: '2023-07-25', resolvedDate: '2023-07-26' },
-    { id: '7', tenantName: 'David Brown', category: 'Cleanliness', title: 'Window cleaning', description: 'Windows need cleaning', status: 'resolved', priority: 'low', date: '2023-05-15', resolvedDate: '2023-05-16' },
-    { id: '8', tenantName: 'David Brown', category: 'Electrical', title: 'Light bulb replacement', description: 'Ceiling light bulb needs replacement', status: 'resolved', priority: 'low', date: '2023-04-20', resolvedDate: '2023-04-21' },
-  ];
 
+  const roomHistory = room?.history || [];
+  const roomComplaints = room?.complaints || [];
+  
   const totalPages = Math.ceil(roomHistory.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const currentHistory = roomHistory.slice(startIndex, startIndex + itemsPerPage);
@@ -119,13 +148,18 @@ const RoomDetails: React.FC = () => {
     }
   };
 
-  const handleSave = () => {
-    setRoom({ ...editData, lastModifiedBy: 'Admin', lastModifiedDate: new Date().toISOString() });
-    setEditOpen(false);
+  const handleSave = async (formData: any) => {
+    try {
+      const updatedRoom = await update('rooms', room.id, formData);
+      setRoom({ ...updatedRoom, ...room }); // Preserve calculated fields
+      setEditOpen(false);
+      loadRoomData(); // Reload to get fresh data
+    } catch (error) {
+      console.error('Error updating room:', error);
+    }
   };
 
   const handleCancel = () => {
-    setEditData({ ...room });
     setEditOpen(false);
   };
 
@@ -144,12 +178,28 @@ const RoomDetails: React.FC = () => {
       ) : (
         <Typography variant="body1" sx={{ fontWeight: 400 }}>
           {label === 'Monthly Rent' || label === 'Security Deposit' 
-            ? `₹${parseInt(value).toLocaleString()}` 
+            ? `₹${Number(value) || 0}` 
             : value}
         </Typography>
       )}
     </Box>
   );
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+        <Typography>Loading room details...</Typography>
+      </Box>
+    );
+  }
+
+  if (!room) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+        <Typography>Room not found</Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 1, maxWidth: '100%', mx: 'auto', height: '100vh', overflow: 'hidden' }}>
@@ -170,7 +220,7 @@ const RoomDetails: React.FC = () => {
               </AccordionSummary>
               <AccordionDetails>
                 <Box display="grid" gridTemplateColumns="1fr 1fr 1fr" gap={2}>
-                  <InfoField label="Room Number" value={room.number} />
+                  <InfoField label="Room Number" value={room.roomNumber} />
                   <InfoField label="Room Type" value={room.type} />
                   <InfoField label="Status" value={room.status} />
                   <InfoField label="Capacity" value={room.capacity} />
@@ -287,100 +337,16 @@ const RoomDetails: React.FC = () => {
       </Box>
 
       {/* Edit Room Dialog */}
-      <Dialog open={editOpen} onClose={() => setEditOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          <Box display="flex" alignItems="center" justifyContent="space-between">
-            <Typography variant="h6">Edit Room - {room.number}</Typography>
-            <IconButton onClick={() => setEditOpen(false)} size="small">
-              <Close />
-            </IconButton>
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField
-              label="Room Number"
-              value={editData.number}
-              onChange={(e) => setEditData({ ...editData, number: e.target.value })}
-              fullWidth
-              size="small"
-            />
-            <FormControl fullWidth size="small">
-              <Select
-                value={editData.type}
-                onChange={(e) => setEditData({ ...editData, type: e.target.value })}
-                displayEmpty
-              >
-                <MenuItem value="single">Single</MenuItem>
-                <MenuItem value="double">Double</MenuItem>
-                <MenuItem value="triple">Triple</MenuItem>
-                <MenuItem value="dormitory">Dormitory</MenuItem>
-              </Select>
-            </FormControl>
-            <TextField
-              label="Capacity"
-              type="number"
-              value={editData.capacity}
-              onChange={(e) => setEditData({ ...editData, capacity: parseInt(e.target.value) })}
-              fullWidth
-              size="small"
-            />
-            <TextField
-              label="Floor"
-              type="number"
-              value={editData.floor}
-              onChange={(e) => setEditData({ ...editData, floor: parseInt(e.target.value) })}
-              fullWidth
-              size="small"
-            />
-            <FormControl fullWidth size="small">
-              <Select
-                value={editData.status}
-                onChange={(e) => setEditData({ ...editData, status: e.target.value })}
-                displayEmpty
-              >
-                <MenuItem value="occupied">Occupied</MenuItem>
-                <MenuItem value="vacant">Vacant</MenuItem>
-                <MenuItem value="maintenance">Maintenance</MenuItem>
-                <MenuItem value="reserved">Reserved</MenuItem>
-              </Select>
-            </FormControl>
-            <TextField
-              label="Monthly Rent"
-              type="number"
-              value={editData.rent}
-              onChange={(e) => setEditData({ ...editData, rent: parseInt(e.target.value) })}
-              fullWidth
-              size="small"
-            />
-            <TextField
-              label="Security Deposit"
-              type="number"
-              value={editData.deposit}
-              onChange={(e) => setEditData({ ...editData, deposit: parseInt(e.target.value) })}
-              fullWidth
-              size="small"
-            />
-            <TextField
-              label="Amenities"
-              value={editData.amenities}
-              onChange={(e) => setEditData({ ...editData, amenities: e.target.value })}
-              fullWidth
-              multiline
-              rows={3}
-              size="small"
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCancel} startIcon={<Cancel />}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave} variant="contained" startIcon={<Save />}>
-            Save Changes
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <DynamicDialog
+        open={editOpen}
+        onClose={handleCancel}
+        onSubmit={handleSave}
+        title={`Edit Room - ${room.roomNumber}`}
+        fields={roomFields}
+        editingItem={room}
+        submitLabel="Room"
+        maxWidth="sm"
+      />
 
       {/* Room History Dialog */}
       <Dialog open={historyOpen} onClose={() => setHistoryOpen(false)} maxWidth="md" fullWidth>
@@ -393,56 +359,77 @@ const RoomDetails: React.FC = () => {
           </Box>
         </DialogTitle>
         <DialogContent>
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Tenant Name</TableCell>
-                  <TableCell>Mobile</TableCell>
-                  <TableCell>Check In</TableCell>
-                  <TableCell>Check Out</TableCell>
-                  <TableCell>Duration</TableCell>
-                  <TableCell>Status</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {currentHistory.map((history) => (
-                  <TableRow key={history.id} hover>
-                    <TableCell>
-                      <Typography 
-                        sx={{ cursor: 'pointer', color: 'primary.main', '&:hover': { textDecoration: 'underline' } }}
-                        onClick={() => navigate(`/admin/tenants/${history.id}`)}
-                      >
-                        {history.tenantName}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>{history.phone}</TableCell>
-                    <TableCell>{new Date(history.checkIn).toLocaleDateString()}</TableCell>
-                    <TableCell>{history.checkOut ? new Date(history.checkOut).toLocaleDateString() : '-'}</TableCell>
-                    <TableCell>{history.duration}</TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={history.status} 
-                        color={history.status === 'current' ? 'success' : 'default'}
-                        size="small"
-                        variant="filled"
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-          
-          <Box display="flex" justifyContent="center" mt={2}>
-            <Pagination 
-              count={totalPages}
-              page={currentPage}
-              onChange={(_, page) => setCurrentPage(page)}
-              color="primary"
-              size="small"
-            />
-          </Box>
+          {roomHistory.length === 0 ? (
+            <Box 
+              display="flex" 
+              flexDirection="column" 
+              alignItems="center" 
+              justifyContent="center" 
+              py={4}
+              textAlign="center"
+            >
+              <History sx={{ fontSize: 48, color: 'grey.400', mb: 2 }} />
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                No Tenant History
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                This room has not been allocated to any tenant yet.
+              </Typography>
+            </Box>
+          ) : (
+            <>
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Tenant Name</TableCell>
+                      <TableCell>Mobile</TableCell>
+                      <TableCell>Check In</TableCell>
+                      <TableCell>Check Out</TableCell>
+                      <TableCell>Duration</TableCell>
+                      <TableCell>Status</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {currentHistory.map((history: any) => (
+                      <TableRow key={history.id} hover>
+                        <TableCell>
+                          <Typography 
+                            sx={{ cursor: 'pointer', color: 'primary.main', '&:hover': { textDecoration: 'underline' } }}
+                            onClick={() => navigate(`/admin/tenants/${history.id}`)}
+                          >
+                            {history.tenantName}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>{history.phone}</TableCell>
+                        <TableCell>{new Date(history.checkIn).toLocaleDateString()}</TableCell>
+                        <TableCell>{history.checkOut ? new Date(history.checkOut).toLocaleDateString() : '-'}</TableCell>
+                        <TableCell>{history.duration}</TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={history.status} 
+                            color={history.status === 'current' ? 'success' : 'default'}
+                            size="small"
+                            variant="filled"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              
+              <Box display="flex" justifyContent="center" mt={2}>
+                <Pagination 
+                  count={totalPages}
+                  page={currentPage}
+                  onChange={(_, page) => setCurrentPage(page)}
+                  color="primary"
+                  size="small"
+                />
+              </Box>
+            </>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setHistoryOpen(false)} variant="contained">
@@ -462,65 +449,86 @@ const RoomDetails: React.FC = () => {
           </Box>
         </DialogTitle>
         <DialogContent>
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Tenant</TableCell>
-                  <TableCell>Category</TableCell>
-                  <TableCell>Title</TableCell>
-                  <TableCell>Priority</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Resolved Date</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {currentComplaints.map((complaint) => (
-                  <TableRow key={complaint.id} hover>
-                    <TableCell>{new Date(complaint.date).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <Typography 
-                        sx={{ cursor: 'pointer', color: 'primary.main', '&:hover': { textDecoration: 'underline' } }}
-                        onClick={() => navigate(`/admin/tenants/${complaint.id}`)}
-                      >
-                        {complaint.tenantName}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>{complaint.category}</TableCell>
-                    <TableCell>{complaint.title}</TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={complaint.priority} 
-                        color={getPriorityColor(complaint.priority) as any}
-                        size="small"
-                        variant="outlined"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={complaint.status} 
-                        color={getComplaintStatusColor(complaint.status) as any}
-                        size="small"
-                        variant="filled"
-                      />
-                    </TableCell>
-                    <TableCell>{complaint.resolvedDate ? new Date(complaint.resolvedDate).toLocaleDateString() : '-'}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-          
-          <Box display="flex" justifyContent="center" mt={2}>
-            <Pagination 
-              count={totalComplaintsPages}
-              page={complaintsPage}
-              onChange={(_, page) => setComplaintsPage(page)}
-              color="primary"
-              size="small"
-            />
-          </Box>
+          {roomComplaints.length === 0 ? (
+            <Box 
+              display="flex" 
+              flexDirection="column" 
+              alignItems="center" 
+              justifyContent="center" 
+              py={4}
+              textAlign="center"
+            >
+              <ReportProblem sx={{ fontSize: 48, color: 'grey.400', mb: 2 }} />
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                No Complaints Found
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                No complaints have been filed for this room.
+              </Typography>
+            </Box>
+          ) : (
+            <>
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Date</TableCell>
+                      <TableCell>Tenant</TableCell>
+                      <TableCell>Category</TableCell>
+                      <TableCell>Title</TableCell>
+                      <TableCell>Priority</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>Resolved Date</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {currentComplaints.map((complaint: any) => (
+                      <TableRow key={complaint.id} hover>
+                        <TableCell>{new Date(complaint.date).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <Typography 
+                            sx={{ cursor: 'pointer', color: 'primary.main', '&:hover': { textDecoration: 'underline' } }}
+                            onClick={() => navigate(`/admin/tenants/${complaint.id}`)}
+                          >
+                            {complaint.tenantName}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>{complaint.category}</TableCell>
+                        <TableCell>{complaint.title}</TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={complaint.priority} 
+                            color={getPriorityColor(complaint.priority) as any}
+                            size="small"
+                            variant="outlined"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={complaint.status} 
+                            color={getComplaintStatusColor(complaint.status) as any}
+                            size="small"
+                            variant="filled"
+                          />
+                        </TableCell>
+                        <TableCell>{complaint.resolvedDate ? new Date(complaint.resolvedDate).toLocaleDateString() : '-'}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              
+              <Box display="flex" justifyContent="center" mt={2}>
+                <Pagination 
+                  count={totalComplaintsPages}
+                  page={complaintsPage}
+                  onChange={(_, page) => setComplaintsPage(page)}
+                  color="primary"
+                  size="small"
+                />
+              </Box>
+            </>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setComplaintsOpen(false)} variant="contained">

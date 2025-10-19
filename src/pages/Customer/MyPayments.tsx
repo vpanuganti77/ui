@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -13,44 +13,59 @@ import { AttachMoney, Receipt, Schedule } from '@mui/icons-material';
 
 const MyPayments: React.FC = () => {
   const navigate = useNavigate();
-  const paymentHistory = [
-    {
-      id: '1',
-      amount: 8000,
-      type: 'rent',
-      month: '2024-03',
-      paymentDate: '2024-03-05',
-      status: 'paid',
-      paymentMethod: 'online',
-      transactionId: 'TXN123456',
-      lastModifiedBy: 'Admin',
-      lastModifiedDate: '2024-03-05T10:30:00Z'
-    },
-    {
-      id: '2',
-      amount: 8000,
-      type: 'rent',
-      month: '2024-02',
-      paymentDate: '2024-02-03',
-      status: 'paid',
-      paymentMethod: 'cash',
-      transactionId: null,
-      lastModifiedBy: 'Manager',
-      lastModifiedDate: '2024-02-03T14:20:00Z'
-    },
-    {
-      id: '3',
-      amount: 8000,
-      type: 'rent',
-      month: '2024-04',
-      paymentDate: null,
-      status: 'pending',
-      paymentMethod: null,
-      transactionId: null,
-      lastModifiedBy: 'System',
-      lastModifiedDate: '2024-04-01T09:00:00Z'
-    }
-  ];
+  const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
+  const [summary, setSummary] = useState<any>({ totalPaid: 0, pendingAmount: 0, nextDueDate: null, monthlyRent: 0 });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadPaymentData = async () => {
+      try {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const { getAll } = await import('../../services/fileDataService');
+        
+        // Get tenant data
+        const tenants = await getAll('tenants');
+        console.log('User:', user);
+        console.log('All tenants:', tenants);
+        const tenant = tenants.find((t: any) => 
+          t.email === user.email || 
+          t.name === user.name ||
+          t.email?.toLowerCase() === user.email?.toLowerCase()
+        );
+        console.log('Found tenant:', tenant);
+        
+        if (tenant) {
+          // Get payments for this tenant
+          const payments = await getAll('payments');
+          const tenantPayments = payments.filter((p: any) => p.tenantId === tenant.id);
+          
+          setPaymentHistory(tenantPayments);
+          
+          // Calculate summary
+          const totalPaid = tenantPayments.filter((p: any) => p.status === 'paid').reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0);
+          const pendingAmount = tenantPayments.filter((p: any) => p.status === 'pending').reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0);
+          
+          setSummary({
+            totalPaid,
+            pendingAmount,
+            nextDueDate: tenant.nextDueDate,
+            monthlyRent: Number(tenant.rent || 0)
+          });
+        }
+        
+        setLoading(false);
+      } catch (error) {
+        console.error('Error loading payment data:', error);
+        setLoading(false);
+      }
+    };
+    
+    loadPaymentData();
+  }, []);
+
+  if (loading) {
+    return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}><Typography>Loading...</Typography></Box>;
+  }
 
   const handlePaymentClick = (id: string) => {
     navigate(`/customer/payments/${id}`);
@@ -108,12 +123,7 @@ const MyPayments: React.FC = () => {
     }
   ];
 
-  const summary = {
-    totalPaid: 16000,
-    pendingAmount: 8000,
-    nextDueDate: '2024-04-05',
-    monthlyRent: 8000
-  };
+
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -187,7 +197,7 @@ const MyPayments: React.FC = () => {
                 Next Due Date
               </Typography>
               <Typography variant="h6">
-                {new Date(summary.nextDueDate).toLocaleDateString()}
+                {summary.nextDueDate ? new Date(summary.nextDueDate).toLocaleDateString() : 'N/A'}
               </Typography>
             </CardContent>
           </Card>

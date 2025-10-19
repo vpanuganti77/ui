@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -41,12 +41,50 @@ import {
   Announcement,
   ExitToApp,
 } from '@mui/icons-material';
+import { useNotifications } from '../../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 
 const TenantDashboard: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { notifications: contextNotifications, unreadCount } = useNotifications();
+  
+  // Auto-refresh complaints when complaint notifications are received
+  useEffect(() => {
+    const complaintNotifications = contextNotifications.filter(n => 
+      n.type === 'complaint_update' && !n.isRead
+    );
+    
+    if (complaintNotifications.length > 0) {
+      const refreshData = async () => {
+        try {
+          const user = JSON.parse(localStorage.getItem('user') || '{}');
+          const { getAll } = await import('../../services/fileDataService');
+          const tenants = await getAll('tenants');
+          const tenant = tenants.find((t: any) => 
+            t.email === user.email || t.name === user.name ||
+            t.email?.toLowerCase() === user.email?.toLowerCase()
+          );
+          
+          if (tenant) {
+            const complaints = await getAll('complaints');
+            const tenantComplaints = complaints.filter((c: any) => 
+              c.tenantId === tenant.id || c.tenantName === tenant.name
+            );
+            setRecentComplaints(tenantComplaints);
+            
+            // Force re-render of complaint cards
+            setRefreshKey(prev => prev + 1);
+          }
+        } catch (error) {
+          console.error('Error refreshing complaints:', error);
+        }
+      };
+      
+      refreshData();
+    }
+  }, [contextNotifications]);
   
   const [complaintOpen, setComplaintOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
@@ -61,74 +99,124 @@ const TenantDashboard: React.FC = () => {
     priority: 'medium'
   });
 
-  // Mock tenant data
-  const tenantData = {
-    name: 'John Doe',
-    room: 'R001',
-    rent: 8000,
-    pendingDues: 0,
-    nextDueDate: '2024-04-05',
-    joiningDate: '2024-01-15',
-    status: 'active'
-  };
+  const [tenantData, setTenantData] = useState<any>(null);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [recentComplaints, setRecentComplaints] = useState<any[]>([]);
+  const [paymentData, setPaymentData] = useState<any>({ history: [], summary: {} });
+  const [roomData, setRoomData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  const notifications = [
-    {
-      id: 1,
-      type: 'payment',
-      title: 'Rent Due Reminder',
-      message: 'Your rent for April 2024 is due on 5th April',
-      date: '2024-03-28',
-      read: false,
-      priority: 'high'
-    },
-    {
-      id: 2,
-      type: 'maintenance',
-      title: 'Maintenance Update',
-      message: 'Your AC repair complaint has been resolved',
-      date: '2024-03-25',
-      read: false,
-      priority: 'medium'
-    },
-    {
-      id: 3,
-      type: 'announcement',
-      title: 'Hostel Notice',
-      message: 'Water supply will be interrupted tomorrow from 10 AM to 2 PM',
-      date: '2024-03-24',
-      read: true,
-      priority: 'low'
-    }
-  ];
+  useEffect(() => {
+    const loadTenantData = async () => {
+      try {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const { getAll } = await import('../../services/fileDataService');
+        
+        // Get tenant data based on user email
+        const tenants = await getAll('tenants');
+        console.log('User:', user);
+        console.log('All tenants:', tenants);
+        const tenant = tenants.find((t: any) => 
+          t.email === user.email || 
+          t.name === user.name ||
+          t.email?.toLowerCase() === user.email?.toLowerCase()
+        );
+        console.log('Found tenant:', tenant);
+        
+        if (tenant) {
+          setTenantData(tenant);
+          
+          // Get all data in parallel
+          const [complaints, notices, payments, rooms] = await Promise.all([
+            getAll('complaints'),
+            getAll('notices'),
+            getAll('payments'),
+            getAll('rooms')
+          ]);
+          
+          // Set complaints
+          const tenantComplaints = complaints.filter((c: any) => c.tenantId === tenant.id || c.tenantName === tenant.name);
+          setRecentComplaints(tenantComplaints);
+          
+          // Set notices (combine with context notifications)
+          const hostelNotices = notices.filter((n: any) => n.hostelId === tenant.hostelId && n.status === 'active');
+          const staticNotifications = hostelNotices.map((n: any) => ({
+            id: n.id,
+            type: 'announcement',
+            title: n.title,
+            message: n.message,
+            date: n.createdAt,
+            read: false,
+            priority: n.priority || 'medium'
+          }));
+          
+          // Combine with real-time notifications from context
+          const allNotifications = [...contextNotifications, ...staticNotifications];
+          setNotifications(allNotifications);
+          
+          // Set payment data
+          const tenantPayments = payments.filter((p: any) => p.tenantId === tenant.id);
+          const totalPaid = tenantPayments.filter((p: any) => p.status === 'paid').reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0);
+          const pendingAmount = tenantPayments.filter((p: any) => p.status === 'pending').reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0);
+          setPaymentData({
+            history: tenantPayments,
+            summary: { totalPaid, pendingAmount, monthlyRent: Number(tenant.rent || 0) }
+          });
+          
+          // Set room data
+          const tenantRoom = rooms.find((r: any) => r.roomNumber === tenant.room || r.id === tenant.roomId);
+          setRoomData(tenantRoom);
+        }
+        
+        setLoading(false);
+      } catch (error) {
+        console.error('Error loading tenant data:', error);
+        setLoading(false);
+      }
+    };
+    
+    loadTenantData();
+  }, []);
 
-  const recentComplaints = [
-    {
-      id: 1,
-      title: 'AC not working',
-      status: 'in-progress',
-      date: '2024-03-20',
-      priority: 'high'
-    },
-    {
-      id: 2,
-      title: 'WiFi connectivity issue',
-      status: 'open',
-      date: '2024-03-18',
-      priority: 'medium'
-    }
-  ];
+  if (loading) {
+    return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}><Typography>Loading...</Typography></Box>;
+  }
 
-  const handleComplaintSubmit = (e: React.FormEvent) => {
+  if (!tenantData) {
+    return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}><Typography>Tenant data not found</Typography></Box>;
+  }
+
+  const handleComplaintSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Submit complaint:', complaintData);
-    setComplaintOpen(false);
-    setComplaintData({
-      title: '',
-      description: '',
-      category: 'maintenance',
-      priority: 'medium'
-    });
+    try {
+      const { create } = await import('../../services/fileDataService');
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      
+      await create('complaints', {
+        ...complaintData,
+        tenantId: tenantData.id,
+        tenantName: tenantData.name,
+        room: tenantData.room,
+        hostelId: tenantData.hostelId,
+        status: 'open',
+        createdAt: new Date().toISOString(),
+        createdBy: user.name
+      });
+      
+      setComplaintOpen(false);
+      setComplaintData({
+        title: '',
+        description: '',
+        category: 'maintenance',
+        priority: 'medium'
+      });
+      
+      // Refresh complaints data
+      window.location.reload();
+    } catch (error) {
+      console.error('Error submitting complaint:', error);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -152,24 +240,22 @@ const TenantDashboard: React.FC = () => {
     }
   };
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const totalUnreadCount = notifications.filter(n => !n.read).length + unreadCount;
 
   return (
     <Box>
       <Box display="flex" flexDirection={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} mb={3} gap={2}>
         <Typography variant="h4" sx={{ fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
-          Welcome, {tenantData.name}
+          Welcome, {tenantData?.name || 'Tenant'}
         </Typography>
         <Box display="flex" gap={1} alignItems="center">
-          <Badge badgeContent={unreadCount} color="error">
-            <IconButton onClick={() => setNotificationOpen(true)}>
-              <Notifications />
-            </IconButton>
-          </Badge>
           {!isMobile && (
-            <Button variant="outlined" startIcon={<Add />} onClick={() => setComplaintOpen(true)}>
-              New Complaint
-            </Button>
+            <>
+              <Button variant="outlined" startIcon={<Add />} onClick={() => setComplaintOpen(true)}>
+                New Complaint
+              </Button>
+
+            </>
           )}
         </Box>
       </Box>
@@ -184,7 +270,7 @@ const TenantDashboard: React.FC = () => {
                   Room Number
                 </Typography>
                 <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                  {tenantData.room}
+                  {tenantData?.room || 'N/A'}
                 </Typography>
               </Box>
               <Hotel color="primary" sx={{ fontSize: 40 }} />
@@ -200,7 +286,7 @@ const TenantDashboard: React.FC = () => {
                   Monthly Rent
                 </Typography>
                 <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                  ₹{tenantData.rent.toLocaleString()}
+                  ₹{Number(tenantData?.rent || 0).toLocaleString()}
                 </Typography>
               </Box>
               <AttachMoney color="success" sx={{ fontSize: 40 }} />
@@ -215,11 +301,11 @@ const TenantDashboard: React.FC = () => {
                 <Typography color="textSecondary" gutterBottom sx={{ fontSize: '0.875rem' }}>
                   Pending Dues
                 </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: tenantData.pendingDues > 0 ? 'error.main' : 'success.main' }}>
-                  ₹{tenantData.pendingDues.toLocaleString()}
+                <Typography variant="h4" sx={{ fontWeight: 700, color: (tenantData?.pendingDues || 0) > 0 ? 'error.main' : 'success.main' }}>
+                  ₹{Number(tenantData?.pendingDues || 0).toLocaleString()}
                 </Typography>
               </Box>
-              <Payment color={tenantData.pendingDues > 0 ? 'error' : 'success'} sx={{ fontSize: 40 }} />
+              <Payment color={(tenantData?.pendingDues || 0) > 0 ? 'error' : 'success'} sx={{ fontSize: 40 }} />
             </Box>
           </CardContent>
         </Card>
@@ -232,7 +318,7 @@ const TenantDashboard: React.FC = () => {
                   Next Due
                 </Typography>
                 <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                  {new Date(tenantData.nextDueDate).toLocaleDateString()}
+                  {tenantData?.nextDueDate ? new Date(tenantData.nextDueDate).toLocaleDateString() : 'N/A'}
                 </Typography>
               </Box>
               <Notifications color="info" sx={{ fontSize: 40 }} />
@@ -304,15 +390,15 @@ const TenantDashboard: React.FC = () => {
             <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
               Recent Complaints
             </Typography>
-            <Box>
-              {recentComplaints.map((complaint) => (
+            <Box key={tenantData?.lastUpdated || 'complaints'}>
+              {recentComplaints.length > 0 ? recentComplaints.map((complaint) => (
                 <Box key={complaint.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 1.5, borderBottom: '1px solid #eee' }}>
                   <Box>
                     <Typography variant="body2" sx={{ fontWeight: 500 }}>
                       {complaint.title}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {new Date(complaint.date).toLocaleDateString()}
+                      {complaint.createdAt ? new Date(complaint.createdAt).toLocaleDateString() : complaint.date ? new Date(complaint.date).toLocaleDateString() : 'N/A'}
                     </Typography>
                   </Box>
                   <Box display="flex" gap={1}>
@@ -328,7 +414,11 @@ const TenantDashboard: React.FC = () => {
                     />
                   </Box>
                 </Box>
-              ))}
+              )) : (
+                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
+                  No complaints submitted
+                </Typography>
+              )}
             </Box>
           </CardContent>
         </Card>
@@ -456,46 +546,82 @@ const TenantDashboard: React.FC = () => {
           {selectedAction === 'payments' && (
             <Box>
               <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2, mb: 3 }}>
-                <Card><CardContent><Typography variant="body2" color="text.secondary">Total Paid</Typography><Typography variant="h6" color="success.main">₹16,000</Typography></CardContent></Card>
-                <Card><CardContent><Typography variant="body2" color="text.secondary">Pending</Typography><Typography variant="h6" color="warning.main">₹8,000</Typography></CardContent></Card>
-                <Card><CardContent><Typography variant="body2" color="text.secondary">Next Due</Typography><Typography variant="h6">Apr 5, 2024</Typography></CardContent></Card>
+                <Card><CardContent><Typography variant="body2" color="text.secondary">Total Paid</Typography><Typography variant="h6" color="success.main">₹{paymentData.summary.totalPaid?.toLocaleString() || '0'}</Typography></CardContent></Card>
+                <Card><CardContent><Typography variant="body2" color="text.secondary">Pending</Typography><Typography variant="h6" color="warning.main">₹{paymentData.summary.pendingAmount?.toLocaleString() || '0'}</Typography></CardContent></Card>
+                <Card><CardContent><Typography variant="body2" color="text.secondary">Monthly Rent</Typography><Typography variant="h6">₹{paymentData.summary.monthlyRent?.toLocaleString() || '0'}</Typography></CardContent></Card>
               </Box>
               <List>
-                <ListItem><ListItemText primary="March 2024 - ₹8,000" secondary="Paid on Mar 5, 2024" /><Chip label="Paid" color="success" size="small" /></ListItem>
-                <ListItem><ListItemText primary="February 2024 - ₹8,000" secondary="Paid on Feb 3, 2024" /><Chip label="Paid" color="success" size="small" /></ListItem>
-                <ListItem><ListItemText primary="April 2024 - ₹8,000" secondary="Due on Apr 5, 2024" /><Chip label="Pending" color="warning" size="small" /></ListItem>
+                {paymentData.history.slice(0, 5).map((payment: any) => (
+                  <ListItem key={payment.id}>
+                    <ListItemText 
+                      primary={`${payment.month}/${payment.year} - ₹${Number(payment.amount || 0).toLocaleString()}`} 
+                      secondary={payment.paymentDate ? `Paid on ${new Date(payment.paymentDate).toLocaleDateString()}` : 'Payment pending'} 
+                    />
+                    <Chip label={payment.status} color={getStatusColor(payment.status) as any} size="small" />
+                  </ListItem>
+                ))}
+                {paymentData.history.length === 0 && (
+                  <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>No payment history available</Typography>
+                )}
               </List>
             </Box>
           )}
           {selectedAction === 'complaints' && (
-            <Box>
+            <Box key={`complaints-section-${refreshKey}`}>
               <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 2, mb: 3 }}>
-                <Card><CardContent><Typography variant="body2" color="text.secondary">Open</Typography><Typography variant="h6" color="error.main">1</Typography></CardContent></Card>
-                <Card><CardContent><Typography variant="body2" color="text.secondary">In Progress</Typography><Typography variant="h6" color="warning.main">1</Typography></CardContent></Card>
-                <Card><CardContent><Typography variant="body2" color="text.secondary">Resolved</Typography><Typography variant="h6" color="success.main">3</Typography></CardContent></Card>
+                <Card><CardContent><Typography variant="body2" color="text.secondary">Open</Typography><Typography variant="h6" color="error.main">{recentComplaints.filter(c => c.status === 'open').length}</Typography></CardContent></Card>
+                <Card><CardContent><Typography variant="body2" color="text.secondary">In Progress</Typography><Typography variant="h6" color="warning.main">{recentComplaints.filter(c => c.status === 'in-progress').length}</Typography></CardContent></Card>
+                <Card><CardContent><Typography variant="body2" color="text.secondary">Resolved</Typography><Typography variant="h6" color="success.main">{recentComplaints.filter(c => c.status === 'resolved').length}</Typography></CardContent></Card>
               </Box>
-              <List>
-                <ListItem><ListItemText primary="AC not working" secondary="Submitted on Mar 20, 2024" /><Chip label="In Progress" color="warning" size="small" /></ListItem>
-                <ListItem><ListItemText primary="WiFi connectivity issue" secondary="Submitted on Mar 18, 2024" /><Chip label="Open" color="error" size="small" /></ListItem>
-                <ListItem><ListItemText primary="Cleaning request" secondary="Submitted on Mar 15, 2024" /><Chip label="Resolved" color="success" size="small" /></ListItem>
+              <List key={`complaint-list-${refreshKey}`}>
+                {recentComplaints.slice(0, 5).map((complaint: any) => (
+                  <ListItem key={`${complaint.id}-${complaint.status}-${complaint.updatedAt}`}>
+                    <ListItemText 
+                      primary={complaint.title} 
+                      secondary={`Submitted on ${new Date(complaint.createdAt || complaint.date).toLocaleDateString()}`} 
+                    />
+                    <Chip label={complaint.status} color={getStatusColor(complaint.status) as any} size="small" />
+                  </ListItem>
+                ))}
+                {recentComplaints.length === 0 && (
+                  <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>No complaints submitted</Typography>
+                )}
               </List>
             </Box>
           )}
           {selectedAction === 'room' && (
             <Box>
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 3 }}>
-                <Card><CardContent><Typography variant="h6" gutterBottom>Room {tenantData.room}</Typography><Typography variant="body2" color="text.secondary" gutterBottom>Type</Typography><Typography variant="body1">Single Occupancy</Typography><Typography variant="body2" color="text.secondary" gutterBottom sx={{ mt: 2 }}>Floor</Typography><Typography variant="body1">1st Floor</Typography></CardContent></Card>
-                <Card><CardContent><Typography variant="h6" gutterBottom>Rent Details</Typography><Typography variant="body2" color="text.secondary" gutterBottom>Monthly Rent</Typography><Typography variant="h6" color="primary.main">₹{tenantData.rent.toLocaleString()}</Typography><Typography variant="body2" color="text.secondary" gutterBottom sx={{ mt: 2 }}>Security Deposit</Typography><Typography variant="body1">₹16,000</Typography></CardContent></Card>
+                <Card><CardContent><Typography variant="h6" gutterBottom>Room {tenantData?.room || 'N/A'}</Typography><Typography variant="body2" color="text.secondary" gutterBottom>Type</Typography><Typography variant="body1">{roomData?.type || 'N/A'}</Typography><Typography variant="body2" color="text.secondary" gutterBottom sx={{ mt: 2 }}>Floor</Typography><Typography variant="body1">{roomData?.floor || 'N/A'}</Typography></CardContent></Card>
+                <Card><CardContent><Typography variant="h6" gutterBottom>Rent Details</Typography><Typography variant="body2" color="text.secondary" gutterBottom>Monthly Rent</Typography><Typography variant="h6" color="primary.main">₹{Number(tenantData?.rent || 0).toLocaleString()}</Typography><Typography variant="body2" color="text.secondary" gutterBottom sx={{ mt: 2 }}>Capacity</Typography><Typography variant="body1">{roomData?.capacity || 'N/A'} bed(s)</Typography></CardContent></Card>
               </Box>
-              <Card sx={{ mt: 2 }}><CardContent><Typography variant="h6" gutterBottom>Amenities</Typography><Box display="flex" flexWrap="wrap" gap={1}>{['WiFi', 'AC', 'Attached Bathroom', 'Study Table', 'Wardrobe'].map(amenity => <Chip key={amenity} label={amenity} size="small" variant="outlined" />)}</Box></CardContent></Card>
+              {roomData?.amenities && (
+                <Card sx={{ mt: 2 }}><CardContent><Typography variant="h6" gutterBottom>Amenities</Typography><Typography variant="body2">{roomData.amenities}</Typography></CardContent></Card>
+              )}
             </Box>
           )}
           {selectedAction === 'notices' && (
-            <List>
-              <ListItem><ListItemIcon><Announcement color="info" /></ListItemIcon><ListItemText primary="Water Supply Interruption" secondary="Tomorrow 10 AM - 2 PM for maintenance work" /></ListItem>
-              <ListItem><ListItemIcon><Announcement color="warning" /></ListItemIcon><ListItemText primary="Rent Due Reminder" secondary="April rent is due on 5th April 2024" /></ListItem>
-              <ListItem><ListItemIcon><Announcement color="success" /></ListItemIcon><ListItemText primary="WiFi Upgrade Complete" secondary="New high-speed internet is now available" /></ListItem>
-            </List>
+            <Box>
+              {notifications.length > 0 ? (
+                <List>
+                  {notifications.map((notice) => (
+                    <ListItem key={notice.id}>
+                      <ListItemIcon>
+                        <Announcement color={getPriorityColor(notice.priority) as any} />
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary={notice.title} 
+                        secondary={`${notice.message} - ${new Date(notice.date).toLocaleDateString()}`} 
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              ) : (
+                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 3 }}>
+                  No notices available
+                </Typography>
+              )}
+            </Box>
           )}
         </DialogContent>
       </Dialog>

@@ -29,16 +29,45 @@ const Login: React.FC = () => {
   const { login, isLoading } = useAuth();
   const navigate = useNavigate();
 
-  // Load saved credentials on component mount
+  // Load saved credentials and handle auto-login on component mount
   useEffect(() => {
-    const savedEmail = localStorage.getItem('rememberedEmail');
-    const savedPassword = localStorage.getItem('rememberedPassword');
-    if (savedEmail && savedPassword) {
-      setEmail(savedEmail);
-      setPassword(savedPassword);
-      setRememberMe(true);
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlEmail = urlParams.get('email');
+    const urlPassword = urlParams.get('password');
+    
+    if (urlEmail && urlPassword) {
+      try {
+        const decodedEmail = decodeURIComponent(urlEmail);
+        const decodedPassword = decodeURIComponent(urlPassword);
+        setEmail(decodedEmail);
+        setPassword(decodedPassword);
+        // Auto-submit the form
+        setTimeout(() => {
+          login(decodedEmail, decodedPassword).then(() => {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            const redirectPath = user.role === 'admin' ? '/admin/dashboard' : '/tenant/dashboard';
+            navigate(redirectPath);
+          }).catch((err) => {
+            setError('Auto-login failed. Please try manually.');
+          });
+        }, 100);
+        return;
+      } catch (error) {
+        setError('Invalid login link');
+      }
     }
-  }, []);
+    
+    // Only load saved credentials if not auto-login
+    if (!urlEmail && !urlPassword) {
+      const savedEmail = localStorage.getItem('rememberedEmail');
+      const savedPassword = localStorage.getItem('rememberedPassword');
+      if (savedEmail && savedPassword) {
+        setEmail(savedEmail);
+        setPassword(savedPassword);
+        setRememberMe(true);
+      }
+    }
+  }, [login, navigate]);
 
   const validateForm = () => {
     if (!email.trim()) return 'Email is required';
@@ -73,7 +102,18 @@ const Login: React.FC = () => {
       const redirectPath = user.role === 'admin' ? '/admin/dashboard' : '/tenant/dashboard';
       navigate(redirectPath);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed');
+      let errorMessage = err.message || 'Login failed';
+      
+      // Handle specific error cases
+      if (err.status === 423) {
+        // Account locked
+        errorMessage = err.message;
+      } else if (err.attemptsRemaining !== undefined) {
+        // Failed login with attempts remaining
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     }
   };
 

@@ -3,7 +3,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import { useSessionTimeout } from './hooks/useSessionTimeout';
 import Layout from './components/Layout';
 import Login from './pages/Auth/Login';
 
@@ -50,7 +52,9 @@ function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
-        <Router>
+        <NotificationProvider>
+          <SessionTimeoutWrapper />
+          <Router>
           <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<Login />} />
@@ -145,10 +149,16 @@ function App() {
             <Route path="/home" element={<HomePage />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
-        </Router>
+          </Router>
+        </NotificationProvider>
       </AuthProvider>
     </ThemeProvider>
   );
 }
+
+const SessionTimeoutWrapper: React.FC = () => {
+  useSessionTimeout();
+  return null;
+};
 
 export default App;

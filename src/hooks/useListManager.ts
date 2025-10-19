@@ -87,7 +87,7 @@ export const useListManager = <T extends Record<string, any>>({
     setDeleteId(null);
   };
 
-  const handleSubmit = async (formData: any, customLogic?: (formData: any, editingItem: T | null) => T) => {
+  const handleSubmit = async (formData: any, customLogic?: (formData: any, editingItem: T | null) => T, onAfterCreate?: (newItem: T) => void) => {
     try {
       if (editingItem) {
         const updatedItem = customLogic ? customLogic(formData, editingItem) : { ...editingItem, ...formData };
@@ -101,6 +101,9 @@ export const useListManager = <T extends Record<string, any>>({
         const newItem = await create(entityKey as any, newItemData);
         setData([...data, newItem]);
         showSnackbar(`${entityName} added successfully`);
+        if (onAfterCreate) {
+          onAfterCreate(newItem);
+        }
       }
       
       setOpen(false);

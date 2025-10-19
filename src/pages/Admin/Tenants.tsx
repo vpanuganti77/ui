@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Typography,
@@ -7,6 +7,7 @@ import {
 import { GridColDef } from '@mui/x-data-grid';
 import ListPage from '../../components/common/ListPage';
 import TenantDialog from '../../components/tenant/TenantDialog';
+import TenantCredentialsDialog from '../../components/tenant/TenantCredentialsDialog';
 import { tenantFields } from '../../components/common/FormConfigs';
 import { tenantCardFields } from '../../components/common/MobileCardConfigs';
 
@@ -14,12 +15,21 @@ const initialTenants: any[] = [];
 
 const Tenants: React.FC = () => {
   const navigate = useNavigate();
+  const [credentialsDialog, setCredentialsDialog] = useState<{
+    open: boolean;
+    credentials: any;
+    tenantName: string;
+  }>({ open: false, credentials: null, tenantName: '' });
 
   const handleItemClick = (id: string) => {
     navigate(`/admin/tenants/${id}`);
   };
 
   const customSubmitLogic = (formData: any, editingItem: any) => {
+    const userData = localStorage.getItem('user');
+    const user = userData ? JSON.parse(userData) : null;
+    const hostelId = user?.hostelId || '';
+    
     if (editingItem) {
       return {
         ...editingItem,
@@ -36,7 +46,6 @@ const Tenants: React.FC = () => {
       };
     } else {
       return {
-        id: (Math.random() * 1000).toString(),
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
@@ -51,8 +60,19 @@ const Tenants: React.FC = () => {
         lastModifiedDate: new Date().toISOString(),
         aadharNumber: formData.aadharNumber,
         aadharFront: formData.aadharFront,
-        aadharBack: formData.aadharBack
+        aadharBack: formData.aadharBack,
+        hostelId
       };
+    }
+  };
+  
+  const handleAfterCreate = (newItem: any) => {
+    if (newItem.userCredentials) {
+      setCredentialsDialog({
+        open: true,
+        credentials: newItem.userCredentials,
+        tenantName: newItem.name
+      });
     }
   };
 
@@ -127,28 +147,38 @@ const Tenants: React.FC = () => {
 
 
   return (
-    <ListPage
-      title="Tenants"
-      data={initialTenants}
-      entityKey="tenants"
-      columns={columns}
-      fields={tenantFields}
-      entityName="Tenant"
-      onItemClick={handleItemClick}
-      mobileCardConfig={{
-        titleField: 'name',
-        fields: [
-          { key: 'phone', label: 'Phone', value: 'phone' },
-          { key: 'roomId', label: 'Room', value: 'roomId' },
-          { key: 'rent', label: 'Rent', value: 'rent', render: (value: any) => value ? `₹${Number(value).toLocaleString()}` : '₹0' },
-          { key: 'status', label: 'Status', value: 'status' },
-          { key: 'pendingDues', label: 'Dues', value: 'pendingDues', render: (value: any) => value && value > 0 ? `₹${Number(value).toLocaleString()}` : '-' }
-        ]
-      }}
-      customSubmitLogic={customSubmitLogic}
-      additionalValidation={additionalValidation}
-      CustomDialog={TenantDialog}
-    />
+    <>
+      <ListPage
+        title="Tenants"
+        data={initialTenants}
+        entityKey="tenants"
+        columns={columns}
+        fields={tenantFields}
+        entityName="Tenant"
+        onItemClick={handleItemClick}
+        mobileCardConfig={{
+          titleField: 'name',
+          fields: [
+            { key: 'phone', label: 'Phone', value: 'phone' },
+            { key: 'roomId', label: 'Room', value: 'roomId' },
+            { key: 'rent', label: 'Rent', value: 'rent', render: (value: any) => value ? `₹${Number(value).toLocaleString()}` : '₹0' },
+            { key: 'status', label: 'Status', value: 'status' },
+            { key: 'pendingDues', label: 'Dues', value: 'pendingDues', render: (value: any) => value && value > 0 ? `₹${Number(value).toLocaleString()}` : '-' }
+          ]
+        }}
+        customSubmitLogic={customSubmitLogic}
+        additionalValidation={additionalValidation}
+        CustomDialog={TenantDialog}
+        onAfterCreate={handleAfterCreate}
+      />
+      
+      <TenantCredentialsDialog
+        open={credentialsDialog.open}
+        onClose={() => setCredentialsDialog({ open: false, credentials: null, tenantName: '' })}
+        credentials={credentialsDialog.credentials}
+        tenantName={credentialsDialog.tenantName}
+      />
+    </>
   );
 };
 

@@ -6,6 +6,7 @@ import { Receipt } from '@mui/icons-material';
 import ListPage from '../../components/common/ListPage';
 import { paymentFields } from '../../components/common/FormConfigs';
 import { paymentCardFields } from '../../components/common/MobileCardConfigs';
+import PaymentDialog from '../../components/PaymentDialog';
 
 const initialPayments = [
   {
@@ -152,6 +153,7 @@ const Payments: React.FC = () => {
       }}
       customSubmitLogic={customSubmitLogic}
       additionalActions={additionalActions}
+      CustomDialog={PaymentDialog}
     />
   );
 };

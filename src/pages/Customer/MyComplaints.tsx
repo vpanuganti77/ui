@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -19,40 +19,81 @@ import {
   Fab,
 } from '@mui/material';
 import { Add } from '@mui/icons-material';
+import { useNotifications } from '../../context/NotificationContext';
 
 const MyComplaints: React.FC = () => {
-  const [complaints, setComplaints] = useState([
-    {
-      _id: '1',
-      title: 'AC not working',
-      description: 'The air conditioner in my room is not cooling properly.',
-      category: 'maintenance',
-      priority: 'high',
-      status: 'in-progress',
-      createdAt: '2024-03-15T10:30:00Z',
-      adminNotes: 'Technician will visit tomorrow'
-    },
-    {
-      _id: '2',
-      title: 'WiFi connectivity issue',
-      description: 'Internet connection is very slow in my room.',
-      category: 'maintenance',
-      priority: 'medium',
-      status: 'open',
-      createdAt: '2024-03-14T14:20:00Z',
-      adminNotes: ''
-    },
-    {
-      _id: '3',
-      title: 'Cleaning request',
-      description: 'Common area needs cleaning.',
-      category: 'cleanliness',
-      priority: 'low',
-      status: 'resolved',
-      createdAt: '2024-03-13T09:15:00Z',
-      adminNotes: 'Cleaning completed'
+  const [complaints, setComplaints] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const { notifications: contextNotifications } = useNotifications();
+  
+  // Auto-refresh complaints when complaint notifications are received
+  useEffect(() => {
+    const complaintNotifications = contextNotifications.filter(n => 
+      n.type === 'complaint_update' && !n.isRead
+    );
+    
+    if (complaintNotifications.length > 0) {
+      const refreshComplaints = async () => {
+        try {
+          const user = JSON.parse(localStorage.getItem('user') || '{}');
+          const { getAll } = await import('../../services/fileDataService');
+          const tenants = await getAll('tenants');
+          const tenant = tenants.find((t: any) => 
+            t.email === user.email || t.name === user.name ||
+            t.email?.toLowerCase() === user.email?.toLowerCase()
+          );
+          
+          if (tenant) {
+            const allComplaints = await getAll('complaints');
+            const tenantComplaints = allComplaints.filter((c: any) => 
+              c.tenantId === tenant.id || c.tenantName === tenant.name
+            );
+            setComplaints(tenantComplaints);
+            setRefreshKey(prev => prev + 1);
+          }
+        } catch (error) {
+          console.error('Error refreshing complaints:', error);
+        }
+      };
+      
+      refreshComplaints();
     }
-  ]);
+  }, [contextNotifications]);
+
+  useEffect(() => {
+    const loadComplaints = async () => {
+      try {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const { getAll } = await import('../../services/fileDataService');
+        
+        // Get tenant data
+        const tenants = await getAll('tenants');
+        console.log('User:', user);
+        console.log('All tenants:', tenants);
+        const tenant = tenants.find((t: any) => 
+          t.email === user.email || 
+          t.name === user.name ||
+          t.email?.toLowerCase() === user.email?.toLowerCase()
+        );
+        console.log('Found tenant:', tenant);
+        
+        if (tenant) {
+          // Get complaints for this tenant
+          const allComplaints = await getAll('complaints');
+          const tenantComplaints = allComplaints.filter((c: any) => c.tenantId === tenant.id || c.tenantName === tenant.name);
+          setComplaints(tenantComplaints);
+        }
+        
+        setLoading(false);
+      } catch (error) {
+        console.error('Error loading complaints:', error);
+        setLoading(false);
+      }
+    };
+    
+    loadComplaints();
+  }, []);
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
@@ -61,16 +102,38 @@ const MyComplaints: React.FC = () => {
     priority: 'medium'
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Submit complaint:', formData);
-    setOpen(false);
-    setFormData({
-      title: '',
-      description: '',
-      category: '',
-      priority: 'medium'
-    });
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const { create } = await import('../../services/fileDataService');
+      
+      const complaintData = {
+        ...formData,
+        tenantId: user.tenantId || user.id,
+        tenantName: user.name,
+        tenantPhone: user.phone,
+        room: user.room,
+        hostel: user.hostelName || 'Hostel',
+        hostelId: user.hostelId,
+        status: 'open',
+        createdAt: new Date().toISOString(),
+        createdBy: user.name
+      };
+      
+      const newComplaint = await create('complaints', complaintData);
+      setComplaints([newComplaint, ...complaints]);
+      
+      setOpen(false);
+      setFormData({
+        title: '',
+        description: '',
+        category: '',
+        priority: 'medium'
+      });
+    } catch (error) {
+      console.error('Error submitting complaint:', error);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -110,14 +173,14 @@ const MyComplaints: React.FC = () => {
       </Box>
 
       {/* Summary Cards */}
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 3 }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 3 }} key={`tenant-complaint-stats-${refreshKey}`}>
         <Card sx={{ minWidth: 150, flex: '1 1 150px' }}>
           <CardContent>
             <Typography color="textSecondary" gutterBottom>
               Open
             </Typography>
             <Typography variant="h5" color="error.main">
-              1
+              {complaints.filter(c => c.status === 'open').length}
             </Typography>
           </CardContent>
         </Card>
@@ -127,7 +190,7 @@ const MyComplaints: React.FC = () => {
               In Progress
             </Typography>
             <Typography variant="h5" color="warning.main">
-              1
+              {complaints.filter(c => c.status === 'in-progress').length}
             </Typography>
           </CardContent>
         </Card>
@@ -137,16 +200,24 @@ const MyComplaints: React.FC = () => {
               Resolved
             </Typography>
             <Typography variant="h5" color="success.main">
-              1
+              {complaints.filter(c => c.status === 'resolved').length}
             </Typography>
           </CardContent>
         </Card>
       </Box>
 
       {/* Complaints List */}
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {complaints.map((complaint) => (
-          <Card key={complaint._id}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }} key={`tenant-complaint-list-${refreshKey}`}>
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+            <Typography>Loading complaints...</Typography>
+          </Box>
+        ) : complaints.length === 0 ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+            <Typography color="text.secondary">No complaints found</Typography>
+          </Box>
+        ) : complaints.map((complaint) => (
+          <Card key={complaint.id || complaint._id}>
             <CardContent>
               <Box display="flex" justifyContent="space-between" alignItems="start" mb={2}>
                 <Typography variant="h6">{complaint.title}</Typography>

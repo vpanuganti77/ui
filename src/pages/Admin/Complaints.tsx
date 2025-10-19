@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -12,56 +12,22 @@ import {
   MenuItem,
   Card,
   CardContent,
+
 } from '@mui/material';
 import { GridColDef } from '@mui/x-data-grid';
 import { Search, Download, Refresh, NotificationsActive, Warning, ReportProblem, Schedule, CheckCircle, PriorityHigh } from '@mui/icons-material';
 import ListPage from '../../components/common/ListPage';
 import { complaintFields } from '../../components/common/FormConfigs';
 import { complaintCardFields } from '../../components/common/MobileCardConfigs';
+import AdminComplaintDialog from '../../components/AdminComplaintDialog';
 
-const initialComplaints = [
-  {
-    id: '1',
-    title: 'AC not working',
-    description: 'The air conditioner in room R001 is not cooling properly.',
-    category: 'maintenance',
-    priority: 'high',
-    status: 'open',
-    tenantName: 'John Doe',
-    tenantPhone: '9876543210',
-    room: 'R001',
-    hostel: 'Main Block',
-    createdAt: '2024-03-15T10:30:00Z',
-    updatedAt: '2024-03-15T10:30:00Z',
-    assignedTo: '',
-    adminNotes: '',
-    resolutionNotes: '',
-    photos: ['ac-issue-1.jpg'],
-    isOverdue: true
-  },
-  {
-    id: '2',
-    title: 'Water leakage',
-    description: 'There is water leakage in the bathroom ceiling.',
-    category: 'maintenance',
-    priority: 'medium',
-    status: 'in-progress',
-    tenantName: 'Jane Smith',
-    tenantPhone: '9876543211',
-    room: 'R205',
-    hostel: 'Block A',
-    createdAt: '2024-03-14T14:20:00Z',
-    updatedAt: '2024-03-16T09:15:00Z',
-    assignedTo: 'Maintenance Team',
-    adminNotes: 'Plumber contacted, will fix tomorrow',
-    resolutionNotes: '',
-    photos: ['leak-1.jpg', 'leak-2.jpg'],
-    isOverdue: false
-  }
-];
+
 
 const Complaints: React.FC = () => {
-  const [complaints] = useState(initialComplaints);
+  const [complaints, setComplaints] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
+
   const [filters, setFilters] = useState({
     search: '',
     status: '',
@@ -70,24 +36,45 @@ const Complaints: React.FC = () => {
     dateRange: 'all'
   });
 
+  useEffect(() => {
+    const loadComplaints = async () => {
+      try {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const { getAll } = await import('../../services/fileDataService');
+        const allComplaints = await getAll('complaints');
+        const hostelComplaints = allComplaints.filter((c: any) => c.hostelId === user.hostelId);
+        setComplaints(hostelComplaints);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error loading complaints:', error);
+        setLoading(false);
+      }
+    };
+    loadComplaints();
+  }, []);
+
   const customSubmitLogic = (formData: any, editingItem: any) => {
     if (editingItem) {
-      return { ...editingItem, ...formData };
-    } else {
-      return {
-        id: (Math.random() * 1000).toString(),
-        ...formData,
-        status: 'open',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        assignedTo: '',
-        adminNotes: '',
-        resolutionNotes: '',
-        photos: [],
-        isOverdue: false
-      };
+      // Refresh complaints data after update
+      setTimeout(async () => {
+        try {
+          const user = JSON.parse(localStorage.getItem('user') || '{}');
+          const { getAll } = await import('../../services/fileDataService');
+          const allComplaints = await getAll('complaints');
+          const hostelComplaints = allComplaints.filter((c: any) => c.hostelId === user.hostelId);
+          setComplaints(hostelComplaints);
+          setRefreshKey(prev => prev + 1);
+        } catch (error) {
+          console.error('Error refreshing complaints:', error);
+        }
+      }, 100);
+      
+      return { ...editingItem, ...formData, updatedAt: new Date().toISOString() };
     }
+    return editingItem;
   };
+
+
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -95,6 +82,7 @@ const Complaints: React.FC = () => {
       case 'in-progress': return 'warning';
       case 'resolved': return 'success';
       case 'closed': return 'default';
+      case 'duplicate': return 'info';
       default: return 'default';
     }
   };
@@ -163,15 +151,14 @@ const Complaints: React.FC = () => {
     {
       field: 'tenantName',
       headerName: 'Tenant',
-      flex: 1,
-      minWidth: 120,
+      width: 250,
       renderCell: (params) => (
-        <Box>
-          <Typography variant="body2" sx={{ fontWeight: 500 }}>
-            {params.value}
+        <Box sx={{ py: 0.5, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <Typography variant="body2" sx={{ fontWeight: 500, lineHeight: 1.2 }}>
+            {params.value || 'N/A'}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {params.row.room} • {params.row.hostel}
+          <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.2 }}>
+            Room {params.row.room || 'N/A'}
           </Typography>
         </Box>
       )
@@ -213,7 +200,7 @@ const Complaints: React.FC = () => {
       width: 80,
       renderCell: (params) => (
         <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
-          {new Date(params.value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          {params.value ? new Date(params.value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}
         </Typography>
       )
     }
@@ -234,7 +221,7 @@ const Complaints: React.FC = () => {
   );
 
   const statsCards = (
-    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: '1fr 1fr 1fr 1fr' }, gap: 3, mb: 3 }}>
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: '1fr 1fr 1fr 1fr' }, gap: 3, mb: 3 }} key={`admin-stats-${refreshKey}`}>
       <Card sx={{ background: 'linear-gradient(135deg, #ff5722 0%, #ff7043 100%)', color: 'white' }}>
         <CardContent>
           <Box display="flex" alignItems="center" justifyContent="space-between">
@@ -366,11 +353,12 @@ const Complaints: React.FC = () => {
       {filtersCard}
       <ListPage
         title="Complaints"
-        data={[]}
+        data={filteredComplaints}
         columns={columns}
         fields={complaintFields}
         entityName="Complaint"
         entityKey="complaints"
+        rowHeight={70}
         mobileCardConfig={{
           titleField: 'title',
           fields: [
@@ -382,8 +370,13 @@ const Complaints: React.FC = () => {
           ]
         }}
         customSubmitLogic={customSubmitLogic}
+        hideAdd={true}
+        hideDelete={true}
         additionalActions={additionalActions}
+        CustomDialog={AdminComplaintDialog}
       />
+      
+
     </Box>
   );
 };

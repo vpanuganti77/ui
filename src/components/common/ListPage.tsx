@@ -38,6 +38,7 @@ interface ListPageProps<T> {
   entityName: string;
   entityKey?: string;
   idField?: string;
+  rowHeight?: number;
   onItemClick?: (id: string) => void;
   renderMobileCard?: (item: T, onEdit: (id: string) => void, onDelete: (id: string) => void) => React.ReactNode;
   mobileCardConfig?: {
@@ -52,6 +53,7 @@ interface ListPageProps<T> {
   hideActions?: boolean;
   hideAdd?: boolean;
   conditionalEdit?: (item: T) => boolean;
+  onAfterCreate?: (newItem: T) => void;
   CustomDialog?: React.ComponentType<{
     open: boolean;
     onClose: () => void;
@@ -68,6 +70,7 @@ const ListPage = <T extends Record<string, any>>({
   entityName,
   entityKey = 'default',
   idField = 'id',
+  rowHeight = 52,
   onItemClick,
   renderMobileCard,
   mobileCardConfig,
@@ -79,6 +82,7 @@ const ListPage = <T extends Record<string, any>>({
   hideActions = false,
   hideAdd = false,
   conditionalEdit,
+  onAfterCreate,
   CustomDialog
 }: ListPageProps<T>) => {
   const navigate = useNavigate();
@@ -108,16 +112,37 @@ const ListPage = <T extends Record<string, any>>({
   });
 
   const handleSubmit = (formData: any) => {
-    // Check unique constraints
+    // Get current user's hostel for scoped validation
+    const userData = localStorage.getItem('user');
+    let currentHostelId: string | null = null;
+    let currentUser: any = null;
+    if (userData) {
+      try {
+        currentUser = JSON.parse(userData);
+        currentHostelId = currentUser.hostelId;
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+      }
+    }
+
+    // Check unique constraints within hostel scope
     const uniqueFields = ['email', 'phone', 'name', 'roomNumber', 'aadharNumber'];
     for (const field of uniqueFields) {
       if (formData[field]) {
-        const existing = data.find(item => 
-          item[field]?.toLowerCase() === formData[field]?.toLowerCase() && 
-          item[idField] !== editingItem?.[idField]
-        );
+        const existing = data.find(item => {
+          // For global entities (users, hostels), check globally
+          if (['users', 'hostels'].includes(entityKey)) {
+            return item[field]?.toLowerCase() === formData[field]?.toLowerCase() && 
+                   item[idField] !== editingItem?.[idField];
+          }
+          // For hostel-scoped entities, check within same hostel
+          return item[field]?.toLowerCase() === formData[field]?.toLowerCase() && 
+                 item[idField] !== editingItem?.[idField] &&
+                 item.hostelId === currentHostelId;
+        });
         if (existing) {
-          showSnackbar(`${field.charAt(0).toUpperCase() + field.slice(1)} already exists`, 'error');
+          const scope = ['users', 'hostels'].includes(entityKey) ? '' : ' in this hostel';
+          showSnackbar(`${field.charAt(0).toUpperCase() + field.slice(1)} already exists${scope}`, 'error');
           return;
         }
       }
@@ -132,7 +157,24 @@ const ListPage = <T extends Record<string, any>>({
       }
     }
 
-    baseHandleSubmit(formData, customSubmitLogic);
+    baseHandleSubmit(formData, customSubmitLogic, onAfterCreate);
+  };
+
+  const shouldHideAddButton = () => {
+    // Only tenants can add complaints
+    if (entityKey === 'complaints') {
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          return user.role !== 'tenant';
+        } catch (error) {
+          return true;
+        }
+      }
+      return true;
+    }
+    return false;
   };
 
   // Add action columns to grid columns
@@ -189,7 +231,7 @@ const ListPage = <T extends Record<string, any>>({
         {!isMobile && (
           <Box display="flex" gap={1}>
             {additionalActions}
-            {!hideAdd && (
+            {!hideAdd && !shouldHideAddButton() && (
               <Button variant="contained" startIcon={<Add />} onClick={handleAdd} size="medium">
                 Add {entityName}
               </Button>
@@ -229,7 +271,7 @@ const ListPage = <T extends Record<string, any>>({
               console.log('getRowId called with row:', row, 'idField:', idField, 'result:', row[idField]);
               return row[idField] || row.id || row._id || Math.random().toString();
             }}
-            rowHeight={52}
+            rowHeight={rowHeight}
             disableRowSelectionOnClick
             checkboxSelection={false}
           />
@@ -280,7 +322,7 @@ const ListPage = <T extends Record<string, any>>({
         </Alert>
       </Snackbar>
       
-      {isMobile && !hideAdd && (
+      {isMobile && !hideAdd && !shouldHideAddButton() && (
         <Fab
           color="primary"
           sx={{ position: 'fixed', bottom: 24, right: 24, zIndex: 1000 }}

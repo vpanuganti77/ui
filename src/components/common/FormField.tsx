@@ -22,7 +22,7 @@ import { CameraAlt } from '@mui/icons-material';
 export interface FieldConfig {
   name: string;
   label: string;
-  type: 'text' | 'email' | 'password' | 'number' | 'date' | 'month' | 'select' | 'multiselect' | 'radio' | 'checkbox' | 'switch' | 'textarea' | 'file' | 'camera';
+  type: 'text' | 'email' | 'password' | 'number' | 'date' | 'month' | 'select' | 'multiselect' | 'radio' | 'checkbox' | 'switch' | 'textarea' | 'file' | 'camera' | 'chips';
   required?: boolean;
   options?: { value: string; label: string; rent?: number }[];
   loadOptions?: (editingItem?: any) => Promise<{ value: string; label: string; rent?: number }[]>;
@@ -88,14 +88,18 @@ const FormField: React.FC<FormFieldProps> = ({
       );
 
     case 'multiselect':
+      const selectedValues = Array.isArray(value) ? value : [];
       return (
         <FormControl sx={fieldStyle} error={!!error}>
           <InputLabel>{config.label}</InputLabel>
           <Select
             multiple
-            value={value || []}
+            value={selectedValues}
             label={config.label}
-            onChange={(e) => handleChange(e.target.value)}
+            onChange={(e) => {
+              const newValue = typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value;
+              handleChange(newValue);
+            }}
             input={<OutlinedInput label={config.label} />}
             renderValue={(selected) => (
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
@@ -110,7 +114,7 @@ const FormField: React.FC<FormFieldProps> = ({
           >
             {config.options?.map((option) => (
               <MenuItem key={option.value} value={option.value}>
-                <Checkbox checked={(value || []).indexOf(option.value) > -1} />
+                <Checkbox checked={selectedValues.indexOf(option.value) > -1} />
                 {option.label}
               </MenuItem>
             ))}
@@ -244,6 +248,41 @@ const FormField: React.FC<FormFieldProps> = ({
           {value && (
             <Typography variant="body2" color="success.main" sx={{ mt: 1 }}>
               ✓ {value.name || 'File selected'}
+            </Typography>
+          )}
+        </Box>
+      );
+
+    case 'chips':
+      const selectedChips = Array.isArray(value) ? value : [];
+      return (
+        <Box sx={fieldStyle}>
+          <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+            {config.label}
+          </Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            {config.options?.map((option) => {
+              const isSelected = selectedChips.includes(option.value);
+              return (
+                <Chip
+                  key={option.value}
+                  label={option.label}
+                  clickable
+                  color={isSelected ? 'primary' : 'default'}
+                  variant={isSelected ? 'filled' : 'outlined'}
+                  onClick={() => {
+                    const newValue = isSelected
+                      ? selectedChips.filter(v => v !== option.value)
+                      : [...selectedChips, option.value];
+                    handleChange(newValue);
+                  }}
+                />
+              );
+            })}
+          </Box>
+          {error && (
+            <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
+              {error}
             </Typography>
           )}
         </Box>

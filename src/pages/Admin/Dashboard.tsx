@@ -176,25 +176,56 @@ const Dashboard: React.FC = () => {
 
   const [alerts, setAlerts] = useState<any[]>([]);
 
-  // Detailed alert data
-  const alertDetails = {
-    overdue: [
-      { name: 'Michael Johnson', room: 'R205', amount: 8000, daysOverdue: 15, phone: '9876543210' },
-      { name: 'Sarah Wilson', room: 'R301', amount: 8000, daysOverdue: 8, phone: '9876543211' },
-      { name: 'Robert Davis', room: 'R108', amount: 6000, daysOverdue: 22, phone: '9876543212' }
-    ],
-    maintenance: [
-      { title: 'AC not working', room: 'R205', tenant: 'John Doe', priority: 'High', date: '2024-03-15' },
-      { title: 'Water leakage', room: 'R301', tenant: 'Jane Smith', priority: 'Medium', date: '2024-03-14' },
-      { title: 'Door lock issue', room: 'R108', tenant: 'Mike Wilson', priority: 'High', date: '2024-03-13' },
-      { title: 'WiFi not working', room: 'R202', tenant: 'Sarah Brown', priority: 'Low', date: '2024-03-12' },
-      { title: 'Light bulb replacement', room: 'R405', tenant: 'Tom Anderson', priority: 'Low', date: '2024-03-11' }
-    ],
-    applications: [
-      { name: 'Alex Thompson', phone: '9876543213', email: 'alex@email.com', preferredRoom: 'Single', date: '2024-03-16' },
-      { name: 'Lisa Garcia', phone: '9876543214', email: 'lisa@email.com', preferredRoom: 'Double', date: '2024-03-15' }
-    ]
-  };
+  const [alertDetails, setAlertDetails] = useState<any>({ overdue: [], maintenance: [], applications: [] });
+
+  useEffect(() => {
+    const loadAlertDetails = async () => {
+      try {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const [tenants, payments, complaints] = await Promise.all([
+          getAll('tenants'),
+          getAll('payments'),
+          getAll('complaints')
+        ]);
+
+        // Filter by hostel
+        const hostelTenants = tenants.filter((t: any) => t.hostelId === user.hostelId);
+        const hostelPayments = payments.filter((p: any) => p.hostelId === user.hostelId);
+        const hostelComplaints = complaints.filter((c: any) => c.hostelId === user.hostelId);
+
+        // Get overdue payments
+        const overduePayments = hostelPayments.filter((p: any) => p.status === 'overdue').map((p: any) => {
+          const tenant = hostelTenants.find((t: any) => t.id === p.tenantId);
+          return {
+            name: tenant?.name || 'Unknown',
+            room: tenant?.room || 'N/A',
+            amount: p.amount || 0,
+            daysOverdue: Math.ceil((new Date().getTime() - new Date(p.createdAt).getTime()) / (1000 * 60 * 60 * 24)),
+            phone: tenant?.phone || 'N/A'
+          };
+        });
+
+        // Get maintenance requests
+        const maintenanceRequests = hostelComplaints.filter((c: any) => c.status === 'open').map((c: any) => ({
+          title: c.title,
+          room: c.room,
+          tenant: c.tenantName,
+          priority: c.priority,
+          date: c.createdAt
+        }));
+
+        setAlertDetails({
+          overdue: overduePayments,
+          maintenance: maintenanceRequests,
+          applications: [] // No applications data in current schema
+        });
+      } catch (error) {
+        console.error('Error loading alert details:', error);
+      }
+    };
+
+    loadAlertDetails();
+  }, []);
 
   const handleAlertClick = (alertType: string) => {
     setSelectedAlert(alertType);
@@ -239,13 +270,13 @@ const Dashboard: React.FC = () => {
     },
     {
       title: 'Monthly Income',
-      value: `₹${(stats?.totalIncome || 0).toLocaleString()}`,
+      value: `₹${(stats?.totalIncome || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`,
       icon: <AttachMoney />,
       color: '#388e3c',
     },
     {
       title: 'Pending Dues',
-      value: `₹${(stats?.totalDues || 0).toLocaleString()}`,
+      value: `₹${(stats?.totalDues || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`,
       icon: <AttachMoney />,
       color: '#d32f2f',
     },
@@ -400,7 +431,7 @@ const Dashboard: React.FC = () => {
                     <Typography variant="caption" color="text.secondary">Floor {room.floor || 'N/A'} • {room.capacity} bed(s)</Typography>
                   </Box>
                   <Typography variant="body2" sx={{ fontWeight: 600, color: 'success.main' }}>
-                    ₹{(room.rent || 0).toLocaleString()}
+                    ₹{(room.rent || 0).toLocaleString('en-IN')}
                   </Typography>
                 </Box>
               )) : (
@@ -520,7 +551,7 @@ const Dashboard: React.FC = () => {
                   Monthly Income
                 </Typography>
                 <Typography variant="h4" component="div" sx={{ fontWeight: 700, mb: 0.5 }}>
-                  ₹{(stats?.totalIncome || 0).toLocaleString()}
+                  ₹{(stats?.totalIncome || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                 </Typography>
                 <Box display="flex" alignItems="center" gap={0.5}>
                   <TrendingUp fontSize="small" color="success" />
@@ -544,7 +575,7 @@ const Dashboard: React.FC = () => {
                   Pending Dues
                 </Typography>
                 <Typography variant="h4" component="div" sx={{ fontWeight: 700, mb: 0.5 }}>
-                  ₹{(stats?.totalDues || 0).toLocaleString()}
+                  ₹{(stats?.totalDues || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                 </Typography>
                 <Box display="flex" alignItems="center" gap={0.5}>
                   <TrendingUp fontSize="small" color="success" />
@@ -592,7 +623,7 @@ const Dashboard: React.FC = () => {
                   Monthly Expenses
                 </Typography>
                 <Typography variant="h4" component="div" sx={{ fontWeight: 700, mb: 0.5 }}>
-                  ₹{(stats?.totalExpenses || 0).toLocaleString()}
+                  ₹{(stats?.totalExpenses || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                 </Typography>
                 <Box display="flex" alignItems="center" gap={0.5}>
                   <TrendingDown fontSize="small" color="error" />
@@ -678,7 +709,7 @@ const Dashboard: React.FC = () => {
                     `${item.name} - ${item.preferredRoom} Room`
                   }
                   secondary={
-                    selectedAlert === 'overdue' ? `₹${item.amount.toLocaleString()} overdue for ${item.daysOverdue} days | ${item.phone}` :
+                    selectedAlert === 'overdue' ? `₹${item.amount.toLocaleString('en-IN')} overdue for ${item.daysOverdue} days | ${item.phone}` :
                     selectedAlert === 'maintenance' ? `Tenant: ${item.tenant} | Priority: ${item.priority} | Date: ${new Date(item.date).toLocaleDateString()}` :
                     `${item.email} | ${item.phone} | Applied: ${new Date(item.date).toLocaleDateString()}`
                   }

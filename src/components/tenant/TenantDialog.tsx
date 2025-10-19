@@ -56,13 +56,19 @@ const TenantDialog: React.FC<TenantDialogProps> = ({
         for (const field of tenantFields) {
           if (field.loadOptions && field.name === 'roomId') {
             try {
-              const options = await field.loadOptions();
+              const options = await field.loadOptions(editingItem);
               field.options = options;
             } catch (error) {
               console.error('Failed to load options for', field.name, error);
             }
           }
-          initialData[field.name] = editingItem?.[field.name] || '';
+          
+          // Map room field to roomId for form compatibility
+          if (field.name === 'roomId') {
+            initialData[field.name] = editingItem?.room || editingItem?.roomId || '';
+          } else {
+            initialData[field.name] = editingItem?.[field.name] || '';
+          }
         }
         
         setFormData(initialData);
@@ -261,7 +267,14 @@ const TenantDialog: React.FC<TenantDialogProps> = ({
       return;
     }
 
-    onSubmit(formData);
+    // Map roomId back to room for database compatibility
+    const submitData: any = {
+      ...formData,
+      room: formData.roomId || formData.room,
+      roomId: formData.roomId,
+    };
+    
+    onSubmit(submitData);
   };
 
   const handleClose = () => {

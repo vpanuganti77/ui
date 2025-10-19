@@ -42,7 +42,7 @@ const Rooms: React.FC = () => {
         roomNumber: formData.roomNumber,
         type,
         capacity,
-        rent: parseInt(formData.rent),
+        rent: Number(formData.rent) || 0,
         floor: parseInt(formData.floor),
         amenities: formData.amenities.split(',').map((a: string) => a.trim())
       };
@@ -51,7 +51,7 @@ const Rooms: React.FC = () => {
         roomNumber: formData.roomNumber,
         type,
         capacity,
-        rent: parseInt(formData.rent),
+        rent: Number(formData.rent) || 0,
         occupancy: 0,
         status: 'available',
         floor: parseInt(formData.floor),
@@ -115,8 +115,8 @@ const Rooms: React.FC = () => {
       width: 120,
       valueFormatter: (params: any) => {
         if (!params) return '₹0';
-        const value = params.value || params.row?.rent || 0;
-        return `₹${value.toLocaleString()}`;
+        const value = Number(params.value || params.row?.rent || 0);
+        return `₹${value.toLocaleString('en-IN')}`;
       },
       align: 'right',
       headerAlign: 'right'
@@ -153,7 +153,7 @@ const Rooms: React.FC = () => {
         fields: [
           { key: 'type', label: 'Type', value: 'type', render: (value: string) => value ? value.charAt(0).toUpperCase() + value.slice(1) : '-' },
           { key: 'occupancy', label: 'Occupancy', value: 'occupancy', render: (value: number, item: any) => `${value || 0}/${item?.capacity || 0}` },
-          { key: 'rent', label: 'Rent', value: 'rent', render: (value: number) => value ? `₹${value.toLocaleString()}` : '₹0' },
+          { key: 'rent', label: 'Rent', value: 'rent', render: (value: number) => `₹${Number(value || 0).toLocaleString('en-IN')}` },
           { key: 'status', label: 'Status', value: 'status' },
           { key: 'floor', label: 'Floor', value: 'floor' }
         ]

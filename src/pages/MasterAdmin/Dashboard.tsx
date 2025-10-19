@@ -5,14 +5,22 @@ import {
   Card,
   CardContent,
   Chip,
-  Button
+  Button,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import { Business, Person, RequestPage, CheckCircle } from '@mui/icons-material';
-import { getAll, update } from '../../services/fileDataService';
+import { getAll, update, create } from '../../services/fileDataService';
+import UserCredentialsDialog from '../../components/UserCredentialsDialog';
 
 const Dashboard: React.FC = () => {
   const [hostels, setHostels] = useState<any[]>([]);
   const [requests, setRequests] = useState<any[]>([]);
+  const [credentialsDialog, setCredentialsDialog] = useState<{
+    open: boolean;
+    userDetails: any;
+  }>({ open: false, userDetails: null });
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
 
   useEffect(() => {
     loadData();
@@ -33,10 +41,83 @@ const Dashboard: React.FC = () => {
 
   const handleApproveRequest = async (requestId: string) => {
     try {
-      await update('hostelRequests', requestId, { status: 'approved' });
+      const request = requests.find(r => r.id === requestId);
+      if (!request) return;
+      
+      const adminPassword = 'admin' + Math.random().toString(36).substring(2, 8);
+      const hostelId = Date.now().toString();
+      const currentDate = new Date().toISOString();
+      
+      // Create hostel first
+      const newHostel = {
+        name: request.hostelName || request.name,
+        address: request.address || '',
+        planType: request.planType || 'free_trial',
+        planStatus: 'trial',
+        trialExpiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        adminName: request.name || '',
+        adminEmail: request.email || '',
+        adminPhone: request.phone || '',
+        status: 'active',
+        totalRooms: 0,
+        occupiedRooms: 0
+      };
+      
+      const createdHostel = await create('hostels', newHostel);
+      
+      // Generate hostel-scoped email for admin
+      const hostelDomain = (request.hostelName || request.name).toLowerCase().replace(/[^a-z0-9]/g, '') + '.com';
+      const adminUsername = (request.name || 'admin').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const adminEmail = `${adminUsername}@${hostelDomain}`;
+      
+      // Create admin user
+      const adminUser = {
+        name: request.name || '',
+        email: adminEmail,
+        phone: request.phone || '',
+        role: 'admin',
+        password: adminPassword,
+        hostelId: createdHostel.id,
+        hostelName: request.hostelName || '',
+        status: 'active'
+      };
+      
+      await create('users', adminUser);
+      
+      // Update request status
+      await update('hostelRequests', requestId, {
+        ...request,
+        status: 'approved',
+        isRead: true,
+        processedAt: currentDate,
+        updatedAt: currentDate
+      });
+      
+      setCredentialsDialog({
+        open: true,
+        userDetails: {
+          name: request.name,
+          email: adminEmail,
+          password: adminPassword,
+          hostelName: request.hostelName,
+          role: 'Admin'
+        }
+      });
+      
+      setSnackbar({ 
+        open: true, 
+        message: 'Hostel and admin account created successfully!', 
+        severity: 'success' 
+      });
+      
       loadData(); // Refresh data
     } catch (error) {
       console.error('Failed to approve request:', error);
+      setSnackbar({ 
+        open: true, 
+        message: 'Error: ' + (error instanceof Error ? error.message : 'Unknown error'), 
+        severity: 'error' 
+      });
     }
   };
 
@@ -199,6 +280,27 @@ const Dashboard: React.FC = () => {
           )}
         </CardContent>
       </Card>
+      
+      <UserCredentialsDialog
+        open={credentialsDialog.open}
+        onClose={() => setCredentialsDialog({ open: false, userDetails: null })}
+        userDetails={credentialsDialog.userDetails}
+      />
+      
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          variant="filled"
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

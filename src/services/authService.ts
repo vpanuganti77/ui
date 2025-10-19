@@ -23,27 +23,38 @@ export const authService = {
       };
     }
     
-    // Check users from fileDataService
-    const users = await getAll('users');
-    const user = users.find((u: any) => u.email === email && u.password === password);
+    // Use the new login API endpoint
+    const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password }),
+    });
     
-    if (user && user.status === 'active') {
-      return {
-        token: 'token-' + user.id,
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          phone: user.phone,
-          role: user.role,
-          hostelId: user.hostelId,
-          hostelName: user.hostelName,
-          isActive: user.status === 'active'
-        }
-      };
+    const data = await response.json();
+    
+    if (!response.ok) {
+      const error = new Error(data.message || 'Login failed');
+      (error as any).status = response.status;
+      (error as any).isLocked = data.isLocked;
+      (error as any).attemptsRemaining = data.attemptsRemaining;
+      throw error;
     }
     
-    throw new Error('Invalid credentials');
+    return {
+      token: 'token-' + data.user.id,
+      user: {
+        id: data.user.id,
+        name: data.user.name,
+        email: data.user.email,
+        phone: data.user.phone,
+        role: data.user.role,
+        hostelId: data.user.hostelId,
+        hostelName: data.user.hostelName,
+        isActive: data.user.status === 'active'
+      }
+    };
   },
 
 

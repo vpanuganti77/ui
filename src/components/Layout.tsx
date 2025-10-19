@@ -20,7 +20,7 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import NotificationMenu from './NotificationMenu';
+import NotificationBell from './NotificationBell';
 import {
   Dashboard,
   People,
@@ -240,10 +240,23 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant={isMobile ? 'body1' : 'h6'} noWrap component="div" sx={{ flexGrow: 1, fontWeight: 600 }}>
-            {isMobile ? 'PGFlow' : (user?.hostelName || 'PG & Hostel Management System')}
-          </Typography>
-          <NotificationMenu />
+          <Box sx={{ flexGrow: 1 }}>
+            {user?.hostelName ? (
+              <>
+                <Typography variant={isMobile ? 'body2' : 'h6'} noWrap sx={{ fontWeight: 700, lineHeight: 1.2 }}>
+                  {user.hostelName}
+                </Typography>
+                <Typography variant="caption" sx={{ opacity: 0.8, fontSize: '0.75rem' }}>
+                  Powered by PGFlow
+                </Typography>
+              </>
+            ) : (
+              <Typography variant={isMobile ? 'body1' : 'h6'} noWrap sx={{ fontWeight: 600 }}>
+                PG & Hostel Management System
+              </Typography>
+            )}
+          </Box>
+          <NotificationBell />
           <Button
             color="inherit"
             onClick={handleProfileMenuOpen}
@@ -322,16 +335,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <Business sx={{ color: 'white', fontSize: 24 }} />
               </Box>
               <Box>
-                <Typography variant="h5" sx={{ fontWeight: 800, fontSize: '1.3rem', color: 'white', letterSpacing: '0.5px' }}>
-                  PGFlow
+                <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.1rem', color: 'white', lineHeight: 1.2 }}>
+                  {user?.hostelName || 'PGFlow'}
                 </Typography>
-                <Typography variant="caption" sx={{ opacity: 0.8, fontSize: '0.75rem', color: 'grey.300' }}>
-                  {user?.role === 'master_admin' ? 'Master Admin' : user?.role === 'admin' ? 'Admin Panel' : 'Tenant Portal'}
+                <Typography variant="caption" sx={{ opacity: 0.8, fontSize: '0.7rem', color: 'grey.300' }}>
+                  {user?.hostelName ? 'PGFlow System' : (user?.role === 'master_admin' ? 'Master Admin' : user?.role === 'admin' ? 'Admin Panel' : 'Tenant Portal')}
                 </Typography>
               </Box>
             </Box>
           ) : (
-            <Tooltip title="PGFlow" placement="right">
+            <Tooltip title={user?.hostelName || 'PGFlow'} placement="right">
               <Box 
                 sx={{ 
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',

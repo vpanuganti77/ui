@@ -9,24 +9,28 @@ import {
   Chip,
   Menu,
   MenuItem,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import { GridColDef } from '@mui/x-data-grid';
 import { Lock, LockOpen, VpnKey, Edit, Delete, MoreVert } from '@mui/icons-material';
 import ListPage from '../../components/common/ListPage';
 import { userFields } from '../../components/common/FormConfigs';
 import { userCardFields } from '../../components/common/MobileCardConfigs';
-import { getAll, create, update, getById, remove } from '../../services/fileDataService';
+import { update, getById } from '../../services/fileDataService';
+import CopyLoginLinkButton from '../../components/CopyLoginLinkButton';
+import UserFormDialog from '../../components/UserFormDialog';
 
 const UserManagement: React.FC = () => {
-  const [users, setUsers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [resetDialog, setResetDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [newUserCredentials, setNewUserCredentials] = useState<{email: string, password: string} | null>(null);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    fetchUsers();
     const userData = localStorage.getItem('user');
     if (userData) {
       const user = JSON.parse(userData);
@@ -34,48 +38,45 @@ const UserManagement: React.FC = () => {
     }
   }, []);
 
-  const fetchUsers = async () => {
-    try {
-      const allUsers = await getAll('users');
-      // Filter users by current user's hostelId for multi-tenant isolation
-      const userData = localStorage.getItem('user');
-      if (userData) {
-        const currentUser = JSON.parse(userData);
-        if (currentUser.role === 'admin' && currentUser.hostelId) {
-          // Admin can only see users from their hostel
-          const hostelUsers = allUsers.filter((user: any) => 
-            user.hostelId === currentUser.hostelId || user.id === currentUser.id
-          );
-          setUsers(hostelUsers);
-        } else {
-          // Master admin can see all users
-          setUsers(allUsers);
-        }
-      } else {
-        setUsers(allUsers);
-      }
-    } catch (error: any) {
-      console.error('Error fetching users:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const customSubmitLogic = async (formData: any, editingItem: any) => {
     if (editingItem) {
-      await update('users', editingItem.id, formData);
-      await fetchUsers();
-      return editingItem;
+      const updatedUser = { ...editingItem, ...formData };
+      await update('users', editingItem.id, updatedUser);
+      return updatedUser;
     } else {
+      const password = formData.password || 'user123';
+      const userData = localStorage.getItem('user');
+      let hostelId = null;
+      let hostelName = '';
+      
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          hostelId = user.hostelId;
+          hostelName = user.hostelName || '';
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+        }
+      }
+      
+      // Generate email based on hostel domain
+      const hostelDomain = hostelName.toLowerCase().replace(/[^a-z0-9]/g, '') + '.com';
+      const username = formData.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const email = `${username}@${hostelDomain}`;
+      
       const newUser = {
         ...formData,
+        email,
+        hostelId,
         id: Date.now().toString(),
-        password: formData.password || 'user123',
+        password,
         status: 'active',
         createdAt: new Date().toISOString().split('T')[0]
       };
-      await create('users', newUser);
-      await fetchUsers();
+      
+      // Set credentials for login link
+      setNewUserCredentials({ email, password });
+      
       return newUser;
     }
   };
@@ -87,10 +88,20 @@ const UserManagement: React.FC = () => {
         ...selectedUser, 
         password: newPassword 
       });
-      alert(`Password reset successfully. New password: ${newPassword}`);
+      
+      // Show dialog with login link
+      const loginLinkDialog = document.createElement('div');
+      loginLinkDialog.innerHTML = `
+        <div style="padding: 20px; text-align: center;">
+          <p>Password reset successfully!</p>
+          <p><strong>New password:</strong> ${newPassword}</p>
+          <div id="copy-link-container"></div>
+        </div>
+      `;
+      
       setResetDialog(false);
       setSelectedUser(null);
-      fetchUsers();
+      setRefreshKey(prev => prev + 1);
     } catch (error: any) {
       alert('Failed to reset password');
     }
@@ -98,33 +109,52 @@ const UserManagement: React.FC = () => {
 
   const handleToggleStatus = async (userId: string, currentStatus: string) => {
     if (userId === currentUserId) {
-      alert('You cannot change your own account status');
+      setSnackbar({ open: true, message: 'You cannot change your own account status', severity: 'error' });
       return;
     }
     try {
       const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
       const user = await getById('users', userId);
       await update('users', userId, { ...user, status: newStatus });
-      alert(`User ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`);
-      fetchUsers();
+      
+      // Trigger refresh
+      setRefreshKey(prev => prev + 1);
+      
+      setSnackbar({ 
+        open: true, 
+        message: `User ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`, 
+        severity: 'success' 
+      });
     } catch (error: any) {
-      alert('Failed to update user status');
+      setSnackbar({ open: true, message: 'Failed to update user status', severity: 'error' });
     }
   };
 
-  const handleDeleteUser = async (userId: string) => {
+  const handleUnlockAccount = async (userId: string) => {
     if (userId === currentUserId) {
-      alert('You cannot delete your own account');
+      setSnackbar({ open: true, message: 'You cannot unlock your own account', severity: 'error' });
       return;
     }
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      try {
-        await remove('users', userId);
-        alert('User deleted successfully');
-        fetchUsers();
-      } catch (error: any) {
-        alert('Failed to delete user');
-      }
+    try {
+      const user = await getById('users', userId);
+      await update('users', userId, { 
+        ...user, 
+        isLocked: false, 
+        failedLoginAttempts: 0,
+        lockedAt: null,
+        lockedBy: null
+      });
+      
+      // Trigger refresh
+      setRefreshKey(prev => prev + 1);
+      
+      setSnackbar({ 
+        open: true, 
+        message: 'Account unlocked successfully', 
+        severity: 'success' 
+      });
+    } catch (error: any) {
+      setSnackbar({ open: true, message: 'Failed to unlock account', severity: 'error' });
     }
   };
 
@@ -176,14 +206,26 @@ const UserManagement: React.FC = () => {
       field: 'status', 
       headerName: 'Status', 
       width: 100,
-      renderCell: (params) => (
-        <Chip 
-          label={params.value || 'active'} 
-          color={getStatusColor(params.value || 'active') as any}
-          size="small"
-          variant="filled"
-        />
-      )
+      renderCell: (params) => {
+        if (params.row.isLocked) {
+          return (
+            <Chip 
+              label="Locked" 
+              color="error"
+              size="small"
+              variant="filled"
+            />
+          );
+        }
+        return (
+          <Chip 
+            label={params.value || 'active'} 
+            color={getStatusColor(params.value || 'active') as any}
+            size="small"
+            variant="filled"
+          />
+        );
+      }
     },
     {
       field: 'actions',
@@ -206,11 +248,13 @@ const UserManagement: React.FC = () => {
   return (
     <>
       <ListPage
+        key={refreshKey}
         title="Users"
-        data={users}
+        data={[]}
         columns={columns}
         fields={userFields}
         entityName="User"
+        entityKey="users"
         idField="id"
         mobileCardConfig={{
           titleField: 'name',
@@ -218,6 +262,7 @@ const UserManagement: React.FC = () => {
         }}
         customSubmitLogic={customSubmitLogic}
         hideActions={true}
+        CustomDialog={UserFormDialog}
       />
 
       <Menu
@@ -235,26 +280,30 @@ const UserManagement: React.FC = () => {
           <VpnKey sx={{ mr: 1 }} color="warning" />
           Reset Password
         </MenuItem>
-        <MenuItem 
-          onClick={() => {
-            handleToggleStatus(selectedUser?.id, selectedUser?.status || 'active');
-            setAnchorEl(null);
-          }}
-          disabled={isCurrentUser(selectedUser)}
-        >
-          {selectedUser?.status === 'active' ? <Lock sx={{ mr: 1 }} color="error" /> : <LockOpen sx={{ mr: 1 }} color="success" />}
-          {selectedUser?.status === 'active' ? 'Deactivate' : 'Activate'}
-        </MenuItem>
-        <MenuItem 
-          onClick={() => {
-            handleDeleteUser(selectedUser?.id);
-            setAnchorEl(null);
-          }}
-          disabled={isCurrentUser(selectedUser)}
-        >
-          <Delete sx={{ mr: 1 }} color="error" />
-          Delete
-        </MenuItem>
+        {selectedUser?.isLocked ? (
+          <MenuItem 
+            onClick={() => {
+              handleUnlockAccount(selectedUser?.id);
+              setAnchorEl(null);
+            }}
+            disabled={isCurrentUser(selectedUser)}
+          >
+            <LockOpen sx={{ mr: 1 }} color="success" />
+            Unlock Account
+          </MenuItem>
+        ) : (
+          <MenuItem 
+            onClick={() => {
+              handleToggleStatus(selectedUser?.id, selectedUser?.status || 'active');
+              setAnchorEl(null);
+            }}
+            disabled={isCurrentUser(selectedUser)}
+          >
+            {selectedUser?.status === 'active' ? <Lock sx={{ mr: 1 }} color="error" /> : <LockOpen sx={{ mr: 1 }} color="success" />}
+            {selectedUser?.status === 'active' ? 'Deactivate' : 'Activate'}
+          </MenuItem>
+        )}
+
       </Menu>
 
       <Dialog open={resetDialog} onClose={() => setResetDialog(false)}>
@@ -262,7 +311,7 @@ const UserManagement: React.FC = () => {
         <DialogContent>
           <Typography>
             Are you sure you want to reset the password for {selectedUser?.name}?
-            A new temporary password will be sent to their email.
+            A new temporary password will be generated and you can copy a login link.
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -272,6 +321,48 @@ const UserManagement: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* New User Success Dialog */}
+      <Dialog open={!!newUserCredentials} onClose={() => setNewUserCredentials(null)}>
+        <DialogTitle>User Created Successfully</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ mb: 2 }}>
+            User created with email: <strong>{newUserCredentials?.email}</strong>
+          </Typography>
+          <Typography sx={{ mb: 2 }}>
+            Password: <strong>{newUserCredentials?.password}</strong>
+          </Typography>
+          <Typography sx={{ mb: 2 }}>
+            Copy the login link below to share with the user:
+          </Typography>
+          {newUserCredentials && (
+            <CopyLoginLinkButton 
+              email={newUserCredentials.email} 
+              password={newUserCredentials.password}
+              variant="contained"
+            />
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setNewUserCredentials(null)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          variant="filled"
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </>
   );
 };
