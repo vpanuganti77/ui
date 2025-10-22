@@ -305,7 +305,7 @@ const Dashboard: React.FC = () => {
           {hostelInfo && (
             <Box display="flex" gap={1} mt={1} flexWrap="wrap">
               <Chip 
-                label={hostelInfo.planType === 'free_trial' ? 'Free Trial' : hostelInfo.planType.toUpperCase()}
+                label={hostelInfo.planType === 'free_trial' ? 'Free Trial' : (hostelInfo.planType || '').toUpperCase()}
                 color={hostelInfo.planType === 'free_trial' ? 'info' : 'primary'}
                 size="small"
               />

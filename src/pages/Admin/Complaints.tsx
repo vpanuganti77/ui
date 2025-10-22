@@ -16,6 +16,7 @@ import {
 } from '@mui/material';
 import { GridColDef } from '@mui/x-data-grid';
 import { Search, Download, Refresh, NotificationsActive, Warning, ReportProblem, Schedule, CheckCircle, PriorityHigh } from '@mui/icons-material';
+import toast from 'react-hot-toast';
 import ListPage from '../../components/common/ListPage';
 import { complaintFields } from '../../components/common/FormConfigs';
 import { complaintCardFields } from '../../components/common/MobileCardConfigs';
@@ -27,6 +28,9 @@ const Complaints: React.FC = () => {
   const [complaints, setComplaints] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [selectedComplaint, setSelectedComplaint] = useState<any>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [openToComments, setOpenToComments] = useState(false);
 
   const [filters, setFilters] = useState({
     search: '',
@@ -52,26 +56,72 @@ const Complaints: React.FC = () => {
     };
     loadComplaints();
   }, []);
-
-  const customSubmitLogic = (formData: any, editingItem: any) => {
-    if (editingItem) {
-      // Refresh complaints data after update
-      setTimeout(async () => {
-        try {
-          const user = JSON.parse(localStorage.getItem('user') || '{}');
-          const { getAll } = await import('../../services/fileDataService');
-          const allComplaints = await getAll('complaints');
-          const hostelComplaints = allComplaints.filter((c: any) => c.hostelId === user.hostelId);
-          setComplaints(hostelComplaints);
-          setRefreshKey(prev => prev + 1);
-        } catch (error) {
-          console.error('Error refreshing complaints:', error);
-        }
-      }, 100);
+  
+  // Handle notification clicks
+  useEffect(() => {
+    const handleNotificationClick = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const complaintId = urlParams.get('complaintId');
+      const openComments = urlParams.get('openComments') === 'true';
       
-      return { ...editingItem, ...formData, updatedAt: new Date().toISOString() };
+      if (complaintId && complaints.length > 0) {
+        const complaint = complaints.find(c => c.id === complaintId);
+        if (complaint) {
+          setSelectedComplaint(complaint);
+          setOpenToComments(openComments);
+          setDialogOpen(true);
+          // Clear URL params
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
+    };
+    
+    handleNotificationClick();
+  }, [complaints]);
+
+  const customSubmitLogic = async (formData: any, editingItem: any) => {
+    // If this is called from ListPage edit action, open our custom dialog
+    if (editingItem && !formData) {
+      handleComplaintEdit(editingItem);
+      return editingItem;
+    }
+    
+    if (editingItem && formData) {
+      try {
+        // Actually update the complaint via API
+        const { update } = await import('../../services/fileDataService');
+        await update('complaints', editingItem.id, formData);
+        
+        // Show success toast
+        toast.success('Complaint updated successfully!');
+        
+        // Close dialog and refresh complaints data after update
+        setDialogOpen(false);
+        setSelectedComplaint(null);
+        setOpenToComments(false);
+        
+        // Refresh complaints data
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const { getAll } = await import('../../services/fileDataService');
+        const allComplaints = await getAll('complaints');
+        const hostelComplaints = allComplaints.filter((c: any) => c.hostelId === user.hostelId);
+        setComplaints(hostelComplaints);
+        setRefreshKey(prev => prev + 1);
+        
+        return { ...editingItem, ...formData, updatedAt: new Date().toISOString() };
+      } catch (error) {
+        console.error('Error updating complaint:', error);
+        toast.error('Failed to update complaint');
+        throw error;
+      }
     }
     return editingItem;
+  };
+  
+  const handleComplaintEdit = (complaint: any) => {
+    setSelectedComplaint(complaint);
+    setOpenToComments(false);
+    setDialogOpen(true);
   };
 
 
@@ -203,6 +253,22 @@ const Complaints: React.FC = () => {
           {params.value ? new Date(params.value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}
         </Typography>
       )
+    },
+    {
+      field: 'actions',
+      type: 'actions',
+      headerName: 'Actions',
+      width: 100,
+      getActions: (params) => [
+        <Button
+          key="manage"
+          size="small"
+          variant="contained"
+          onClick={() => handleComplaintEdit(params.row)}
+        >
+          Manage
+        </Button>
+      ]
     }
   ];
 
@@ -227,7 +293,7 @@ const Complaints: React.FC = () => {
           <Box display="flex" alignItems="center" justifyContent="space-between">
             <Box>
               <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                {complaints.filter(c => c.status === 'open').length}
+                {complaints.filter(c => c.status === 'open' || c.status === 'reopen').length}
               </Typography>
               <Typography variant="body2" sx={{ opacity: 0.9 }}>Open Complaints</Typography>
             </Box>
@@ -372,10 +438,25 @@ const Complaints: React.FC = () => {
         customSubmitLogic={customSubmitLogic}
         hideAdd={true}
         hideDelete={true}
+        hideEdit={true}
+        hideActions={true}
         additionalActions={additionalActions}
-        CustomDialog={AdminComplaintDialog}
       />
       
+      {/* Custom Complaint Dialog */}
+      {selectedComplaint && (
+        <AdminComplaintDialog
+          open={dialogOpen}
+          onClose={() => {
+            setDialogOpen(false);
+            setSelectedComplaint(null);
+            setOpenToComments(false);
+          }}
+          onSubmit={(data) => customSubmitLogic(data, selectedComplaint)}
+          editingItem={selectedComplaint}
+          openToComments={openToComments}
+        />
+      )}
 
     </Box>
   );

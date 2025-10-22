@@ -39,16 +39,17 @@ const NotificationBell: React.FC = () => {
   const handleNotificationClick = (notification: any) => {
     markAsRead(notification.id);
     
-    // Navigate based on notification type
+    // Navigate based on notification type and user role
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
     switch (notification.type) {
       case 'complaint':
-        navigate('/admin/complaints');
+        navigate(user.role === 'master_admin' ? '/master-admin/dashboard' : '/admin/complaints');
         break;
       case 'payment':
         navigate('/admin/payments');
         break;
       case 'hostelRequest':
-        navigate('/master-admin/hostel-requests');
+        navigate('/master-admin/requests');
         break;
       default:
         break;
@@ -60,6 +61,7 @@ const NotificationBell: React.FC = () => {
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'complaint':
+      case 'complaint_update':
         return <ReportProblem color="error" fontSize="small" />;
       case 'payment':
         return <Payment color="warning" fontSize="small" />;

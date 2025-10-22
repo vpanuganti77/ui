@@ -17,9 +17,11 @@ import {
   MenuItem,
   Grid,
   Fab,
+  IconButton,
 } from '@mui/material';
-import { Add } from '@mui/icons-material';
+import { Add, Comment } from '@mui/icons-material';
 import { useNotifications } from '../../context/NotificationContext';
+import TenantComplaintDialog from '../../components/TenantComplaintDialog';
 
 const MyComplaints: React.FC = () => {
   const [complaints, setComplaints] = useState<any[]>([]);
@@ -94,7 +96,30 @@ const MyComplaints: React.FC = () => {
     
     loadComplaints();
   }, []);
+  
+  // Handle notification clicks
+  useEffect(() => {
+    const handleNotificationClick = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const complaintId = urlParams.get('complaintId');
+      const openComments = urlParams.get('openComments') === 'true';
+      
+      if (complaintId && complaints.length > 0) {
+        const complaint = complaints.find(c => c.id === complaintId);
+        if (complaint) {
+          setSelectedComplaint(complaint);
+          setComplaintDialogOpen(true);
+          // Clear URL params
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
+    };
+    
+    handleNotificationClick();
+  }, [complaints]);
   const [open, setOpen] = useState(false);
+  const [selectedComplaint, setSelectedComplaint] = useState<any>(null);
+  const [complaintDialogOpen, setComplaintDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -106,14 +131,27 @@ const MyComplaints: React.FC = () => {
     e.preventDefault();
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const { create } = await import('../../services/fileDataService');
+      const { create, getAll } = await import('../../services/fileDataService');
+      
+      // Get room information if not available in user object
+      let roomNumber = user.room;
+      if (!roomNumber) {
+        const tenants = await getAll('tenants');
+        const tenant = tenants.find((t: any) => 
+          t.email === user.email || t.name === user.name ||
+          t.email?.toLowerCase() === user.email?.toLowerCase()
+        );
+        if (tenant) {
+          roomNumber = tenant.room;
+        }
+      }
       
       const complaintData = {
         ...formData,
         tenantId: user.tenantId || user.id,
         tenantName: user.name,
         tenantPhone: user.phone,
-        room: user.room,
+        room: roomNumber,
         hostel: user.hostelName || 'Hostel',
         hostelId: user.hostelId,
         status: 'open',
@@ -139,6 +177,7 @@ const MyComplaints: React.FC = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'open': return 'error';
+      case 'reopen': return 'error';
       case 'in-progress': return 'warning';
       case 'resolved': return 'success';
       case 'closed': return 'default';
@@ -180,7 +219,7 @@ const MyComplaints: React.FC = () => {
               Open
             </Typography>
             <Typography variant="h5" color="error.main">
-              {complaints.filter(c => c.status === 'open').length}
+              {complaints.filter(c => c.status === 'open' || c.status === 'reopen').length}
             </Typography>
           </CardContent>
         </Card>
@@ -221,7 +260,7 @@ const MyComplaints: React.FC = () => {
             <CardContent>
               <Box display="flex" justifyContent="space-between" alignItems="start" mb={2}>
                 <Typography variant="h6">{complaint.title}</Typography>
-                <Box display="flex" gap={1}>
+                <Box display="flex" gap={1} alignItems="center">
                   <Chip 
                     label={complaint.category} 
                     color={getCategoryColor(complaint.category) as any}
@@ -237,6 +276,16 @@ const MyComplaints: React.FC = () => {
                     color={getStatusColor(complaint.status) as any}
                     size="small"
                   />
+                  <IconButton 
+                    size="small" 
+                    onClick={() => {
+                      setSelectedComplaint(complaint);
+                      setComplaintDialogOpen(true);
+                    }}
+                    title="View Details & Comments"
+                  >
+                    <Comment fontSize="small" />
+                  </IconButton>
                 </Box>
               </Box>
               
@@ -325,6 +374,17 @@ const MyComplaints: React.FC = () => {
       >
         <Add />
       </Fab>
+      
+      {/* Tenant Complaint Dialog */}
+      <TenantComplaintDialog
+        open={complaintDialogOpen}
+        onClose={() => {
+          setComplaintDialogOpen(false);
+          setSelectedComplaint(null);
+        }}
+        complaint={selectedComplaint}
+        openToComments={new URLSearchParams(window.location.search).get('openComments') === 'true'}
+      />
     </Box>
   );
 };

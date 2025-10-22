@@ -11,11 +11,12 @@ class SocketService {
   private notificationCallback: ((notification: NotificationData) => void) | null = null;
   private reconnectInterval: NodeJS.Timeout | null = null;
 
-  connect(userData: any) {
+  async connect(userData: any) {
     if (this.ws?.readyState === WebSocket.OPEN) return;
 
     try {
-      this.ws = new WebSocket(process.env.REACT_APP_WS_URL || 'ws://localhost:5000');
+      const config = await fetch('/config.json').then(r => r.json()).catch(() => ({ REACT_APP_WS_URL: 'ws://https://api-production-79b8.up.railway.app' }));
+      this.ws = new WebSocket(config.REACT_APP_WS_URL || 'ws://https://api-production-79b8.up.railway.app');
       
       this.ws.onopen = () => {
         console.log('Connected to WebSocket server');

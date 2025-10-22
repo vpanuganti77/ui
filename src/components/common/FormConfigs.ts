@@ -305,6 +305,28 @@ export const complaintFields: FieldConfig[] = [
     flex: '1 1 100%',
   },
   {
+    name: 'status',
+    label: 'Status',
+    type: 'select',
+    required: true,
+    options: [],
+    loadOptions: async (editingItem?: any) => {
+      const allStatuses = [
+        { value: 'open', label: 'Open' },
+        { value: 'in-progress', label: 'In Progress' },
+        { value: 'resolved', label: 'Resolved' },
+        { value: 'closed', label: 'Closed' }
+      ];
+      
+      // If editing and current status is not 'open', exclude 'open' from options
+      if (editingItem && editingItem.status !== 'open') {
+        return allStatuses.filter(status => status.value !== 'open');
+      }
+      
+      return allStatuses;
+    },
+  },
+  {
     name: 'category',
     label: 'Category',
     type: 'select',
@@ -328,29 +350,11 @@ export const complaintFields: FieldConfig[] = [
     ],
   },
   {
-    name: 'tenantName',
-    label: 'Tenant Name',
-    type: 'text',
-    required: true,
-  },
-  {
-    name: 'tenantPhone',
-    label: 'Phone',
-    type: 'text',
-    required: true,
-    validation: validations.phone,
-  },
-  {
-    name: 'room',
-    label: 'Room',
-    type: 'text',
-    required: true,
-  },
-  {
-    name: 'hostel',
-    label: 'Hostel',
-    type: 'text',
-    required: true,
+    name: 'adminNotes',
+    label: 'Admin Notes',
+    type: 'textarea',
+    rows: 2,
+    flex: '1 1 100%',
   },
 ];
 

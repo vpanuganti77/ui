@@ -26,31 +26,37 @@ const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [contactOpen, setContactOpen] = useState(false);
+  const [autoLoginAttempted, setAutoLoginAttempted] = useState(false);
   const { login, isLoading } = useAuth();
   const navigate = useNavigate();
 
   // Load saved credentials and handle auto-login on component mount
   useEffect(() => {
+    if (autoLoginAttempted) return;
+    
     const urlParams = new URLSearchParams(window.location.search);
     const urlEmail = urlParams.get('email');
     const urlPassword = urlParams.get('password');
     
-    if (urlEmail && urlPassword) {
+    if (urlEmail && urlPassword && !autoLoginAttempted) {
+      setAutoLoginAttempted(true);
       try {
         const decodedEmail = decodeURIComponent(urlEmail);
         const decodedPassword = decodeURIComponent(urlPassword);
         setEmail(decodedEmail);
         setPassword(decodedPassword);
+        
+        // Clear URL parameters to prevent re-execution
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
         // Auto-submit the form
-        setTimeout(() => {
-          login(decodedEmail, decodedPassword).then(() => {
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
-            const redirectPath = user.role === 'admin' ? '/admin/dashboard' : '/tenant/dashboard';
-            navigate(redirectPath);
-          }).catch((err) => {
-            setError('Auto-login failed. Please try manually.');
-          });
-        }, 100);
+        login(decodedEmail, decodedPassword).then(() => {
+          const user = JSON.parse(localStorage.getItem('user') || '{}');
+          const redirectPath = user.role === 'admin' ? '/admin/dashboard' : '/tenant/dashboard';
+          navigate(redirectPath);
+        }).catch((err) => {
+          setError('Auto-login failed. Please try manually.');
+        });
         return;
       } catch (error) {
         setError('Invalid login link');
@@ -67,7 +73,7 @@ const Login: React.FC = () => {
         setRememberMe(true);
       }
     }
-  }, [login, navigate]);
+  }, [login, navigate, autoLoginAttempted]);
 
   const validateForm = () => {
     if (!email.trim()) return 'Email is required';

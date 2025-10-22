@@ -22,6 +22,7 @@ interface UserCredentialsDialogProps {
     password: string;
     hostelName: string;
     role: string;
+    loginUrl?: string;
   } | null;
 }
 
@@ -44,7 +45,7 @@ Email: ${userDetails.email}
 Password: ${userDetails.password}
 Role: ${userDetails.role}
 
-Login URL: ${process.env.REACT_APP_FRONTEND_URL || window.location.origin}/login
+Login URL: ${userDetails.loginUrl || `${window.location.origin}/login`}
 
 Please keep these credentials safe and change the password after first login.
     `.trim();
@@ -148,6 +149,15 @@ Please keep these credentials safe and change the password after first login.
               </Typography>
               <Typography variant="body1" sx={{ fontFamily: 'monospace', bgcolor: 'white', p: 1, borderRadius: 1 }}>
                 {userDetails.role}
+              </Typography>
+            </Box>
+
+            <Box>
+              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                Login URL:
+              </Typography>
+              <Typography variant="body1" sx={{ fontFamily: 'monospace', bgcolor: 'white', p: 1, borderRadius: 1, wordBreak: 'break-all' }}>
+                {userDetails.loginUrl || `${window.location.origin}/login`}
               </Typography>
             </Box>
           </Box>

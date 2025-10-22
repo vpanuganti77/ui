@@ -18,67 +18,34 @@ const HostelRequests: React.FC = () => {
     try {
       console.log('Starting quick approve for:', request);
       
-      const adminPassword = 'admin' + Math.random().toString(36).substring(2, 8);
-      const hostelId = Date.now().toString();
-      const currentDate = new Date().toISOString();
-      
-      // Create hostel first
-      const newHostel = {
-        name: request.hostelName || request.name,
-        address: request.address || '',
-        planType: request.planType || 'free_trial',
-        planStatus: 'trial',
-        trialExpiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        adminName: request.name || '',
-        adminEmail: request.email || '',
-        adminPhone: request.phone || '',
-        status: 'active',
-        totalRooms: 0,
-        occupiedRooms: 0
-      };
-      
-      console.log('Creating hostel:', newHostel);
-      const createdHostel = await create('hostels', newHostel);
-      console.log('Hostel created:', createdHostel);
-      
-      // Create admin user
-      const adminUser = {
-        name: request.name || '',
-        email: request.email || '',
-        phone: request.phone || '',
-        role: 'admin',
-        password: adminPassword,
-        hostelId: hostelId,
-        hostelName: request.hostelName || '',
-        status: 'active'
-      };
-      
-      console.log('Creating admin user:', adminUser);
-      const createdUser = await create('users', adminUser);
-      console.log('User created:', createdUser);
-      
-      // Update request status
-      const updatedRequest = {
-        ...request,
-        status: 'approved',
-        isRead: true,
-        processedAt: currentDate,
-        updatedAt: currentDate
-      };
-      
-      console.log('Updating request:', updatedRequest);
-      await update('hostelRequests', request.id, updatedRequest);
-      
-      setCredentialsDialog({
-        open: true,
-        userDetails: {
-          name: request.name,
-          email: request.email,
-          password: adminPassword,
-          hostelName: request.hostelName,
-          role: 'Admin'
+      // Use new backend approval endpoint
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api'}/hostelRequests/${request.id}/approve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
         }
       });
+      
+      if (!response.ok) {
+        throw new Error('Failed to approve hostel');
+      }
+      
+      const result = await response.json();
+      console.log('Approval result:', result);
+      
+      setTimeout(() => {
+        setCredentialsDialog({
+          open: true,
+          userDetails: {
+            name: result.name,
+            email: result.userCredentials.email,
+            password: result.userCredentials.password,
+            hostelName: result.hostelName,
+            role: 'admin',
+            loginUrl: result.userCredentials.loginUrl
+          }
+        });
+      }, 500);
       
       setSnackbar({ 
         open: true, 
@@ -108,54 +75,35 @@ const HostelRequests: React.FC = () => {
         processedAt: new Date().toISOString()
       };
 
-      // If approved, create hostel and admin user automatically
+      // If approved, use backend approval endpoint
       if (formData.status === 'approved' && editingItem.status !== 'approved') {
         try {
-          const adminPassword = 'admin' + Math.random().toString(36).substring(2, 8);
-          const hostelId = Date.now().toString();
-          const currentDate = new Date().toISOString();
-          
-          // Create hostel with owner's details
-          const newHostel = {
-            name: editingItem.hostelName || editingItem.name,
-            address: editingItem.address || '',
-            planType: editingItem.planType || 'free_trial',
-            planStatus: 'trial',
-            trialExpiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            adminName: editingItem.name || '',
-            adminEmail: editingItem.email || '',
-            adminPhone: editingItem.phone || '',
-            status: 'active',
-            totalRooms: 0,
-            occupiedRooms: 0
-          };
-          
-          // Create admin user with owner's details
-          const adminUser = {
-            name: editingItem.name || '',
-            email: editingItem.email || '',
-            phone: editingItem.phone || '',
-            role: 'admin',
-            password: adminPassword,
-            hostelId: hostelId,
-            hostelName: editingItem.hostelName || '',
-            status: 'active'
-          };
-          
-          await create('hostels', newHostel);
-          await create('users', adminUser);
-          
-          // Show credentials immediately
-          setCredentialsDialog({
-            open: true,
-            userDetails: {
-              name: editingItem.name,
-              email: editingItem.email,
-              password: adminPassword,
-              hostelName: editingItem.hostelName,
-              role: 'Admin'
+          const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api'}/hostelRequests/${editingItem.id}/approve`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
             }
           });
+          
+          if (!response.ok) {
+            throw new Error('Failed to approve hostel');
+          }
+          
+          const result = await response.json();
+          
+          setTimeout(() => {
+            setCredentialsDialog({
+              open: true,
+              userDetails: {
+                name: result.name,
+                email: result.userCredentials.email,
+                password: result.userCredentials.password,
+                hostelName: result.hostelName,
+                role: 'admin',
+                loginUrl: result.userCredentials.loginUrl
+              }
+            });
+          }, 500);
           
           setSnackbar({ 
             open: true, 
