@@ -35,6 +35,37 @@ export const authService = {
     const data = await response.json();
     
     if (!response.ok) {
+      console.log('Login failed response:', data); // Debug log
+      
+      // Special handling for deactivated hostel - allow admin/receptionist login with restrictions
+      if (data.message && data.message.includes('Account is deactivated')) {
+        // Try local authentication for deactivated hostel admins
+        try {
+          const users = await getAll('users');
+          const user = users.find((u: any) => u.email === email && u.password === password);
+          
+          if (user && (user.role === 'admin' || user.role === 'receptionist')) {
+            // Allow login but mark hostel as deactivated
+            return {
+              token: 'token-' + user.id,
+              user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                phone: user.phone,
+                role: user.role,
+                hostelId: user.hostelId,
+                hostelName: user.hostelName,
+                isActive: false,
+                hostelDeactivated: true
+              }
+            };
+          }
+        } catch (localAuthError) {
+          console.log('Failed local auth for deactivated hostel:', localAuthError);
+        }
+      }
+      
       const error = new Error(data.message || 'Login failed');
       (error as any).status = response.status;
       (error as any).isLocked = data.isLocked;

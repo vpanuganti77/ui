@@ -11,6 +11,7 @@ export interface User {
   firstLogin?: boolean;
   requestId?: string;
   status?: string;
+  hostelDeactivated?: boolean;
 }
 
 export interface Hostel {

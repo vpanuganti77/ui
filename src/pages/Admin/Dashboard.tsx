@@ -60,6 +60,7 @@ import { tenantFields } from '../../components/common/FormConfigs';
 
 import TrialStatus from '../../components/TrialStatus';
 import PendingApprovalDashboard from '../../components/PendingApprovalDashboard';
+import DeactivatedHostelDashboard from '../../components/DeactivatedHostelDashboard';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -289,6 +290,11 @@ const Dashboard: React.FC = () => {
     return <PendingApprovalDashboard />;
   }
 
+  // Check if hostel is deactivated (only for admin/receptionist roles)
+  if ((hostelInfo?.status === 'deactivated' || user.hostelDeactivated) && (user.role === 'admin' || user.role === 'receptionist')) {
+    return <DeactivatedHostelDashboard />;
+  }
+
   return (
     <Box>
       <TrialStatus />
@@ -338,17 +344,6 @@ const Dashboard: React.FC = () => {
             onClick={() => setNoticeDialogOpen(true)}
           >
             Send Notice
-          </Button>
-          {/* Test install prompt */}
-          <Button 
-            variant="outlined" 
-            size="small" 
-            onClick={() => {
-              localStorage.removeItem('install-prompt-shown');
-              window.location.reload();
-            }}
-          >
-            Test Install
           </Button>
         </Box>
       </Box>

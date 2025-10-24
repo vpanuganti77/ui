@@ -48,6 +48,30 @@ const HostelManagement: React.FC = () => {
         });
       }
       
+      // Create notification for hostel admin
+      if (adminUser) {
+        const notification = {
+          id: Date.now().toString(),
+          type: 'hostel_status_change',
+          title: `Hostel ${newStatus === 'active' ? 'Activated' : 'Deactivated'}`,
+          message: newStatus === 'active' 
+            ? 'Your hostel has been activated by the master administrator. You now have full access to all features.'
+            : 'Your hostel has been deactivated by the master administrator. Please contact support for assistance.',
+          userId: adminUser.id,
+          hostelId: hostel.id,
+          priority: newStatus === 'active' ? 'medium' : 'high',
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          createdBy: 'Master Admin'
+        };
+        
+        try {
+          await create('notifications', notification);
+        } catch (notificationError) {
+          console.error('Failed to create notification:', notificationError);
+        }
+      }
+      
       setSnackbar({ 
         open: true, 
         message: `Hostel ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`, 

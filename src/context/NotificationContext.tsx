@@ -6,7 +6,7 @@ interface Notification {
   id: string;
   title: string;
   message: string;
-  type: 'complaint' | 'complaint_update' | 'payment' | 'hostelRequest' | 'general' | 'test' | 'hostel_approved';
+  type: 'complaint' | 'complaint_update' | 'payment' | 'hostelRequest' | 'general' | 'test' | 'hostel_approved' | 'hostel_status_change';
   priority: 'low' | 'medium' | 'high';
   isRead: boolean;
   createdAt: string;
@@ -96,7 +96,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
             id: `${notification.type}-${Date.now()}`,
             title: notification.title,
             message: notification.message,
-            type: notification.type as 'complaint' | 'complaint_update' | 'payment' | 'hostelRequest' | 'general' | 'hostel_approved',
+            type: notification.type as 'complaint' | 'complaint_update' | 'payment' | 'hostelRequest' | 'general' | 'hostel_approved' | 'hostel_status_change',
             priority: notification.priority as 'low' | 'medium' | 'high',
             isRead: false,
             createdAt: notification.createdAt,

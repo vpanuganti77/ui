@@ -35,8 +35,20 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
     password: ''
   });
   const [generatedEmail, setGeneratedEmail] = useState('');
+  const [currentUserRole, setCurrentUserRole] = useState('');
 
   useEffect(() => {
+    // Get current user role
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      try {
+        const user = JSON.parse(userData);
+        setCurrentUserRole(user.role || '');
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+      }
+    }
+    
     if (open) {
       if (editingItem) {
         setFormData({
@@ -126,8 +138,15 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
               onChange={(e) => setFormData({ ...formData, role: e.target.value })}
               label="Role"
             >
-              <MenuItem value="admin">Admin</MenuItem>
-              <MenuItem value="receptionist">Receptionist</MenuItem>
+              {currentUserRole === 'master_admin' && (
+                <MenuItem value="master_admin">Master Admin</MenuItem>
+              )}
+              {(currentUserRole === 'admin' || currentUserRole === 'master_admin') && (
+                <MenuItem value="admin">Admin</MenuItem>
+              )}
+              {(currentUserRole === 'admin' || currentUserRole === 'master_admin') && (
+                <MenuItem value="receptionist">Receptionist</MenuItem>
+              )}
               <MenuItem value="tenant">Tenant</MenuItem>
             </Select>
           </FormControl>

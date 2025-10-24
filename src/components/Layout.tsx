@@ -61,6 +61,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const [sidebarOpen, setSidebarOpen] = React.useState(!isMobile);
+  const [hostelStatus, setHostelStatus] = React.useState<string>('active');
   const [expandedGroups, setExpandedGroups] = React.useState<{ [key: string]: boolean }>({
     management: true,
     financial: false,
@@ -70,6 +71,31 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   React.useEffect(() => {
     setSidebarOpen(!isMobile);
   }, [isMobile]);
+
+  React.useEffect(() => {
+    const checkHostelStatus = async () => {
+      try {
+        // Check if user has hostelDeactivated flag first
+        if (user?.hostelDeactivated) {
+          setHostelStatus('deactivated');
+          return;
+        }
+        
+        if (user?.hostelId && (user.role === 'admin' || user.role === 'receptionist')) {
+          const { getAll } = await import('../services/fileDataService');
+          const hostels = await getAll('hostels');
+          const hostel = hostels.find((h: any) => h.id === user.hostelId);
+          if (hostel) {
+            setHostelStatus(hostel.status || 'active');
+          }
+        }
+      } catch (error) {
+        console.error('Error checking hostel status:', error);
+      }
+    };
+    
+    checkHostelStatus();
+  }, [user]);
 
   const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -405,6 +431,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <ListItemButton
                       selected={location.pathname === item.path || location.pathname.startsWith(item.path + '/')}
                       onClick={() => {
+                        // Prevent navigation if hostel is deactivated (except for dashboard and profile)
+                        if (hostelStatus === 'deactivated' && (user?.role === 'admin' || user?.role === 'receptionist') && !item.path.includes('/dashboard') && !item.path.includes('/profile')) {
+                          return;
+                        }
                         navigate(item.path);
                         if (isMobile) setSidebarOpen(false);
                       }}
@@ -413,6 +443,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                         minHeight: 48,
                         justifyContent: sidebarOpen ? 'initial' : 'center',
                         px: 2.5,
+                        opacity: (hostelStatus === 'deactivated' && (user?.role === 'admin' || user?.role === 'receptionist') && !item.path.includes('/dashboard') && !item.path.includes('/profile')) ? 0.5 : 1,
+                        cursor: (hostelStatus === 'deactivated' && (user?.role === 'admin' || user?.role === 'receptionist') && !item.path.includes('/dashboard') && !item.path.includes('/profile')) ? 'not-allowed' : 'pointer',
                         '&.Mui-selected': {
                           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                           borderRadius: '12px',
@@ -422,7 +454,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                           }
                         },
                         '&:hover': {
-                          bgcolor: 'grey.800'
+                          bgcolor: (hostelStatus === 'deactivated' && (user?.role === 'admin' || user?.role === 'receptionist') && !item.path.includes('/dashboard') && !item.path.includes('/profile')) ? 'transparent' : 'grey.800'
                         }
                       }}
                     >
@@ -501,6 +533,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                       <ListItemButton
                         selected={location.pathname === subItem.path || location.pathname.startsWith(subItem.path + '/')}
                         onClick={() => {
+                          // Prevent navigation if hostel is deactivated (except for profile)
+                          if (hostelStatus === 'deactivated' && (user?.role === 'admin' || user?.role === 'receptionist') && !subItem.path.includes('/profile')) {
+                            return;
+                          }
                           navigate(subItem.path);
                           if (isMobile) setSidebarOpen(false);
                         }}
@@ -508,6 +544,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                           borderRadius: 2,
                           minHeight: 44,
                           px: 2,
+                          opacity: (hostelStatus === 'deactivated' && (user?.role === 'admin' || user?.role === 'receptionist') && !subItem.path.includes('/profile')) ? 0.5 : 1,
+                          cursor: (hostelStatus === 'deactivated' && (user?.role === 'admin' || user?.role === 'receptionist') && !subItem.path.includes('/profile')) ? 'not-allowed' : 'pointer',
                           '&.Mui-selected': {
                             bgcolor: 'primary.main',
                             '&:hover': {
@@ -515,7 +553,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                             }
                           },
                           '&:hover': {
-                            bgcolor: 'grey.800'
+                            bgcolor: (hostelStatus === 'deactivated' && (user?.role === 'admin' || user?.role === 'receptionist') && !subItem.path.includes('/profile')) ? 'transparent' : 'grey.800'
                           }
                         }}
                       >
