@@ -15,8 +15,8 @@ class SocketService {
     if (this.ws?.readyState === WebSocket.OPEN) return;
 
     try {
-      const config = await fetch('/config.json').then(r => r.json()).catch(() => ({ REACT_APP_WS_URL: 'ws://https://api-production-79b8.up.railway.app' }));
-      this.ws = new WebSocket(config.REACT_APP_WS_URL || 'ws://https://api-production-79b8.up.railway.app');
+      const config = await fetch('/config.json').then(r => r.json()).catch(() => ({ REACT_APP_WS_URL: 'wss://api-production-79b8.up.railway.app' }));
+      this.ws = new WebSocket(config.REACT_APP_WS_URL || 'wss://api-production-79b8.up.railway.app');
       
       this.ws.onopen = () => {
         console.log('Connected to WebSocket server');

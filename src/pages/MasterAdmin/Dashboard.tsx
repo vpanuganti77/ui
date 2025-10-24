@@ -11,19 +11,39 @@ import {
 } from '@mui/material';
 import { Business, Person, RequestPage, CheckCircle } from '@mui/icons-material';
 import { getAll, update, create } from '../../services/fileDataService';
-import UserCredentialsDialog from '../../components/UserCredentialsDialog';
+import { socketService } from '../../services/socketService';
+
 
 const Dashboard: React.FC = () => {
   const [hostels, setHostels] = useState<any[]>([]);
   const [requests, setRequests] = useState<any[]>([]);
-  const [credentialsDialog, setCredentialsDialog] = useState<{
-    open: boolean;
-    userDetails: any;
-  }>({ open: false, userDetails: null });
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' | 'warning' });
 
   useEffect(() => {
     loadData();
+    
+    // Connect to WebSocket for real-time updates
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      try {
+        const user = JSON.parse(userData);
+        socketService.connect(user);
+        
+        // Listen for notifications that should trigger data refresh
+        socketService.onNotification((notification) => {
+          if (notification.type === 'hostelRequest' || notification.type === 'hostel_approved') {
+            loadData(); // Refresh data when hostel-related notifications arrive
+          }
+        });
+      } catch (error) {
+        console.error('Error connecting to socket:', error);
+      }
+    }
+    
+    return () => {
+      socketService.disconnect();
+    };
   }, []);
 
   const loadData = async () => {
@@ -44,69 +64,95 @@ const Dashboard: React.FC = () => {
       const request = requests.find(r => r.id === requestId);
       if (!request) return;
       
-      const adminPassword = 'admin' + Math.random().toString(36).substring(2, 8);
-      const hostelId = Date.now().toString();
-      const currentDate = new Date().toISOString();
+      // Prevent duplicate approval
+      if (request.status === 'approved') {
+        setSnackbar({ 
+          open: true, 
+          message: 'Request is already approved!', 
+          severity: 'error' 
+        });
+        return;
+      }
       
-      // Create hostel first
-      const newHostel = {
-        name: request.hostelName || request.name,
-        address: request.address || '',
-        planType: request.planType || 'free_trial',
-        planStatus: 'trial',
-        trialExpiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        adminName: request.name || '',
-        adminEmail: request.email || '',
-        adminPhone: request.phone || '',
+      // Check if hostel already exists for this request
+      const existingHostel = hostels.find((h: any) => 
+        h.contactEmail === request.email || h.name === request.hostelName
+      );
+      
+      let hostel;
+      let hostelId;
+      
+      if (existingHostel) {
+        hostel = existingHostel;
+        hostelId = existingHostel.id;
+      } else {
+        // Create hostel with unique ID
+        hostelId = `hostel_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const hostelData = {
+          id: hostelId,
+          name: `${request.hostelName}_${Date.now()}`,
+          displayName: request.hostelName,
+          address: request.address,
+          contactPerson: request.name,
+          contactEmail: request.email,
+          contactPhone: request.phone,
+          planType: request.planType,
+          status: 'active',
+          trialExpiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          createdAt: new Date().toISOString(),
+          createdBy: 'Master Admin'
+        };
+        
+        hostel = await create('hostels', hostelData);
+      }
+      
+      // Find and update existing user (don't create new one)
+      const users = await getAll('users');
+      const user = users.find((u: any) => 
+        u.email === request.email || u.requestId === request.id
+      );
+      
+      if (!user) {
+        throw new Error('User account not found for this request');
+      }
+      
+      const updatedUser = {
+        ...user,
         status: 'active',
-        totalRooms: 0,
-        occupiedRooms: 0
+        hostelId: hostel.id || hostelId,
+        hostelName: request.hostelName,
+        approvedAt: new Date().toISOString()
       };
       
-      const createdHostel = await create('hostels', newHostel);
-      
-      // Generate hostel-scoped email for admin
-      const hostelDomain = (request.hostelName || request.name).toLowerCase().replace(/[^a-z0-9]/g, '') + '.com';
-      const adminUsername = (request.name || 'admin').toLowerCase().replace(/[^a-z0-9]/g, '');
-      const adminEmail = `${adminUsername}@${hostelDomain}`;
-      
-      // Create admin user
-      const adminUser = {
-        name: request.name || '',
-        email: adminEmail,
-        phone: request.phone || '',
-        role: 'admin',
-        password: adminPassword,
-        hostelId: createdHostel.id,
-        hostelName: request.hostelName || '',
-        status: 'active'
-      };
-      
-      await create('users', adminUser);
+      await update('users', user.id, updatedUser);
       
       // Update request status
       await update('hostelRequests', requestId, {
         ...request,
         status: 'approved',
-        isRead: true,
-        processedAt: currentDate,
-        updatedAt: currentDate
+        processedAt: new Date().toISOString(),
+        hostelId: hostel.id || hostelId
       });
       
-      setCredentialsDialog({
-        open: true,
-        userDetails: {
-          name: request.name,
-          email: adminEmail,
-          password: adminPassword,
-          hostelName: request.hostelName,
-          role: 'Admin'
-        }
-      });
+      // Send push notification to backend for hostel admin
+      try {
+        await fetch(`${process.env.REACT_APP_API_BASE_URL || 'https://api-production-79b8.up.railway.app/api'}/push-notification`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            targetEmail: request.email,
+            title: 'Hostel Approved!',
+            message: `Your hostel "${request.hostelName}" has been approved and is now active.`,
+            type: 'hostel_approved'
+          })
+        });
+      } catch (error) {
+        console.warn('Backend push notification failed:', error);
+      }
       
       setSnackbar({ 
         open: true, 
-        message: 'Hostel and admin account created successfully!', 
+        message: 'Hostel request approved successfully!', 
         severity: 'success' 
       });
       
@@ -281,11 +327,7 @@ const Dashboard: React.FC = () => {
         </CardContent>
       </Card>
       
-      <UserCredentialsDialog
-        open={credentialsDialog.open}
-        onClose={() => setCredentialsDialog({ open: false, userDetails: null })}
-        userDetails={credentialsDialog.userDetails}
-      />
+
       
       <Snackbar
         open={snackbar.open}

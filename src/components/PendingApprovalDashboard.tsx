@@ -43,10 +43,23 @@ const PendingApprovalDashboard: React.FC = () => {
     );
     
     if (approvalNotifications.length > 0) {
-      // Update localStorage user status and refresh
-      const updatedUser = { ...user, status: 'active' };
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-      window.location.reload();
+      // Fetch updated user data from database
+      const checkApproval = async () => {
+        try {
+          const { getAll } = await import('../services/fileDataService');
+          const users = await getAll('users');
+          const updatedUser = users.find((u: any) => u.email === user?.email);
+          
+          if (updatedUser && updatedUser.status === 'active') {
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+            window.location.reload();
+          }
+        } catch (error) {
+          console.error('Error checking approval:', error);
+        }
+      };
+      
+      checkApproval();
     }
   }, [notifications, user?.email]);
   
@@ -115,9 +128,10 @@ const PendingApprovalDashboard: React.FC = () => {
           <Alert severity="info" sx={{ mb: 3 }}>
             <Typography variant="body2">
               <strong>What happens next?</strong><br/>
-              • Our team will review your hostel details<br/>
+              • Our team will review your hostel details (usually within 24-48 hours)<br/>
               • You'll receive a notification once approved<br/>
-              • Your dashboard will automatically update with full access
+              • Your dashboard will automatically update with full access<br/>
+              • This page will refresh automatically every 10 seconds to check for approval
             </Typography>
           </Alert>
 
@@ -171,7 +185,11 @@ const PendingApprovalDashboard: React.FC = () => {
           <Typography color="text.secondary" sx={{ mb: 2 }}>
             If you have any questions about your setup or need assistance, feel free to contact our support team.
           </Typography>
-          <Button variant="contained" color="primary">
+          <Button 
+            variant="contained" 
+            color="primary"
+            onClick={() => window.open('mailto:vpanuganti13@gmail.com?subject=Hostel Setup Support&body=Hi, I need help with my hostel setup request.', '_blank')}
+          >
             Contact Support
           </Button>
         </CardContent>

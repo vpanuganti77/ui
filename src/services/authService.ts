@@ -83,6 +83,7 @@ export const authService = {
         role: data.user.role,
         hostelId: data.user.hostelId,
         hostelName: data.user.hostelName,
+        status: data.user.status,
         isActive: data.user.status === 'active'
       }
     };

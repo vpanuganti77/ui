@@ -45,6 +45,13 @@ const NotificationBell: React.FC = () => {
     
     // Navigate based on notification type and user role
     const user = JSON.parse(localStorage.getItem('user') || '{}');
+    
+    // If user is pending approval, don't navigate anywhere except for approval notifications
+    if (user.status === 'pending_approval' && notification.type !== 'hostel_approved') {
+      handleClose();
+      return;
+    }
+    
     switch (notification.type) {
       case 'complaint':
         navigate(user.role === 'master_admin' ? '/master-admin/dashboard' : '/admin/complaints');
@@ -54,6 +61,10 @@ const NotificationBell: React.FC = () => {
         break;
       case 'hostelRequest':
         navigate('/master-admin/requests');
+        break;
+      case 'hostel_approved':
+        // For approval notifications, refresh the page to update user status
+        window.location.reload();
         break;
       default:
         break;

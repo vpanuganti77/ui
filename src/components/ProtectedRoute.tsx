@@ -29,6 +29,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole 
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // Redirect pending approval users to dashboard only
+  if (user?.status === 'pending_approval' && !location.pathname.includes('/dashboard')) {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+
   if (requiredRole && user?.role !== requiredRole) {
     const getRedirectPath = (role: string) => {
       switch (role) {

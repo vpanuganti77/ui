@@ -15,6 +15,7 @@ import { create } from '../services/fileDataService';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
+
 interface ContactUsDialogProps {
   open: boolean;
   onClose: () => void;
@@ -96,22 +97,41 @@ const ContactUsDialog: React.FC<ContactUsDialogProps> = ({ open, onClose }) => {
       
       const createdUser = await create('users', userData);
       
-      // Store user data in localStorage for auto-login
-      const userForStorage = {
-        ...userData,
-        id: createdUser.id || userId,
-        isAuthenticated: true
-      };
+      // Send push notification to backend for master admins
+      try {
+        await fetch(`${process.env.REACT_APP_API_BASE_URL || 'https://api-production-79b8.up.railway.app/api'}/push-notification`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            targetRole: 'master_admin',
+            title: 'New Hostel Setup Request',
+            message: `${formData.name} has requested to setup ${formData.hostelName}`,
+            type: 'hostel_request'
+          })
+        });
+      } catch (error) {
+        console.warn('Backend push notification failed:', error);
+      }
       
-      localStorage.setItem('user', JSON.stringify(userForStorage));
-      localStorage.setItem('token', 'temp_token_' + Date.now());
-      
+      // Auto-login with created user credentials
       setSuccess(true);
       
-      setTimeout(() => {
-        onClose();
-        navigate('/admin/dashboard');
-      }, 2000);
+      setTimeout(async () => {
+        try {
+          console.log('Attempting auto-login with:', formData.email, tempPassword);
+          await login(formData.email, tempPassword);
+          console.log('Auto-login successful, navigating to dashboard');
+          onClose();
+          navigate('/admin/dashboard');
+        } catch (loginError) {
+          console.error('Auto-login failed:', loginError);
+          console.error('Login error details:', loginError);
+          // Stay on current page and show error instead of redirecting to login
+          setError('Auto-login failed. Please try logging in manually.');
+          setSuccess(false);
+          setIsSubmitting(false);
+        }
+      }, 3000);
       
     } catch (err: any) {
       setError(err.message || 'Failed to submit request');
@@ -124,13 +144,32 @@ const ContactUsDialog: React.FC<ContactUsDialogProps> = ({ open, onClose }) => {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={success ? undefined : onClose} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ pb: 1 }}>Setup Your Hostel</DialogTitle>
       <form onSubmit={handleSubmit}>
         <DialogContent sx={{ pt: 1 }}>
           {success ? (
-            <Alert severity="success">
-              Account created successfully! Redirecting to your dashboard...
+            <Alert severity="success" sx={{ textAlign: 'center' }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                <Box sx={{ 
+                  width: 60, 
+                  height: 60, 
+                  border: '4px solid #e0e0e0', 
+                  borderTop: '4px solid #4caf50', 
+                  borderRadius: '50%', 
+                  animation: 'spin 1s linear infinite',
+                  '@keyframes spin': {
+                    '0%': { transform: 'rotate(0deg)' },
+                    '100%': { transform: 'rotate(360deg)' }
+                  }
+                }} />
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  🎉 Hostel Setup Complete!
+                </Typography>
+                <Typography variant="body2">
+                  Your account has been created successfully. Redirecting to dashboard...
+                </Typography>
+              </Box>
             </Alert>
           ) : (
             <>
@@ -202,16 +241,16 @@ const ContactUsDialog: React.FC<ContactUsDialogProps> = ({ open, onClose }) => {
             </>
           )}
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button onClick={onClose} color="inherit">
-            Cancel
-          </Button>
-          {!success && (
+        {!success && (
+          <DialogActions sx={{ px: 3, pb: 3 }}>
+            <Button onClick={onClose} color="inherit">
+              Cancel
+            </Button>
             <Button type="submit" variant="contained" disabled={isSubmitting}>
               {isSubmitting ? 'Setting up...' : 'Get Started'}
             </Button>
-          )}
-        </DialogActions>
+          </DialogActions>
+        )}
       </form>
     </Dialog>
   );

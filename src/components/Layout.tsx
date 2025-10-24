@@ -235,6 +235,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   const getMenuItems = () => {
+    // If user is pending approval, return empty menu
+    if (user?.status === 'pending_approval') {
+      return [];
+    }
+    
     switch (user?.role) {
       case 'master_admin': return masterAdminMenuGroups;
       case 'admin': return adminMenuGroups;

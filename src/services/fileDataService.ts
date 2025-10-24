@@ -208,16 +208,32 @@ export const importData = async (jsonData: string): Promise<void> => {
 
 export const clearAllData = async (): Promise<void> => {
   const entityTypes: (keyof DataStructure)[] = [
-    'hostels', 'tenants', 'rooms', 'payments', 'complaints', 
-    'users', 'expenses', 'staff', 'hostelRequests', 'notices',
-    'checkoutRequests', 'hostelSettings', 'notifications'
+    'notifications', 'checkoutRequests', 'notices', 'complaints',
+    'payments', 'expenses', 'tenants', 'rooms', 'staff',
+    'hostelRequests', 'hostels', 'users', 'hostelSettings'
   ];
   
+  const errors: string[] = [];
+  
   for (const entityType of entityTypes) {
-    const items = await getAll(entityType);
-    for (const item of items) {
-      // Pass masterAdminCleanup=true to bypass complaint deletion restriction
-      await remove(entityType, item.id, true);
+    try {
+      const items = await getAll(entityType);
+      for (const item of items) {
+        try {
+          await remove(entityType, item.id, true);
+        } catch (error: any) {
+          console.warn(`Failed to delete ${entityType} ${item.id}:`, error.message);
+          errors.push(`${entityType}: ${error.message}`);
+        }
+      }
+    } catch (error: any) {
+      console.warn(`Failed to get ${entityType}:`, error.message);
+      errors.push(`Get ${entityType}: ${error.message}`);
     }
+  }
+  
+  if (errors.length > 0) {
+    console.warn('Some items could not be deleted:', errors);
+    // Don't throw error, just log warnings
   }
 };

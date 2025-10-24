@@ -61,6 +61,7 @@ import { tenantFields } from '../../components/common/FormConfigs';
 import TrialStatus from '../../components/TrialStatus';
 import PendingApprovalDashboard from '../../components/PendingApprovalDashboard';
 import DeactivatedHostelDashboard from '../../components/DeactivatedHostelDashboard';
+import { socketService } from '../../services/socketService';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -95,6 +96,39 @@ const Dashboard: React.FC = () => {
   });
   const [noticeError, setNoticeError] = useState('');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+  const [userStatus, setUserStatus] = useState(() => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    return user.status;
+  });
+
+  useEffect(() => {
+    // Connect to WebSocket for real-time updates
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      try {
+        const user = JSON.parse(userData);
+        socketService.connect(user);
+        
+        // Listen for hostel approval notifications
+        socketService.onNotification((notification) => {
+          if (notification.type === 'hostel_approved') {
+            // Update user status in localStorage and state
+            const updatedUser = { ...user, status: 'active' };
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+            setUserStatus('active');
+            // Refresh dashboard data
+            window.location.reload();
+          }
+        });
+      } catch (error) {
+        console.error('Error connecting to socket:', error);
+      }
+    }
+    
+    return () => {
+      socketService.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     const fetchDashboardStats = async () => {
@@ -286,7 +320,7 @@ const Dashboard: React.FC = () => {
 
   // Check if user is pending approval
   const user = JSON.parse(localStorage.getItem('user') || '{}');
-  if (user.status === 'pending_approval') {
+  if (userStatus === 'pending_approval') {
     return <PendingApprovalDashboard />;
   }
 

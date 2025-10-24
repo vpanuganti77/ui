@@ -6,7 +6,7 @@ interface Notification {
   id: string;
   title: string;
   message: string;
-  type: 'complaint' | 'complaint_update' | 'payment' | 'hostelRequest' | 'general' | 'test' | 'hostel_approved' | 'hostel_status_change';
+  type: 'complaint' | 'complaint_update' | 'payment' | 'hostelRequest' | 'hostel_request' | 'general' | 'test' | 'hostel_approved' | 'hostel_status_change';
   priority: 'low' | 'medium' | 'high';
   isRead: boolean;
   createdAt: string;
@@ -51,7 +51,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   }, []);
 
-  const refreshNotifications = useCallback(() => {
+  const refreshNotifications = useCallback(async () => {
+    // Only load from localStorage since notifications are handled via WebSocket/push
     loadStoredNotifications();
   }, [loadStoredNotifications]);
 
@@ -80,7 +81,18 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   // Load stored notifications on mount
   useEffect(() => {
     loadStoredNotifications();
-  }, [loadStoredNotifications]);
+    
+    // Listen for notification refresh events
+    const handleNotificationRefresh = () => {
+      refreshNotifications();
+    };
+    
+    window.addEventListener('notificationRefresh', handleNotificationRefresh);
+    
+    return () => {
+      window.removeEventListener('notificationRefresh', handleNotificationRefresh);
+    };
+  }, [loadStoredNotifications, refreshNotifications]);
 
   // Connect to WebSocket for real-time notifications
   useEffect(() => {
@@ -96,7 +108,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
             id: `${notification.type}-${Date.now()}`,
             title: notification.title,
             message: notification.message,
-            type: notification.type as 'complaint' | 'complaint_update' | 'payment' | 'hostelRequest' | 'general' | 'hostel_approved' | 'hostel_status_change',
+            type: notification.type as 'complaint' | 'complaint_update' | 'payment' | 'hostelRequest' | 'hostel_request' | 'general' | 'test' | 'hostel_approved' | 'hostel_status_change',
             priority: notification.priority as 'low' | 'medium' | 'high',
             isRead: false,
             createdAt: notification.createdAt,

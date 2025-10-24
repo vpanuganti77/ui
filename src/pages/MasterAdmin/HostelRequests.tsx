@@ -1,63 +1,116 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Chip, Typography, Box, Button, Snackbar, Alert, IconButton, Tooltip } from '@mui/material';
 import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
 import { Business, Phone, Email, CheckCircle, Schedule, ThumbUp } from '@mui/icons-material';
 import ListPage from '../../components/common/ListPage';
-import UserCredentialsDialog from '../../components/UserCredentialsDialog';
+
 import { create, update } from '../../services/fileDataService';
+import { socketService } from '../../services/socketService';
+
 
 const HostelRequests: React.FC = () => {
-  const [credentialsDialog, setCredentialsDialog] = useState<{
-    open: boolean;
-    userDetails: any;
-  }>({ open: false, userDetails: null });
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' | 'warning' });
   const [refreshKey, setRefreshKey] = useState(0);
+  
+  useEffect(() => {
+    // Connect to WebSocket for real-time updates
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      try {
+        const user = JSON.parse(userData);
+        socketService.connect(user);
+        
+        // Listen for notifications that should trigger data refresh
+        socketService.onNotification((notification) => {
+          if (notification.type === 'hostelRequest') {
+            setRefreshKey(prev => prev + 1); // Trigger ListPage refresh
+          }
+        });
+      } catch (error) {
+        console.error('Error connecting to socket:', error);
+      }
+    }
+    
+    return () => {
+      socketService.disconnect();
+    };
+  }, []);
 
   const handleQuickApprove = async (request: any) => {
     try {
       console.log('Starting quick approve for:', request);
       
-      // Create hostel with unique ID
-      const hostelId = `hostel_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const hostelData = {
-        id: hostelId,
-        name: `${request.hostelName}_${Date.now()}`, // Make name unique
-        displayName: request.hostelName, // Store original name for display
-        address: request.address,
-        contactPerson: request.name,
-        contactEmail: request.email,
-        contactPhone: request.phone,
-        planType: request.planType,
-        status: 'active',
-        trialExpiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
-        createdAt: new Date().toISOString(),
-        createdBy: 'Master Admin'
-      };
+      // Prevent duplicate approval
+      if (request.status === 'approved') {
+        setSnackbar({ 
+          open: true, 
+          message: 'Request is already approved!', 
+          severity: 'warning' 
+        });
+        return;
+      }
       
-      const hostel = await create('hostels', hostelData);
+      // Check if hostel already exists for this request
+      const { getAll } = await import('../../services/fileDataService');
+      const existingHostels = await getAll('hostels');
+      const existingHostel = existingHostels.find((h: any) => 
+        h.contactEmail === request.email || h.name === request.hostelName
+      );
       
-      // Update user status and hostelId
-      const { getAll, update } = await import('../../services/fileDataService');
-      const users = await getAll('users');
-      const user = users.find((u: any) => u.email === request.email && u.requestId === request.id);
+      let hostel;
+      let hostelId;
       
-      if (user) {
-        const updatedUser = {
-          ...user,
+      if (existingHostel) {
+        console.log('Using existing hostel:', existingHostel);
+        hostel = existingHostel;
+        hostelId = existingHostel.id;
+      } else {
+        // Create hostel with unique ID
+        hostelId = `hostel_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const hostelData = {
+          id: hostelId,
+          name: `${request.hostelName}_${Date.now()}`, // Make name unique
+          displayName: request.hostelName, // Store original name for display
+          address: request.address,
+          contactPerson: request.name,
+          contactEmail: request.email,
+          contactPhone: request.phone,
+          planType: request.planType,
           status: 'active',
-          hostelId: hostel.id || hostelId,
-          hostelName: request.hostelName, // Use original hostel name
-          approvedAt: new Date().toISOString()
+          trialExpiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+          createdAt: new Date().toISOString(),
+          createdBy: 'Master Admin'
         };
         
-        await update('users', user.id, updatedUser);
-        
-        // Update localStorage if this is the current user
-        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-        if (currentUser.email === request.email) {
-          localStorage.setItem('user', JSON.stringify(updatedUser));
-        }
+        hostel = await create('hostels', hostelData);
+        console.log('Created new hostel:', hostel);
+      }
+      
+      // Find and update existing user (don't create new one)
+      const users = await getAll('users');
+      const user = users.find((u: any) => 
+        u.email === request.email || u.requestId === request.id
+      );
+      
+      if (!user) {
+        throw new Error('User account not found for this request');
+      }
+      
+      const updatedUser = {
+        ...user,
+        status: 'active',
+        hostelId: hostel.id || hostelId,
+        hostelName: request.hostelName,
+        approvedAt: new Date().toISOString()
+      };
+      
+      await update('users', user.id, updatedUser);
+      
+      // Update localStorage if this is the current user
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      if (currentUser.email === request.email) {
+        localStorage.setItem('user', JSON.stringify(updatedUser));
       }
       
       // Update request status
@@ -68,35 +121,27 @@ const HostelRequests: React.FC = () => {
         hostelId: hostel.id || hostelId
       });
       
-      // Create notification for user
-      await create('notifications', {
-        userId: user.id,
-        type: 'hostel_approved',
-        title: 'Hostel Approved!',
-        message: `Your hostel "${request.hostelName}" has been approved and is now active.`,
-        priority: 'high',
-        isRead: false,
-        createdAt: new Date().toISOString()
-      });
-      
-      // Show user credentials (existing password)
-      setTimeout(() => {
-        setCredentialsDialog({
-          open: true,
-          userDetails: {
-            name: request.name,
-            email: request.email,
-            password: request.tempPassword || 'Auto-generated password',
-            hostelName: request.hostelName,
-            role: 'admin',
-            loginUrl: window.location.origin + '/login'
-          }
+      // Send push notification to backend for hostel admin
+      try {
+        await fetch(`${process.env.REACT_APP_API_BASE_URL || 'https://api-production-79b8.up.railway.app/api'}/push-notification`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            targetEmail: request.email,
+            title: 'Hostel Approved!',
+            message: `Your hostel "${request.hostelName}" has been approved and is now active.`,
+            type: 'hostel_approved'
+          })
         });
-      }, 500);
+      } catch (error) {
+        console.warn('Backend push notification failed:', error);
+      }
+      
+      // User credentials already provided during setup - no popup needed
       
       setSnackbar({ 
         open: true, 
-        message: 'Hostel approved and user account activated!', 
+        message: 'Hostel request approved successfully!', 
         severity: 'success' 
       });
       
@@ -122,10 +167,8 @@ const HostelRequests: React.FC = () => {
         processedAt: new Date().toISOString()
       };
 
-      // If approved, create hostel and update user
-      if (formData.status === 'approved' && editingItem.status !== 'approved') {
-        await handleQuickApprove(editingItem);
-      }
+      // Don't call handleQuickApprove here - it's handled by the quick approve button
+      // This prevents duplicate hostel creation
 
       return updatedRequest;
     }
@@ -306,11 +349,7 @@ const HostelRequests: React.FC = () => {
         hideActions={true}
       />
       
-      <UserCredentialsDialog
-        open={credentialsDialog.open}
-        onClose={() => setCredentialsDialog({ open: false, userDetails: null })}
-        userDetails={credentialsDialog.userDetails}
-      />
+
       
       <Snackbar
         open={snackbar.open}

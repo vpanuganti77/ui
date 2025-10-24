@@ -39,6 +39,7 @@ import MasterAdminDashboard from './pages/MasterAdmin/Dashboard';
 import DataManagement from './pages/MasterAdmin/DataManagement';
 import RoleTestPanel from './components/RoleTestPanel';
 import HomePage from './pages/Landing/HomePage';
+import PendingApprovalWrapper from './components/PendingApprovalWrapper';
 
 
 
@@ -97,22 +98,24 @@ function App() {
               element={
                 <ProtectedRoute requiredRole="admin">
                   <Layout>
-                    <Routes>
-                      <Route path="dashboard" element={<Dashboard />} />
-                      <Route path="tenants" element={<Tenants />} />
-                      <Route path="users" element={<UserManagement />} />
-                      <Route path="tenants/:id" element={<TenantDetails />} />
-                      <Route path="payments/:id" element={<PaymentDetails />} />
-                      <Route path="rooms/:id" element={<RoomDetails />} />
-                      <Route path="rooms" element={<Rooms />} />
-                      <Route path="payments" element={<Payments />} />
-                      <Route path="complaints" element={<Complaints />} />
-                      <Route path="reports" element={<Reports />} />
-                      <Route path="expenses" element={<Expenses />} />
-                      <Route path="staff" element={<Staff />} />
-                      <Route path="notices" element={<Notices />} />
-                      <Route path="profile" element={<Profile />} />
-                    </Routes>
+                    <PendingApprovalWrapper>
+                      <Routes>
+                        <Route path="dashboard" element={<Dashboard />} />
+                        <Route path="tenants" element={<Tenants />} />
+                        <Route path="users" element={<UserManagement />} />
+                        <Route path="tenants/:id" element={<TenantDetails />} />
+                        <Route path="payments/:id" element={<PaymentDetails />} />
+                        <Route path="rooms/:id" element={<RoomDetails />} />
+                        <Route path="rooms" element={<Rooms />} />
+                        <Route path="payments" element={<Payments />} />
+                        <Route path="complaints" element={<Complaints />} />
+                        <Route path="reports" element={<Reports />} />
+                        <Route path="expenses" element={<Expenses />} />
+                        <Route path="staff" element={<Staff />} />
+                        <Route path="notices" element={<Notices />} />
+                        <Route path="profile" element={<Profile />} />
+                      </Routes>
+                    </PendingApprovalWrapper>
                   </Layout>
                 </ProtectedRoute>
               }
@@ -124,13 +127,15 @@ function App() {
               element={
                 <ProtectedRoute requiredRole="receptionist">
                   <Layout>
-                    <Routes>
-                      <Route path="dashboard" element={<Dashboard />} />
-                      <Route path="tenants" element={<Tenants />} />
-                      <Route path="rooms" element={<Rooms />} />
-                      <Route path="payments" element={<Payments />} />
-                      <Route path="complaints" element={<Complaints />} />
-                    </Routes>
+                    <PendingApprovalWrapper>
+                      <Routes>
+                        <Route path="dashboard" element={<Dashboard />} />
+                        <Route path="tenants" element={<Tenants />} />
+                        <Route path="rooms" element={<Rooms />} />
+                        <Route path="payments" element={<Payments />} />
+                        <Route path="complaints" element={<Complaints />} />
+                      </Routes>
+                    </PendingApprovalWrapper>
                   </Layout>
                 </ProtectedRoute>
               }
