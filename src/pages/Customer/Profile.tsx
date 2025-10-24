@@ -18,7 +18,7 @@ import {
   InputAdornment,
   IconButton
 } from '@mui/material';
-import { Edit, Save, Cancel, Person, Email, Phone, Business, Badge, VpnKey, Visibility, VisibilityOff, Fingerprint } from '@mui/icons-material';
+import { Edit, Save, Cancel, Person, Email, Phone, Business, Badge, VpnKey, Visibility, VisibilityOff, Hotel, Fingerprint } from '@mui/icons-material';
 import { update } from '../../services/fileDataService';
 import BiometricSetupDialog from '../../components/BiometricSetupDialog';
 import { BiometricService } from '../../services/biometricService';
@@ -145,28 +145,6 @@ const Profile: React.FC = () => {
     setShowPasswords({ ...showPasswords, [field]: !showPasswords[field] });
   };
 
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'admin': return 'primary';
-      case 'master_admin': return 'error';
-      case 'receptionist': return 'secondary';
-      case 'staff': return 'info';
-      case 'tenant': return 'success';
-      default: return 'default';
-    }
-  };
-
-  const getRoleLabel = (role: string) => {
-    switch (role) {
-      case 'master_admin': return 'Master Admin';
-      case 'admin': return 'Admin';
-      case 'receptionist': return 'Receptionist';
-      case 'staff': return 'Staff';
-      case 'tenant': return 'Tenant';
-      default: return role;
-    }
-  };
-
   if (!user) {
     return <Typography>Loading...</Typography>;
   }
@@ -176,7 +154,7 @@ const Profile: React.FC = () => {
       {/* Header */}
       <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
         <Typography variant="h5" sx={{ fontWeight: 600 }}>
-          Profile
+          My Profile
         </Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
@@ -222,11 +200,11 @@ const Profile: React.FC = () => {
               sx={{
                 width: { xs: 70, md: 80 },
                 height: { xs: 70, md: 80 },
-                bgcolor: 'primary.main',
+                bgcolor: 'success.main',
                 fontSize: { xs: '1.8rem', md: '2rem' }
               }}
             >
-              {user.name?.charAt(0)?.toUpperCase() || 'U'}
+              {user.name?.charAt(0)?.toUpperCase() || 'T'}
             </Avatar>
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
@@ -237,8 +215,8 @@ const Profile: React.FC = () => {
               </Typography>
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: { xs: 'center', sm: 'flex-start' } }}>
                 <Chip
-                  label={getRoleLabel(user.role)}
-                  color={getRoleColor(user.role) as any}
+                  label="Tenant"
+                  color="success"
                   icon={<Badge />}
                   size="small"
                 />
@@ -247,9 +225,61 @@ const Profile: React.FC = () => {
                   color={user.status === 'active' ? 'success' : 'error'}
                   size="small"
                 />
+                {user.room && (
+                  <Chip
+                    label={`Room ${user.room}`}
+                    color="primary"
+                    icon={<Hotel />}
+                    size="small"
+                  />
+                )}
               </Box>
             </Box>
           </Box>
+        </CardContent>
+      </Card>
+
+      {/* Quick Authentication */}
+      <Card sx={{ mb: 2 }}>
+        <CardContent sx={{ p: 2 }}>
+          <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+            <Fingerprint sx={{ mr: 1 }} />
+            Quick Authentication
+          </Typography>
+          
+          {quickAuthEnabled ? (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              Quick authentication is enabled. You can use PIN or biometric login.
+            </Alert>
+          ) : (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Set up PIN or biometric authentication for faster login.
+            </Alert>
+          )}
+          
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+            {BiometricService.isPINSet() && (
+              <Chip label="PIN Enabled" color="success" variant="outlined" size="small" />
+            )}
+            {BiometricService.isBiometricEnabled() && (
+              <Chip label="Biometric Enabled" color="success" variant="outlined" size="small" />
+            )}
+          </Box>
+          
+          {quickAuthEnabled && (
+            <Button
+              variant="outlined"
+              color="error"
+              onClick={() => {
+                clearQuickAuth();
+                setQuickAuthEnabled(false);
+                setSnackbar({ open: true, message: 'Quick authentication disabled', severity: 'success' });
+              }}
+              size="small"
+            >
+              Disable Quick Auth
+            </Button>
+          )}
         </CardContent>
       </Card>
 
@@ -338,6 +368,20 @@ const Profile: React.FC = () => {
                 </Typography>
               </Box>
             </Box>
+
+            {user.room && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Hotel sx={{ color: 'primary.main', fontSize: 20 }} />
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    Room Number
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                    {user.room}
+                  </Typography>
+                </Box>
+              </Box>
+            )}
           </Box>
 
           {editing && (
@@ -358,110 +402,6 @@ const Profile: React.FC = () => {
               </Button>
             </Box>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Quick Authentication - Hidden when feature is disabled */}
-      {FEATURE_FLAGS.QUICK_AUTH_ENABLED && (
-        <Card sx={{ mb: 2 }}>
-        <CardContent sx={{ p: 2 }}>
-          <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, display: 'flex', alignItems: 'center' }}>
-            <Fingerprint sx={{ mr: 1 }} />
-            Quick Authentication
-          </Typography>
-          
-          {quickAuthEnabled ? (
-            <Alert severity="success" sx={{ mb: 2 }}>
-              Quick authentication is enabled. You can use PIN or biometric login.
-            </Alert>
-          ) : (
-            <Alert severity="info" sx={{ mb: 2 }}>
-              Set up PIN or biometric authentication for faster login.
-            </Alert>
-          )}
-          
-          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
-            {BiometricService.isPINSet() && (
-              <Chip label="PIN Enabled" color="success" variant="outlined" size="small" />
-            )}
-            {BiometricService.isBiometricEnabled() && (
-              <Chip label="Biometric Enabled" color="success" variant="outlined" size="small" />
-            )}
-          </Box>
-          
-          {quickAuthEnabled && (
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button
-                variant="outlined"
-                color="error"
-                onClick={() => {
-                  clearQuickAuth();
-                  setQuickAuthEnabled(false);
-                  setSnackbar({ open: true, message: 'Quick authentication disabled', severity: 'success' });
-                }}
-                size="small"
-              >
-                Disable Quick Auth
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={() => {
-                  console.log('Stored biometric data:', BiometricService.getStoredData());
-                  setSnackbar({ open: true, message: 'Check browser console for stored data', severity: 'success' });
-                }}
-                size="small"
-              >
-                Debug Data
-              </Button>
-            </Box>
-          )}
-        </CardContent>
-        </Card>
-      )}
-
-      {/* Account Details */}
-      <Card>
-        <CardContent sx={{ p: 2 }}>
-          <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-            Account Details
-          </Typography>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
-              <Typography variant="caption" color="text.secondary">
-                User ID
-              </Typography>
-              <Typography variant="caption" sx={{ fontFamily: 'monospace', bgcolor: 'grey.100', px: 1, py: 0.25, borderRadius: 0.5 }}>
-                {user.id}
-              </Typography>
-            </Box>
-            <Divider />
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
-              <Typography variant="caption" color="text.secondary">
-                Hostel ID
-              </Typography>
-              <Typography variant="caption" sx={{ fontFamily: 'monospace', bgcolor: 'grey.100', px: 1, py: 0.25, borderRadius: 0.5 }}>
-                {user.hostelId}
-              </Typography>
-            </Box>
-            <Divider />
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
-              <Typography variant="caption" color="text.secondary">
-                Account Created
-              </Typography>
-              <Typography variant="caption" sx={{ fontWeight: 500 }}>
-                {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
-              </Typography>
-            </Box>
-            <Divider />
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
-              <Typography variant="caption" color="text.secondary">
-                Last Updated
-              </Typography>
-              <Typography variant="caption" sx={{ fontWeight: 500 }}>
-                {user.updatedAt ? new Date(user.updatedAt).toLocaleDateString() : 'N/A'}
-              </Typography>
-            </Box>
-          </Box>
         </CardContent>
       </Card>
 

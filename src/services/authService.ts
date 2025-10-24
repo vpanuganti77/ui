@@ -24,7 +24,7 @@ export const authService = {
     }
     
     // Use the new login API endpoint
-    const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api'}/auth/login`, {
+    const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'https://api-production-79b8.up.railway.app/api'}/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -70,6 +70,9 @@ export const authService = {
   logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    // Keep session data for quick re-login unless explicitly cleared
+    // localStorage.removeItem('rememberedEmail');
+    // localStorage.removeItem('rememberedPassword');
   },
 
   getStoredUser(): User | null {
@@ -84,5 +87,27 @@ export const authService = {
   storeAuth(token: string, user: User) {
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
+    // Set session timestamp for persistent login
+    localStorage.setItem('sessionTimestamp', Date.now().toString());
+  },
+
+  // Check if session is still valid (disabled for persistent login)
+  isSessionValid(): boolean {
+    // Always return true for persistent login
+    return true;
+  },
+
+  // Extend session on activity (disabled for persistent login)
+  extendSession() {
+    // No-op for persistent login
+  },
+
+  // Clear all auth data including persistent session
+  clearAllAuth() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('sessionTimestamp');
+    localStorage.removeItem('rememberedEmail');
+    localStorage.removeItem('rememberedPassword');
   }
 };

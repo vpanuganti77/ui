@@ -9,9 +9,11 @@ import {
   Alert,
   useTheme,
   useMediaQuery,
+  Stack,
+  Paper,
 } from '@mui/material';
 import { DataGrid, GridColDef, DataGridProps, GridActionsCellItem } from '@mui/x-data-grid';
-import { Add, Edit, Delete } from '@mui/icons-material';
+import { Add, Edit, Delete, Inbox } from '@mui/icons-material';
 import MobileCard from './MobileCard';
 
 interface CardField {
@@ -156,11 +158,39 @@ const StyledDataGrid: React.FC<StyledDataGridProps> = ({
   const mobileContent = mobileCardConfig && (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       {data.length === 0 ? (
-        <Box sx={{ textAlign: 'center', py: 4 }}>
-          <Typography variant="body1" color="text.secondary">
-            No data available
-          </Typography>
-        </Box>
+        <Paper 
+          elevation={1} 
+          sx={{ 
+            p: 4, 
+            textAlign: 'center', 
+            bgcolor: 'grey.50',
+            border: '1px dashed',
+            borderColor: 'grey.300'
+          }}
+        >
+          <Stack spacing={2} alignItems="center">
+            <Inbox sx={{ fontSize: 48, color: 'grey.400' }} />
+            <Typography variant="h6" color="text.secondary">
+              No {title?.toLowerCase() || 'records'} found
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {enableCrud ? 
+                `Get started by adding your first ${title?.toLowerCase().slice(0, -1) || 'record'}` :
+                `No ${title?.toLowerCase() || 'records'} available`
+              }
+            </Typography>
+            {enableCrud && (
+              <Button 
+                variant="contained" 
+                startIcon={<Add />} 
+                onClick={handleAdd}
+                sx={{ mt: 2 }}
+              >
+                Add {title?.slice(0, -1) || 'Record'}
+              </Button>
+            )}
+          </Stack>
+        </Paper>
       ) : (
         data.map((item) => (
           <MobileCard
@@ -178,91 +208,128 @@ const StyledDataGrid: React.FC<StyledDataGridProps> = ({
     </Box>
   );
 
-  // Desktop table view
-  const desktopContent = (
-    <Box sx={{ height, width: '100%' }}>
-      <DataGrid
-        rows={data}
-        columns={columnsWithActions}
-        getRowId={(row) => row.id || row._id || Math.random().toString()}
-        initialState={{
-          pagination: {
-            paginationModel: { page: 0, pageSize: 10 },
-          },
-        }}
-        pageSizeOptions={[5, 10, 25]}
-        checkboxSelection={false}
-        disableRowSelectionOnClick
-        {...props}
-        sx={{
-          border: 'none',
-          borderRadius: '12px',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.1)',
-          '& .MuiDataGrid-cell': {
-            borderBottom: '1px solid #f0f0f0',
-            fontSize: '0.875rem',
-            padding: '8px 16px',
-            fontWeight: 500,
-            display: 'flex',
-            alignItems: 'center',
-            minHeight: '52px',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          },
-          '& .MuiDataGrid-columnHeaders': {
-            background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%) !important',
-            color: 'white !important',
-            borderBottom: 'none',
-            fontWeight: '700 !important',
-            fontSize: '0.9rem',
-            minHeight: '56px !important',
-            boxShadow: '0 2px 8px rgba(25, 118, 210, 0.2)',
-            '& .MuiDataGrid-columnHeaderTitle': {
-              fontWeight: '700 !important',
-              color: 'white !important',
-            },
-          },
-          '& .MuiDataGrid-columnHeader': {
-            background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%) !important',
-            color: 'white !important',
-            '& .MuiCheckbox-root': {
-              color: 'white !important',
-              '&.Mui-checked': {
+  // Desktop table view with error handling
+  const desktopContent = (() => {
+    try {
+      return (
+        <Box sx={{ height, width: '100%' }}>
+          <DataGrid
+            rows={data || []}
+            columns={columnsWithActions || []}
+            getRowId={(row) => row?.id || row?._id || Math.random().toString()}
+            initialState={{
+              pagination: {
+                paginationModel: { page: 0, pageSize: 10 },
+              },
+            }}
+            pageSizeOptions={[5, 10, 25]}
+            checkboxSelection={false}
+            disableRowSelectionOnClick
+            slots={{
+              noRowsOverlay: () => (
+                <Stack height="100%" alignItems="center" justifyContent="center" spacing={2}>
+                  <Inbox sx={{ fontSize: 48, color: 'grey.400' }} />
+                  <Typography variant="h6" color="text.secondary">
+                    No {title?.toLowerCase() || 'records'} found
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {enableCrud ? 
+                      `Get started by adding your first ${title?.toLowerCase().slice(0, -1) || 'record'}` :
+                      `Payment history will appear here once available`
+                    }
+                  </Typography>
+                  {enableCrud && (
+                    <Button 
+                      variant="contained" 
+                      startIcon={<Add />} 
+                      onClick={handleAdd}
+                      sx={{ mt: 1 }}
+                    >
+                      Add {title?.slice(0, -1) || 'Record'}
+                    </Button>
+                  )}
+                </Stack>
+              )
+            }}
+            sx={{
+              border: 'none',
+              borderRadius: '12px',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.1)',
+              '& .MuiDataGrid-cell': {
+                borderBottom: '1px solid #f0f0f0',
+                fontSize: '0.875rem',
+                padding: '8px 16px',
+                fontWeight: 500,
+                display: 'flex',
+                alignItems: 'center',
+                minHeight: '52px',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              },
+              '& .MuiDataGrid-columnHeaders': {
+                background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%) !important',
+                color: 'white !important',
+                borderBottom: 'none',
+                fontWeight: '700 !important',
+                fontSize: '0.9rem',
+                minHeight: '56px !important',
+                boxShadow: '0 2px 8px rgba(25, 118, 210, 0.2)',
+                '& .MuiDataGrid-columnHeaderTitle': {
+                  fontWeight: '700 !important',
+                  color: 'white !important',
+                },
+              },
+              '& .MuiDataGrid-columnHeader': {
+                background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%) !important',
+                color: 'white !important',
+                '& .MuiCheckbox-root': {
+                  color: 'white !important',
+                  '&.Mui-checked': {
+                    color: 'white !important',
+                  },
+                },
+              },
+              '& .MuiDataGrid-row': {
+                '&:nth-of-type(even)': {
+                  backgroundColor: '#f8fafc',
+                },
+                '&:hover': {
+                  backgroundColor: '#e3f2fd !important',
+                  cursor: 'pointer',
+                },
+              },
+              '& .text-error': {
+                color: '#d32f2f',
+                fontWeight: 700,
+                backgroundColor: '#ffebee',
+                borderRadius: '6px',
+                padding: '4px 8px',
+              },
+              '& .MuiDataGrid-footerContainer': {
+                borderTop: '2px solid #e0e0e0',
+                backgroundColor: '#f8fafc',
+              },
+              '& .MuiDataGrid-sortIcon': {
                 color: 'white !important',
               },
-            },
-          },
-          '& .MuiDataGrid-row': {
-            '&:nth-of-type(even)': {
-              backgroundColor: '#f8fafc',
-            },
-            '&:hover': {
-              backgroundColor: '#e3f2fd !important',
-              cursor: 'pointer',
-            },
-          },
-          '& .text-error': {
-            color: '#d32f2f',
-            fontWeight: 700,
-            backgroundColor: '#ffebee',
-            borderRadius: '6px',
-            padding: '4px 8px',
-          },
-          '& .MuiDataGrid-footerContainer': {
-            borderTop: '2px solid #e0e0e0',
-            backgroundColor: '#f8fafc',
-          },
-          '& .MuiDataGrid-sortIcon': {
-            color: 'white !important',
-          },
-          '& .MuiDataGrid-menuIconButton': {
-            color: 'white !important',
-          },
-        }}
-      />
-    </Box>
-  );
+              '& .MuiDataGrid-menuIconButton': {
+                color: 'white !important',
+              },
+              ...props?.sx,
+            }}
+          />
+        </Box>
+      );
+    } catch (error) {
+      console.error('DataGrid error:', error);
+      return (
+        <Box sx={{ height, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Typography color="error">Error loading data grid</Typography>
+        </Box>
+      );
+    }
+  })();
 
   const content = isMobile && mobileCardConfig ? mobileContent : desktopContent;
 

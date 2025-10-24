@@ -131,8 +131,7 @@ const Tenants: React.FC = () => {
     {
       field: 'pendingDues',
       headerName: 'Dues',
-      flex: 1,
-      minWidth: 100,
+      width: 100,
       valueFormatter: (params: any) => {
         if (!params) return '-';
         const value = params.value || params.row?.pendingDues || 0;
@@ -141,6 +140,35 @@ const Tenants: React.FC = () => {
       cellClassName: (params: any) => (params.value && params.value > 0) ? 'text-error' : '',
       align: 'right',
       headerAlign: 'right'
+    },
+    {
+      field: 'nextDueDate',
+      headerName: 'Next Due',
+      width: 120,
+      valueFormatter: (params: any) => {
+        if (!params || !params.value) {
+          // Calculate from joining date if nextDueDate is not set
+          const joiningDate = params.row?.joiningDate;
+          if (joiningDate) {
+            const joining = new Date(joiningDate);
+            const today = new Date();
+            const currentMonth = today.getMonth();
+            const currentYear = today.getFullYear();
+            
+            // Calculate next due date on the same day of month as joining date
+            let nextDue = new Date(currentYear, currentMonth, joining.getDate());
+            
+            // If this month's due date has passed, move to next month
+            if (nextDue <= today) {
+              nextDue = new Date(currentYear, currentMonth + 1, joining.getDate());
+            }
+            
+            return nextDue.toLocaleDateString();
+          }
+          return 'N/A';
+        }
+        return new Date(params.value).toLocaleDateString();
+      }
     }
   ];
 
@@ -163,7 +191,27 @@ const Tenants: React.FC = () => {
             { key: 'roomId', label: 'Room', value: 'roomId' },
             { key: 'rent', label: 'Rent', value: 'rent', render: (value: any) => value ? `₹${Number(value).toLocaleString()}` : '₹0' },
             { key: 'status', label: 'Status', value: 'status' },
-            { key: 'pendingDues', label: 'Dues', value: 'pendingDues', render: (value: any) => value && value > 0 ? `₹${Number(value).toLocaleString()}` : '-' }
+            { key: 'pendingDues', label: 'Dues', value: 'pendingDues', render: (value: any) => value && value > 0 ? `₹${Number(value).toLocaleString()}` : '-' },
+            { key: 'nextDueDate', label: 'Next Due', value: 'nextDueDate', render: (value: any, item: any) => {
+              if (value) return new Date(value).toLocaleDateString();
+              if (item.joiningDate) {
+                const joining = new Date(item.joiningDate);
+                const today = new Date();
+                const currentMonth = today.getMonth();
+                const currentYear = today.getFullYear();
+                
+                // Calculate next due date on the same day of month as joining date
+                let nextDue = new Date(currentYear, currentMonth, joining.getDate());
+                
+                // If this month's due date has passed, move to next month
+                if (nextDue <= today) {
+                  nextDue = new Date(currentYear, currentMonth + 1, joining.getDate());
+                }
+                
+                return nextDue.toLocaleDateString();
+              }
+              return 'N/A';
+            }}
           ]
         }}
         customSubmitLogic={customSubmitLogic}

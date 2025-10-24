@@ -13,6 +13,9 @@ interface DataStructure {
   staff: any[];
   hostelRequests: any[];
   notices: any[];
+  checkoutRequests: any[];
+  hostelSettings: any[];
+  notifications: any[];
 }
 
 // API helper function
@@ -26,8 +29,14 @@ const apiCall = async (endpoint: string, options?: RequestInit) => {
   });
   
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(errorData.error || `API call failed: ${response.statusText}`);
+    let errorMessage = response.statusText;
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.error || errorData.message || response.statusText;
+    } catch (e) {
+      // If response is not JSON, use status text
+    }
+    throw new Error(errorMessage);
   }
   
   return response.json();
@@ -135,10 +144,16 @@ export const update = async (entityType: keyof DataStructure, id: string, update
   }
 };
 
-export const remove = async (entityType: keyof DataStructure, id: string): Promise<void> => {
-  await apiCall(`/${entityType}/${id}`, {
-    method: 'DELETE',
-  });
+export const remove = async (entityType: keyof DataStructure, id: string, masterAdminCleanup = false): Promise<void> => {
+  try {
+    const url = masterAdminCleanup ? `/${entityType}/${id}?masterAdminCleanup=true` : `/${entityType}/${id}`;
+    await apiCall(url, {
+      method: 'DELETE',
+    });
+  } catch (error: any) {
+    // Re-throw the specific error message from backend
+    throw new Error(error.message || `Failed to delete ${entityType}`);
+  }
 };
 
 export const getById = async (entityType: keyof DataStructure, id: string): Promise<any> => {
@@ -164,7 +179,10 @@ export const exportData = async (): Promise<string> => {
     expenses: await getAll('expenses'),
     staff: await getAll('staff'),
     hostelRequests: await getAll('hostelRequests'),
-    notices: await getAll('notices')
+    notices: await getAll('notices'),
+    checkoutRequests: await getAll('checkoutRequests'),
+    hostelSettings: await getAll('hostelSettings'),
+    notifications: await getAll('notifications')
   };
   return JSON.stringify(data, null, 2);
 };
@@ -191,13 +209,15 @@ export const importData = async (jsonData: string): Promise<void> => {
 export const clearAllData = async (): Promise<void> => {
   const entityTypes: (keyof DataStructure)[] = [
     'hostels', 'tenants', 'rooms', 'payments', 'complaints', 
-    'users', 'expenses', 'staff', 'hostelRequests', 'notices'
+    'users', 'expenses', 'staff', 'hostelRequests', 'notices',
+    'checkoutRequests', 'hostelSettings', 'notifications'
   ];
   
   for (const entityType of entityTypes) {
     const items = await getAll(entityType);
     for (const item of items) {
-      await remove(entityType, item.id);
+      // Pass masterAdminCleanup=true to bypass complaint deletion restriction
+      await remove(entityType, item.id, true);
     }
   }
 };

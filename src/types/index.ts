@@ -8,6 +8,9 @@ export interface User {
   hostelName?: string;
   avatar?: string;
   isActive: boolean;
+  firstLogin?: boolean;
+  requestId?: string;
+  status?: string;
 }
 
 export interface Hostel {

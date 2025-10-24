@@ -99,7 +99,7 @@ const AdminComplaintDialog: React.FC<AdminComplaintDialogProps> = ({
   const handleAddComment = async (comment: string) => {
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api'}/complaints/${editingItem.id}/comments`, {
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'https://api-production-79b8.up.railway.app/api'}/complaints/${editingItem.id}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -147,6 +147,16 @@ const AdminComplaintDialog: React.FC<AdminComplaintDialogProps> = ({
     // If complaint is resolved, admin cannot change status (only tenant can reopen)
     if (editingItem && editingItem.status === 'resolved') {
       return [{ value: 'resolved', label: 'Resolved (Only tenant can reopen)' }];
+    }
+    
+    // Prevent reverting from in-progress to open
+    if (editingItem && editingItem.status === 'in-progress') {
+      return allStatuses.filter(status => status.value !== 'open');
+    }
+    
+    // Prevent reverting from reopen to open
+    if (editingItem && editingItem.status === 'reopen') {
+      return allStatuses.filter(status => status.value !== 'open');
     }
     
     // If current status is not 'open' or 'reopen', exclude 'open' from options

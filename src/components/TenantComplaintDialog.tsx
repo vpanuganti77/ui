@@ -60,7 +60,7 @@ const TenantComplaintDialog: React.FC<TenantComplaintDialogProps> = ({
   const handleAddComment = async (comment: string) => {
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api'}/complaints/${complaint.id}/comments`, {
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'https://api-production-79b8.up.railway.app/api'}/complaints/${complaint.id}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -94,7 +94,7 @@ const TenantComplaintDialog: React.FC<TenantComplaintDialogProps> = ({
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       
       // First add the reopen reason as a system comment
-      await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api'}/complaints/${complaint.id}/comments`, {
+      await fetch(`${process.env.REACT_APP_API_BASE_URL || 'https://api-production-79b8.up.railway.app/api'}/complaints/${complaint.id}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

@@ -18,38 +18,85 @@ const HostelRequests: React.FC = () => {
     try {
       console.log('Starting quick approve for:', request);
       
-      // Use new backend approval endpoint
-      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api'}/hostelRequests/${request.id}/approve`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+      // Create hostel with unique ID
+      const hostelId = `hostel_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const hostelData = {
+        id: hostelId,
+        name: `${request.hostelName}_${Date.now()}`, // Make name unique
+        displayName: request.hostelName, // Store original name for display
+        address: request.address,
+        contactPerson: request.name,
+        contactEmail: request.email,
+        contactPhone: request.phone,
+        planType: request.planType,
+        status: 'active',
+        trialExpiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+        createdAt: new Date().toISOString(),
+        createdBy: 'Master Admin'
+      };
       
-      if (!response.ok) {
-        throw new Error('Failed to approve hostel');
+      const hostel = await create('hostels', hostelData);
+      
+      // Update user status and hostelId
+      const { getAll, update } = await import('../../services/fileDataService');
+      const users = await getAll('users');
+      const user = users.find((u: any) => u.email === request.email && u.requestId === request.id);
+      
+      if (user) {
+        const updatedUser = {
+          ...user,
+          status: 'active',
+          hostelId: hostel.id || hostelId,
+          hostelName: request.hostelName, // Use original hostel name
+          approvedAt: new Date().toISOString()
+        };
+        
+        await update('users', user.id, updatedUser);
+        
+        // Update localStorage if this is the current user
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        if (currentUser.email === request.email) {
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+        }
       }
       
-      const result = await response.json();
-      console.log('Approval result:', result);
+      // Update request status
+      await update('hostelRequests', request.id, {
+        ...request,
+        status: 'approved',
+        processedAt: new Date().toISOString(),
+        hostelId: hostel.id || hostelId
+      });
       
+      // Create notification for user
+      await create('notifications', {
+        userId: user.id,
+        type: 'hostel_approved',
+        title: 'Hostel Approved!',
+        message: `Your hostel "${request.hostelName}" has been approved and is now active.`,
+        priority: 'high',
+        isRead: false,
+        createdAt: new Date().toISOString()
+      });
+      
+      // Show user credentials (existing password)
       setTimeout(() => {
         setCredentialsDialog({
           open: true,
           userDetails: {
-            name: result.name,
-            email: result.userCredentials.email,
-            password: result.userCredentials.password,
-            hostelName: result.hostelName,
+            name: request.name,
+            email: request.email,
+            password: request.tempPassword || 'Auto-generated password',
+            hostelName: request.hostelName,
             role: 'admin',
-            loginUrl: result.userCredentials.loginUrl
+            loginUrl: window.location.origin + '/login'
           }
         });
       }, 500);
       
       setSnackbar({ 
         open: true, 
-        message: 'Hostel and admin account created successfully!', 
+        message: 'Hostel approved and user account activated!', 
         severity: 'success' 
       });
       
@@ -75,49 +122,9 @@ const HostelRequests: React.FC = () => {
         processedAt: new Date().toISOString()
       };
 
-      // If approved, use backend approval endpoint
+      // If approved, create hostel and update user
       if (formData.status === 'approved' && editingItem.status !== 'approved') {
-        try {
-          const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api'}/hostelRequests/${editingItem.id}/approve`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            }
-          });
-          
-          if (!response.ok) {
-            throw new Error('Failed to approve hostel');
-          }
-          
-          const result = await response.json();
-          
-          setTimeout(() => {
-            setCredentialsDialog({
-              open: true,
-              userDetails: {
-                name: result.name,
-                email: result.userCredentials.email,
-                password: result.userCredentials.password,
-                hostelName: result.hostelName,
-                role: 'admin',
-                loginUrl: result.userCredentials.loginUrl
-              }
-            });
-          }, 500);
-          
-          setSnackbar({ 
-            open: true, 
-            message: 'Hostel approved and admin account created!', 
-            severity: 'success' 
-          });
-          
-        } catch (error) {
-          setSnackbar({ 
-            open: true, 
-            message: 'Error creating hostel: ' + (error instanceof Error ? error.message : 'Unknown error'), 
-            severity: 'error' 
-          });
-        }
+        await handleQuickApprove(editingItem);
       }
 
       return updatedRequest;

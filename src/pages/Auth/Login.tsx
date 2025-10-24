@@ -13,11 +13,16 @@ import {
   Checkbox,
   IconButton,
   InputAdornment,
+  Fab,
+  Tooltip
 } from '@mui/material';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import ContactUsDialog from '../../components/ContactUsDialog';
-import { ArrowBack, Visibility, VisibilityOff } from '@mui/icons-material';
+import QuickAuthDialog from '../../components/QuickAuthDialog';
+import { ArrowBack, Visibility, VisibilityOff, Fingerprint } from '@mui/icons-material';
+import { BiometricService } from '../../services/biometricService';
+import { FEATURE_FLAGS } from '../../config/features';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -26,9 +31,20 @@ const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [contactOpen, setContactOpen] = useState(false);
+  const [quickAuthOpen, setQuickAuthOpen] = useState(false);
   const [autoLoginAttempted, setAutoLoginAttempted] = useState(false);
+  const [hasQuickAuth, setHasQuickAuth] = useState(false);
   const { login, isLoading } = useAuth();
   const navigate = useNavigate();
+
+  // Check for quick auth availability
+  useEffect(() => {
+    const checkQuickAuth = () => {
+      const quickAuthAvailable = BiometricService.isPINSet() || BiometricService.isBiometricEnabled();
+      setHasQuickAuth(quickAuthAvailable);
+    };
+    checkQuickAuth();
+  }, []);
 
   // Load saved credentials and handle auto-login on component mount
   useEffect(() => {
@@ -246,6 +262,18 @@ const Login: React.FC = () => {
               {isLoading ? <CircularProgress size={24} /> : 'Sign In'}
             </Button>
             
+            {FEATURE_FLAGS.QUICK_AUTH_ENABLED && hasQuickAuth && (
+              <Button
+                fullWidth
+                variant="outlined"
+                startIcon={<Fingerprint />}
+                onClick={() => setQuickAuthOpen(true)}
+                sx={{ mb: 2 }}
+              >
+                Quick Login
+              </Button>
+            )}
+            
             <Box textAlign="center">
               <Button
                 variant="outlined"
@@ -268,6 +296,12 @@ const Login: React.FC = () => {
           <ContactUsDialog
             open={contactOpen}
             onClose={() => setContactOpen(false)}
+          />
+          
+          <QuickAuthDialog
+            open={quickAuthOpen}
+            onClose={() => setQuickAuthOpen(false)}
+            onAuthenticate={login}
           />
         </Paper>
       </Container>

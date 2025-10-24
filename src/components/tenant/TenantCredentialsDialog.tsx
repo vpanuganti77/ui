@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -7,11 +7,11 @@ import {
   Button,
   Typography,
   Box,
-  TextField,
+  Paper,
   IconButton,
   Alert,
 } from '@mui/material';
-import { ContentCopy, Launch } from '@mui/icons-material';
+import { ContentCopy, CheckCircle } from '@mui/icons-material';
 
 interface TenantCredentialsDialogProps {
   open: boolean;
@@ -30,13 +30,29 @@ const TenantCredentialsDialog: React.FC<TenantCredentialsDialogProps> = ({
   credentials,
   tenantName,
 }) => {
-  const handleCopyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-  };
+  const [copied, setCopied] = useState(false);
 
-  const handleOpenLoginUrl = () => {
-    if (credentials?.loginUrl) {
-      window.open(credentials.loginUrl, '_blank');
+  const handleCopyToClipboard = async () => {
+    if (!credentials) return;
+
+    const credentialsText = `
+Hostel Management System - Tenant Login Credentials
+
+Tenant Name: ${tenantName}
+Email: ${credentials.email}
+Password: ${credentials.password}
+
+Login URL: ${credentials.loginUrl}
+
+Please keep these credentials safe and change the password after first login.
+    `.trim();
+
+    try {
+      await navigator.clipboard.writeText(credentialsText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3000);
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error);
     }
   };
 
@@ -50,89 +66,94 @@ const TenantCredentialsDialog: React.FC<TenantCredentialsDialogProps> = ({
         </Typography>
       </DialogTitle>
       <DialogContent>
-        <Alert severity="success" sx={{ mb: 2 }}>
-          User account has been automatically created for {tenantName}
+        <Alert severity="success" sx={{ mb: 3 }}>
+          Tenant account has been created successfully! Please share these credentials with {tenantName}.
         </Alert>
-        
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-            Login Email:
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <TextField
-              value={credentials.email}
-              fullWidth
-              size="small"
-              InputProps={{ readOnly: true }}
-            />
-            <IconButton
-              onClick={() => handleCopyToClipboard(credentials.email)}
-              size="small"
-              title="Copy email"
-            >
-              <ContentCopy />
-            </IconButton>
-          </Box>
-        </Box>
 
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-            Password:
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <TextField
-              value={credentials.password}
-              fullWidth
-              size="small"
-              InputProps={{ readOnly: true }}
-            />
-            <IconButton
-              onClick={() => handleCopyToClipboard(credentials.password)}
-              size="small"
-              title="Copy password"
-            >
-              <ContentCopy />
-            </IconButton>
-          </Box>
-        </Box>
+        <Paper 
+          elevation={2} 
+          sx={{ 
+            p: 3, 
+            bgcolor: 'grey.50', 
+            border: '1px solid', 
+            borderColor: 'grey.200',
+            position: 'relative'
+          }}
+        >
+          <IconButton
+            onClick={handleCopyToClipboard}
+            sx={{ 
+              position: 'absolute', 
+              top: 8, 
+              right: 8,
+              bgcolor: copied ? 'success.main' : 'primary.main',
+              color: 'white',
+              '&:hover': {
+                bgcolor: copied ? 'success.dark' : 'primary.dark'
+              }
+            }}
+            size="small"
+          >
+            {copied ? <CheckCircle fontSize="small" /> : <ContentCopy fontSize="small" />}
+          </IconButton>
 
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-            Direct Login Link:
+          <Typography variant="h6" gutterBottom sx={{ pr: 5 }}>
+            Login Credentials
           </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <TextField
-              value={credentials.loginUrl}
-              fullWidth
-              size="small"
-              InputProps={{ readOnly: true }}
-              multiline
-              rows={2}
-            />
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              <IconButton
-                onClick={() => handleCopyToClipboard(credentials.loginUrl)}
-                size="small"
-                title="Copy login URL"
-              >
-                <ContentCopy />
-              </IconButton>
-              <IconButton
-                onClick={handleOpenLoginUrl}
-                size="small"
-                title="Open login URL"
-              >
-                <Launch />
-              </IconButton>
+
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            <Box>
+              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                Tenant Name:
+              </Typography>
+              <Typography variant="body1" sx={{ fontFamily: 'monospace', bgcolor: 'white', p: 1, borderRadius: 1 }}>
+                {tenantName}
+              </Typography>
+            </Box>
+
+            <Box>
+              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                Email (Username):
+              </Typography>
+              <Typography variant="body1" sx={{ fontFamily: 'monospace', bgcolor: 'white', p: 1, borderRadius: 1 }}>
+                {credentials.email}
+              </Typography>
+            </Box>
+
+            <Box>
+              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                Password:
+              </Typography>
+              <Typography variant="body1" sx={{ fontFamily: 'monospace', bgcolor: 'white', p: 1, borderRadius: 1 }}>
+                {credentials.password}
+              </Typography>
+            </Box>
+
+            <Box>
+              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                Login URL:
+              </Typography>
+              <Typography variant="body1" sx={{ fontFamily: 'monospace', bgcolor: 'white', p: 1, borderRadius: 1, wordBreak: 'break-all' }}>
+                {credentials.loginUrl}
+              </Typography>
             </Box>
           </Box>
-        </Box>
 
-        <Alert severity="info">
-          Share these credentials with the tenant. They can use the direct login link to access their account without entering username and password.
-        </Alert>
+          {copied && (
+            <Alert severity="success" sx={{ mt: 2 }}>
+              Credentials copied to clipboard!
+            </Alert>
+          )}
+        </Paper>
+
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+          Please share these credentials securely with the tenant. They should change the password after first login.
+        </Typography>
       </DialogContent>
       <DialogActions>
+        <Button onClick={handleCopyToClipboard} variant="outlined" startIcon={<ContentCopy />}>
+          Copy Credentials
+        </Button>
         <Button onClick={onClose} variant="contained">
           Close
         </Button>

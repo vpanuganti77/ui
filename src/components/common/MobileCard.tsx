@@ -26,6 +26,8 @@ interface MobileCardProps {
   onDelete: (id: string) => void;
   onItemClick?: (id: string) => void;
   idField?: string;
+  hideDelete?: boolean;
+  hideEdit?: boolean;
 }
 
 const MobileCard: React.FC<MobileCardProps> = ({
@@ -35,7 +37,9 @@ const MobileCard: React.FC<MobileCardProps> = ({
   onEdit,
   onDelete,
   onItemClick,
-  idField = 'id'
+  idField = 'id',
+  hideDelete = false,
+  hideEdit = false
 }) => {
   return (
     <Card 
@@ -69,26 +73,30 @@ const MobileCard: React.FC<MobileCardProps> = ({
             {item[titleField]}
           </Typography>
           <Box display="flex" gap={0.5}>
-            <IconButton 
-              size="small" 
-              onClick={() => onEdit(item[idField])}
-              sx={{ 
-                bgcolor: 'primary.50',
-                '&:hover': { bgcolor: 'primary.100' }
-              }}
-            >
-              <Edit fontSize="small" color="primary" />
-            </IconButton>
-            <IconButton 
-              size="small" 
-              onClick={() => onDelete(item[idField])}
-              sx={{ 
-                bgcolor: 'error.50',
-                '&:hover': { bgcolor: 'error.100' }
-              }}
-            >
-              <Delete fontSize="small" color="error" />
-            </IconButton>
+            {!hideEdit && (
+              <IconButton 
+                size="small" 
+                onClick={() => onEdit(item[idField])}
+                sx={{ 
+                  bgcolor: 'primary.50',
+                  '&:hover': { bgcolor: 'primary.100' }
+                }}
+              >
+                <Edit fontSize="small" color="primary" />
+              </IconButton>
+            )}
+            {!hideDelete && (
+              <IconButton 
+                size="small" 
+                onClick={() => onDelete(item[idField])}
+                sx={{ 
+                  bgcolor: 'error.50',
+                  '&:hover': { bgcolor: 'error.100' }
+                }}
+              >
+                <Delete fontSize="small" color="error" />
+              </IconButton>
+            )}
           </Box>
         </Box>
         <Stack spacing={1.5}>

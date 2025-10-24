@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { User } from '../types';
 import { authService } from '../services/authService';
+import { BiometricService } from '../services/biometricService';
 
 interface AuthState {
   user: User | null;
@@ -18,8 +19,9 @@ type AuthAction =
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
-
   logout: () => void;
+  hasQuickAuth: () => boolean;
+  clearQuickAuth: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -70,10 +72,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const initAuth = () => {
-      const token = authService.getStoredToken();
-      const user = authService.getStoredUser();
+      const token = authService.getStoredToken() || localStorage.getItem('token');
+      const user = authService.getStoredUser() || JSON.parse(localStorage.getItem('user') || 'null');
 
       if (token && user) {
+        // Always restore session for persistent login
         dispatch({ type: 'LOGIN_SUCCESS', payload: { user, token } });
       } else {
         dispatch({ type: 'SET_LOADING', payload: false });
@@ -82,6 +85,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     initAuth();
   }, []);
+
+  // Activity tracking disabled for persistent login
+  // useEffect(() => {
+  //   const handleActivity = () => {
+  //     if (state.isAuthenticated) {
+  //       authService.extendSession();
+  //     }
+  //   };
+
+  //   const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+  //   events.forEach(event => {
+  //     document.addEventListener(event, handleActivity, true);
+  //   });
+
+  //   return () => {
+  //     events.forEach(event => {
+  //       document.removeEventListener(event, handleActivity, true);
+  //     });
+  //   };
+  // }, [state.isAuthenticated]);
 
   const login = async (email: string, password: string) => {
     try {
@@ -102,13 +125,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     dispatch({ type: 'LOGOUT' });
   };
 
+  const hasQuickAuth = () => {
+    return BiometricService.isPINSet() || BiometricService.isBiometricEnabled();
+  };
+
+  const clearQuickAuth = () => {
+    BiometricService.clearBiometric();
+  };
+
   return (
     <AuthContext.Provider
       value={{
         ...state,
         login,
-
         logout,
+        hasQuickAuth,
+        clearQuickAuth,
       }}
     >
       {children}

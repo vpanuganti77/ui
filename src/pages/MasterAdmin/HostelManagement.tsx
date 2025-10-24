@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Chip, Typography, Box, Button, Snackbar, Alert } from '@mui/material';
 import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
-import { Business, Add, Verified, Pending, Block, Visibility, PlayArrow, Stop } from '@mui/icons-material';
+import { Business, Add, Verified, Pending, Block, Visibility, PlayArrow, Stop, VpnKey } from '@mui/icons-material';
 import ListPage from '../../components/common/ListPage';
 import { hostelFields } from '../../components/common/FormConfigs';
 import UserCredentialsDialog from '../../components/UserCredentialsDialog';
@@ -21,6 +21,7 @@ const HostelManagement: React.FC = () => {
   }>({ open: false, hostel: null });
   const [refreshKey, setRefreshKey] = useState(0);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+  const [resetCredentials, setResetCredentials] = useState<{name: string, email: string, password: string, hostelName: string} | null>(null);
   
   const handleToggleStatus = async (hostel: any) => {
     try {
@@ -57,6 +58,49 @@ const HostelManagement: React.FC = () => {
       setSnackbar({ 
         open: true, 
         message: 'Failed to update hostel status', 
+        severity: 'error' 
+      });
+    }
+  };
+
+  const handleResetAdminPassword = async (hostel: any) => {
+    try {
+      const users = await getAll('users');
+      const adminUser = users.find((u: any) => u.hostelId === hostel.id && u.role === 'admin');
+      
+      if (!adminUser) {
+        setSnackbar({ 
+          open: true, 
+          message: 'Admin user not found for this hostel', 
+          severity: 'error' 
+        });
+        return;
+      }
+      
+      const newPassword = 'admin' + Math.random().toString(36).substring(2, 8);
+      await update('users', adminUser.id, { 
+        ...adminUser, 
+        password: newPassword,
+        firstLogin: true
+      });
+      
+      // Show credentials dialog
+      setResetCredentials({
+        name: adminUser.name,
+        email: adminUser.email,
+        password: newPassword,
+        hostelName: hostel.name
+      });
+      
+      setSnackbar({ 
+        open: true, 
+        message: 'Admin password reset successfully! User will be required to change password on next login.', 
+        severity: 'success' 
+      });
+    } catch (error) {
+      setSnackbar({ 
+        open: true, 
+        message: 'Failed to reset admin password', 
         severity: 'error' 
       });
     }
@@ -299,6 +343,12 @@ const HostelManagement: React.FC = () => {
             onClick={() => setUsageDialog({ open: true, hostel: params.row })}
           />,
           <GridActionsCellItem
+            key="reset"
+            icon={<VpnKey color="warning" />}
+            label="Reset Admin Password"
+            onClick={() => handleResetAdminPassword(params.row)}
+          />,
+          <GridActionsCellItem
             key="toggle"
             icon={isActive ? <Stop color="error" /> : <PlayArrow color="success" />}
             label={isActive ? 'Deactivate' : 'Activate'}
@@ -350,6 +400,22 @@ const HostelManagement: React.FC = () => {
         onClose={() => setUsageDialog({ open: false, hostel: null })}
         hostel={usageDialog.hostel}
       />
+      
+      {/* Reset Admin Password Dialog */}
+      {resetCredentials && (
+        <UserCredentialsDialog
+          open={!!resetCredentials}
+          onClose={() => setResetCredentials(null)}
+          userDetails={{
+            name: resetCredentials.name,
+            email: resetCredentials.email,
+            password: resetCredentials.password,
+            hostelName: resetCredentials.hostelName,
+            role: 'admin',
+            loginUrl: `${window.location.origin}/login?email=${encodeURIComponent(resetCredentials.email)}&password=${encodeURIComponent(resetCredentials.password)}`
+          }}
+        />
+      )}
       
       <Snackbar
         open={snackbar.open}

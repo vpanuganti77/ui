@@ -120,6 +120,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       isGroup: true,
       items: [
         { text: 'All Users', icon: <AccountCircle />, path: '/master-admin/users' },
+        { text: 'Profile', icon: <Settings />, path: '/master-admin/profile' },
         { text: 'Settings', icon: <Settings />, path: '/master-admin/settings' },
       ]
     }
@@ -232,39 +233,70 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           borderColor: 'divider'
         }}
       >
-        <Toolbar sx={{ minHeight: '64px !important' }}>
+        <Toolbar sx={{ minHeight: '64px !important', px: isMobile ? 1 : 3 }}>
           <IconButton
             color="inherit"
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            sx={{ mr: 2 }}
+            sx={{ mr: isMobile ? 1 : 2 }}
           >
             <MenuIcon />
           </IconButton>
-          <Box sx={{ flexGrow: 1 }}>
+          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
             {user?.hostelName ? (
               <>
-                <Typography variant={isMobile ? 'body2' : 'h6'} noWrap sx={{ fontWeight: 700, lineHeight: 1.2 }}>
+                <Typography 
+                  variant={isMobile ? 'body2' : 'h6'} 
+                  noWrap 
+                  sx={{ 
+                    fontWeight: 700, 
+                    lineHeight: 1.2,
+                    fontSize: isMobile ? '0.875rem' : '1.25rem'
+                  }}
+                >
                   {user.hostelName}
                 </Typography>
-                <Typography variant="caption" sx={{ opacity: 0.8, fontSize: '0.75rem' }}>
-                  Powered by PGFlow
-                </Typography>
+                {!isMobile && (
+                  <Typography variant="caption" sx={{ opacity: 0.8, fontSize: '0.75rem' }}>
+                    Powered by PGFlow
+                  </Typography>
+                )}
               </>
             ) : (
-              <Typography variant={isMobile ? 'body1' : 'h6'} noWrap sx={{ fontWeight: 600 }}>
-                PG & Hostel Management System
+              <Typography 
+                variant={isMobile ? 'body2' : 'h6'} 
+                noWrap 
+                sx={{ 
+                  fontWeight: 600,
+                  fontSize: isMobile ? '0.875rem' : '1.25rem'
+                }}
+              >
+                {isMobile ? 'PGFlow' : 'PG & Hostel Management System'}
               </Typography>
             )}
           </Box>
-          <NotificationBell />
-          <Button
-            color="inherit"
-            onClick={handleProfileMenuOpen}
-            startIcon={<Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>{user?.name.charAt(0)}</Avatar>}
-            sx={{ textTransform: 'none', borderRadius: 2 }}
-          >
-            {user?.name}
-          </Button>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: isMobile ? 0.5 : 1 }}>
+            <NotificationBell />
+            {isMobile ? (
+              <IconButton
+                color="inherit"
+                onClick={handleProfileMenuOpen}
+                sx={{ p: 1 }}
+              >
+                <Avatar sx={{ width: 28, height: 28, bgcolor: 'primary.main', fontSize: '0.875rem' }}>
+                  {user?.name.charAt(0)}
+                </Avatar>
+              </IconButton>
+            ) : (
+              <Button
+                color="inherit"
+                onClick={handleProfileMenuOpen}
+                startIcon={<Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>{user?.name.charAt(0)}</Avatar>}
+                sx={{ textTransform: 'none', borderRadius: 2 }}
+              >
+                {user?.name}
+              </Button>
+            )}
+          </Box>
           <Menu
             anchorEl={anchorEl}
             open={Boolean(anchorEl)}
@@ -273,13 +305,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               sx: {
                 mt: 1,
                 borderRadius: 2,
-                boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+                boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                minWidth: isMobile ? 160 : 180
               }
             }}
           >
             <MenuItem onClick={() => {
               handleProfileMenuClose();
-              navigate(user?.role === 'admin' ? '/admin/profile' : '/tenant/profile');
+              const profilePath = user?.role === 'master_admin' ? '/master-admin/profile' : 
+                                 user?.role === 'admin' ? '/admin/profile' : '/tenant/profile';
+              navigate(profilePath);
             }} sx={{ borderRadius: 1, mx: 1 }}>
               <ListItemIcon>
                 <AccountCircle fontSize="small" />
@@ -518,7 +553,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         sx={{
           flexGrow: 1,
           bgcolor: 'grey.50',
-          p: isMobile ? 2 : 3,
+          p: isMobile ? 1.5 : 3,
           width: isMobile ? '100%' : `calc(100% - ${sidebarOpen ? drawerWidth : miniDrawerWidth}px)`,
           transition: 'width 0.3s ease',
           minHeight: '100vh'

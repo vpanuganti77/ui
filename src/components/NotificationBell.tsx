@@ -10,7 +10,9 @@ import {
   Button,
   Chip,
   ListItemIcon,
-  ListItemText
+  ListItemText,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import {
   Notifications,
@@ -27,6 +29,8 @@ const NotificationBell: React.FC = () => {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -101,10 +105,16 @@ const NotificationBell: React.FC = () => {
       <IconButton
         color="inherit"
         onClick={handleClick}
-        sx={{ mr: 1 }}
+        sx={{ 
+          mr: isMobile ? 0.5 : 1,
+          p: isMobile ? 1 : 1.5
+        }}
       >
         <Badge badgeContent={unreadCount} color="error">
-          {unreadCount > 0 ? <Notifications /> : <NotificationsNone />}
+          {unreadCount > 0 ? 
+            <Notifications sx={{ fontSize: isMobile ? 20 : 24 }} /> : 
+            <NotificationsNone sx={{ fontSize: isMobile ? 20 : 24 }} />
+          }
         </Badge>
       </IconButton>
 
@@ -113,7 +123,11 @@ const NotificationBell: React.FC = () => {
         open={Boolean(anchorEl)}
         onClose={handleClose}
         PaperProps={{
-          sx: { width: 400, maxHeight: 500 }
+          sx: { 
+            width: isMobile ? '90vw' : 400, 
+            maxWidth: isMobile ? 350 : 400,
+            maxHeight: isMobile ? '70vh' : 500
+          }
         }}
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}

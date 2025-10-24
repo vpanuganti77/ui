@@ -19,7 +19,8 @@ import {
   Fab,
   IconButton,
 } from '@mui/material';
-import { Add, Comment } from '@mui/icons-material';
+import { Add, Comment, Inbox } from '@mui/icons-material';
+import toast from 'react-hot-toast';
 import { useNotifications } from '../../context/NotificationContext';
 import TenantComplaintDialog from '../../components/TenantComplaintDialog';
 
@@ -162,6 +163,9 @@ const MyComplaints: React.FC = () => {
       const newComplaint = await create('complaints', complaintData);
       setComplaints([newComplaint, ...complaints]);
       
+      // Show success toast
+      toast.success('Complaint submitted successfully!');
+      
       setOpen(false);
       setFormData({
         title: '',
@@ -171,6 +175,7 @@ const MyComplaints: React.FC = () => {
       });
     } catch (error) {
       console.error('Error submitting complaint:', error);
+      toast.error('Failed to submit complaint');
     }
   };
 
@@ -252,9 +257,25 @@ const MyComplaints: React.FC = () => {
             <Typography>Loading complaints...</Typography>
           </Box>
         ) : complaints.length === 0 ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-            <Typography color="text.secondary">No complaints found</Typography>
-          </Box>
+          <Card elevation={1} sx={{ p: 4, textAlign: 'center', bgcolor: 'grey.50', border: '1px dashed', borderColor: 'grey.300' }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <Comment sx={{ fontSize: 48, color: 'grey.400' }} />
+              <Typography variant="h6" color="text.secondary">
+                No complaints submitted yet
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                When you have any issues or concerns, you can submit them here
+              </Typography>
+              <Button 
+                variant="contained" 
+                startIcon={<Add />} 
+                onClick={() => setOpen(true)}
+                sx={{ mt: 1 }}
+              >
+                Submit Complaint
+              </Button>
+            </Box>
+          </Card>
         ) : complaints.map((complaint) => (
           <Card key={complaint.id || complaint._id}>
             <CardContent>

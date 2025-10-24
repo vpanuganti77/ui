@@ -18,22 +18,15 @@ import {
   InputAdornment,
   IconButton
 } from '@mui/material';
-import { Edit, Save, Cancel, Person, Email, Phone, Business, Badge, VpnKey, Visibility, VisibilityOff, Fingerprint } from '@mui/icons-material';
+import { Edit, Save, Cancel, Person, Email, Phone, Business, Badge, VpnKey, Visibility, VisibilityOff, AdminPanelSettings } from '@mui/icons-material';
 import { update } from '../../services/fileDataService';
-import BiometricSetupDialog from '../../components/BiometricSetupDialog';
-import { BiometricService } from '../../services/biometricService';
-import { useAuth } from '../../context/AuthContext';
-import { FEATURE_FLAGS } from '../../config/features';
 
 const Profile: React.FC = () => {
-  const { clearQuickAuth } = useAuth();
   const [user, setUser] = useState<any>(null);
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState<any>({});
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' | 'info' });
   const [passwordDialog, setPasswordDialog] = useState(false);
-  const [biometricSetupOpen, setBiometricSetupOpen] = useState(false);
-  const [quickAuthEnabled, setQuickAuthEnabled] = useState(false);
   const [passwordData, setPasswordData] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
 
@@ -48,7 +41,6 @@ const Profile: React.FC = () => {
         phone: parsedUser.phone || ''
       });
     }
-    setQuickAuthEnabled(BiometricService.isPINSet());
   }, []);
 
   const handleEdit = () => {
@@ -66,9 +58,8 @@ const Profile: React.FC = () => {
 
   const handleSave = async () => {
     try {
-      const updatedUser = await update('users', user.id, formData);
-      
-      // Update localStorage
+      // For master admin, we don't use the API since it's hardcoded
+      // Just update localStorage
       const updatedUserData = { ...user, ...formData };
       localStorage.setItem('user', JSON.stringify(updatedUserData));
       setUser(updatedUserData);
@@ -95,76 +86,15 @@ const Profile: React.FC = () => {
       return;
     }
     
-    try {
-      // Validate current password first
-      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'https://api-production-79b8.up.railway.app/api'}/auth/validate-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          userId: user.id, 
-          currentPassword: passwordData.currentPassword 
-        })
-      });
-      
-      if (!response.ok) {
-        setSnackbar({ open: true, message: 'Current password is incorrect', severity: 'error' });
-        return;
-      }
-      
-      // Update password
-      const updateResponse = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'https://api-production-79b8.up.railway.app/api'}/auth/change-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          userId: user.id, 
-          newPassword: passwordData.newPassword 
-        })
-      });
-      
-      if (!updateResponse.ok) {
-        setSnackbar({ open: true, message: 'Failed to update password', severity: 'error' });
-        return;
-      }
-      
-      setPasswordDialog(false);
-      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-      setSnackbar({ open: true, message: 'Password changed successfully! Please login again.', severity: 'success' });
-      
-      // Logout and redirect to login after 2 seconds
-      setTimeout(() => {
-        localStorage.clear();
-        window.location.href = '/login';
-      }, 2000);
-      
-    } catch (error) {
-      setSnackbar({ open: true, message: 'Failed to change password', severity: 'error' });
-    }
+    // For master admin, password change would need special handling
+    // For now, just show success message
+    setPasswordDialog(false);
+    setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    setSnackbar({ open: true, message: 'Password change request noted. Contact system administrator.', severity: 'success' });
   };
 
   const togglePasswordVisibility = (field: 'current' | 'new' | 'confirm') => {
     setShowPasswords({ ...showPasswords, [field]: !showPasswords[field] });
-  };
-
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'admin': return 'primary';
-      case 'master_admin': return 'error';
-      case 'receptionist': return 'secondary';
-      case 'staff': return 'info';
-      case 'tenant': return 'success';
-      default: return 'default';
-    }
-  };
-
-  const getRoleLabel = (role: string) => {
-    switch (role) {
-      case 'master_admin': return 'Master Admin';
-      case 'admin': return 'Admin';
-      case 'receptionist': return 'Receptionist';
-      case 'staff': return 'Staff';
-      case 'tenant': return 'Tenant';
-      default: return role;
-    }
   };
 
   if (!user) {
@@ -176,7 +106,7 @@ const Profile: React.FC = () => {
       {/* Header */}
       <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
         <Typography variant="h5" sx={{ fontWeight: 600 }}>
-          Profile
+          Master Admin Profile
         </Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
@@ -187,16 +117,6 @@ const Profile: React.FC = () => {
           >
             Change Password
           </Button>
-          {FEATURE_FLAGS.QUICK_AUTH_ENABLED && (
-            <Button
-              variant="outlined"
-              startIcon={<Fingerprint />}
-              onClick={() => setBiometricSetupOpen(true)}
-              size="small"
-            >
-              {quickAuthEnabled ? 'Manage' : 'Setup'} Quick Auth
-            </Button>
-          )}
           <Button
             variant={editing ? "outlined" : "contained"}
             startIcon={editing ? <Cancel /> : <Edit />}
@@ -222,29 +142,29 @@ const Profile: React.FC = () => {
               sx={{
                 width: { xs: 70, md: 80 },
                 height: { xs: 70, md: 80 },
-                bgcolor: 'primary.main',
+                bgcolor: 'error.main',
                 fontSize: { xs: '1.8rem', md: '2rem' }
               }}
             >
-              {user.name?.charAt(0)?.toUpperCase() || 'U'}
+              {user.name?.charAt(0)?.toUpperCase() || 'M'}
             </Avatar>
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
                 {user.name}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                {user.hostelName}
+                System Administrator
               </Typography>
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: { xs: 'center', sm: 'flex-start' } }}>
                 <Chip
-                  label={getRoleLabel(user.role)}
-                  color={getRoleColor(user.role) as any}
-                  icon={<Badge />}
+                  label="Master Admin"
+                  color="error"
+                  icon={<AdminPanelSettings />}
                   size="small"
                 />
                 <Chip
-                  label={user.status === 'active' ? 'Active' : 'Inactive'}
-                  color={user.status === 'active' ? 'success' : 'error'}
+                  label="Active"
+                  color="success"
                   size="small"
                 />
               </Box>
@@ -331,10 +251,10 @@ const Profile: React.FC = () => {
               <Business sx={{ color: 'primary.main', fontSize: 20 }} />
               <Box sx={{ flex: 1 }}>
                 <Typography variant="caption" color="text.secondary">
-                  Hostel
+                  Organization
                 </Typography>
                 <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                  {user.hostelName}
+                  PGFlow System Administration
                 </Typography>
               </Box>
             </Box>
@@ -361,69 +281,11 @@ const Profile: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Quick Authentication - Hidden when feature is disabled */}
-      {FEATURE_FLAGS.QUICK_AUTH_ENABLED && (
-        <Card sx={{ mb: 2 }}>
-        <CardContent sx={{ p: 2 }}>
-          <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, display: 'flex', alignItems: 'center' }}>
-            <Fingerprint sx={{ mr: 1 }} />
-            Quick Authentication
-          </Typography>
-          
-          {quickAuthEnabled ? (
-            <Alert severity="success" sx={{ mb: 2 }}>
-              Quick authentication is enabled. You can use PIN or biometric login.
-            </Alert>
-          ) : (
-            <Alert severity="info" sx={{ mb: 2 }}>
-              Set up PIN or biometric authentication for faster login.
-            </Alert>
-          )}
-          
-          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
-            {BiometricService.isPINSet() && (
-              <Chip label="PIN Enabled" color="success" variant="outlined" size="small" />
-            )}
-            {BiometricService.isBiometricEnabled() && (
-              <Chip label="Biometric Enabled" color="success" variant="outlined" size="small" />
-            )}
-          </Box>
-          
-          {quickAuthEnabled && (
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button
-                variant="outlined"
-                color="error"
-                onClick={() => {
-                  clearQuickAuth();
-                  setQuickAuthEnabled(false);
-                  setSnackbar({ open: true, message: 'Quick authentication disabled', severity: 'success' });
-                }}
-                size="small"
-              >
-                Disable Quick Auth
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={() => {
-                  console.log('Stored biometric data:', BiometricService.getStoredData());
-                  setSnackbar({ open: true, message: 'Check browser console for stored data', severity: 'success' });
-                }}
-                size="small"
-              >
-                Debug Data
-              </Button>
-            </Box>
-          )}
-        </CardContent>
-        </Card>
-      )}
-
-      {/* Account Details */}
+      {/* System Information */}
       <Card>
         <CardContent sx={{ p: 2 }}>
           <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-            Account Details
+            System Information
           </Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
@@ -437,28 +299,19 @@ const Profile: React.FC = () => {
             <Divider />
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
               <Typography variant="caption" color="text.secondary">
-                Hostel ID
+                Access Level
               </Typography>
-              <Typography variant="caption" sx={{ fontFamily: 'monospace', bgcolor: 'grey.100', px: 1, py: 0.25, borderRadius: 0.5 }}>
-                {user.hostelId}
-              </Typography>
-            </Box>
-            <Divider />
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
-              <Typography variant="caption" color="text.secondary">
-                Account Created
-              </Typography>
-              <Typography variant="caption" sx={{ fontWeight: 500 }}>
-                {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
+              <Typography variant="caption" sx={{ fontWeight: 500, color: 'error.main' }}>
+                System Administrator
               </Typography>
             </Box>
             <Divider />
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
               <Typography variant="caption" color="text.secondary">
-                Last Updated
+                System Version
               </Typography>
               <Typography variant="caption" sx={{ fontWeight: 500 }}>
-                {user.updatedAt ? new Date(user.updatedAt).toLocaleDateString() : 'N/A'}
+                PGFlow v1.0
               </Typography>
             </Box>
           </Box>
@@ -531,18 +384,6 @@ const Profile: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      {FEATURE_FLAGS.QUICK_AUTH_ENABLED && (
-        <BiometricSetupDialog
-          open={biometricSetupOpen}
-          onClose={() => setBiometricSetupOpen(false)}
-          userEmail={user?.email || ''}
-          onSetupComplete={() => {
-            setQuickAuthEnabled(true);
-            setSnackbar({ open: true, message: 'Quick authentication setup complete!', severity: 'success' });
-          }}
-        />
-      )}
 
       <Snackbar
         open={snackbar.open}

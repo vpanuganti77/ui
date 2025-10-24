@@ -71,6 +71,14 @@ export const useListManager = <T extends Record<string, any>>({
   const confirmDelete = async () => {
     if (deleteId) {
       try {
+        // Prevent deletion of complaints
+        if (entityKey === 'complaints') {
+          showSnackbar('Complaints cannot be deleted once raised', 'error');
+          setDeleteOpen(false);
+          setDeleteId(null);
+          return;
+        }
+        
         await remove(entityKey as any, deleteId);
         const success = true;
         if (success) {

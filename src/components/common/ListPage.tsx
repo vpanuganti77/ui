@@ -13,7 +13,10 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Paper,
+  Stack,
 } from '@mui/material';
+import { Inbox } from '@mui/icons-material';
 import { GridColDef, GridActionsCellItem, GridRenderCellParams } from '@mui/x-data-grid';
 import { Add, Edit, Delete } from '@mui/icons-material';
 import StyledDataGrid from './StyledDataGrid';
@@ -242,23 +245,61 @@ const ListPage = <T extends Record<string, any>>({
 
       {isMobile ? (
         <Box>
-          {renderMobileCard ? (
-            data.map(item => renderMobileCard(item, handleEdit, handleDelete))
-          ) : mobileCardConfig ? (
-            data.map(item => (
-              <MobileCard
-                key={item[idField]}
-                item={item}
-                titleField={mobileCardConfig.titleField}
-                fields={mobileCardConfig.fields}
-                onEdit={conditionalEdit && !conditionalEdit(item) ? () => {} : handleEdit}
-                onDelete={handleDelete}
-                onItemClick={onItemClick}
-                idField={idField}
-              />
-            ))
+          {data.length === 0 ? (
+            <Paper 
+              elevation={1} 
+              sx={{ 
+                p: 4, 
+                textAlign: 'center', 
+                bgcolor: 'grey.50',
+                border: '1px dashed',
+                borderColor: 'grey.300'
+              }}
+            >
+              <Stack spacing={2} alignItems="center">
+                <Inbox sx={{ fontSize: 48, color: 'grey.400' }} />
+                <Typography variant="h6" color="text.secondary">
+                  No {title.toLowerCase()} found
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {!hideAdd && !shouldHideAddButton() ? 
+                    `Get started by adding your first ${entityName.toLowerCase()}` :
+                    `No ${entityName.toLowerCase()} records available`
+                  }
+                </Typography>
+                {!hideAdd && !shouldHideAddButton() && (
+                  <Button 
+                    variant="contained" 
+                    startIcon={<Add />} 
+                    onClick={handleAdd}
+                    sx={{ mt: 2 }}
+                  >
+                    Add {entityName}
+                  </Button>
+                )}
+              </Stack>
+            </Paper>
           ) : (
-            <Typography>Mobile view not configured</Typography>
+            renderMobileCard ? (
+              data.map(item => renderMobileCard(item, handleEdit, handleDelete))
+            ) : mobileCardConfig ? (
+              data.map(item => (
+                <MobileCard
+                  key={item[idField]}
+                  item={item}
+                  titleField={mobileCardConfig.titleField}
+                  fields={mobileCardConfig.fields}
+                  onEdit={conditionalEdit && !conditionalEdit(item) ? () => {} : handleEdit}
+                  onDelete={handleDelete}
+                  onItemClick={onItemClick}
+                  idField={idField}
+                  hideDelete={hideDelete}
+                  hideEdit={hideEdit || (conditionalEdit && !conditionalEdit(item))}
+                />
+              ))
+            ) : (
+              <Typography>Mobile view not configured</Typography>
+            )
           )}
         </Box>
       ) : (
@@ -274,6 +315,32 @@ const ListPage = <T extends Record<string, any>>({
             rowHeight={rowHeight}
             disableRowSelectionOnClick
             checkboxSelection={false}
+            slots={{
+              noRowsOverlay: () => (
+                <Stack height="100%" alignItems="center" justifyContent="center" spacing={2}>
+                  <Inbox sx={{ fontSize: 48, color: 'grey.400' }} />
+                  <Typography variant="h6" color="text.secondary">
+                    No {title.toLowerCase()} found
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {!hideAdd && !shouldHideAddButton() ? 
+                      `Get started by adding your first ${entityName.toLowerCase()}` :
+                      `No ${entityName.toLowerCase()} records available`
+                    }
+                  </Typography>
+                  {!hideAdd && !shouldHideAddButton() && (
+                    <Button 
+                      variant="contained" 
+                      startIcon={<Add />} 
+                      onClick={handleAdd}
+                      sx={{ mt: 1 }}
+                    >
+                      Add {entityName}
+                    </Button>
+                  )}
+                </Stack>
+              )
+            }}
           />
         </>
       )}
@@ -322,7 +389,7 @@ const ListPage = <T extends Record<string, any>>({
         </Alert>
       </Snackbar>
       
-      {isMobile && !hideAdd && !shouldHideAddButton() && (
+      {isMobile && !hideAdd && !shouldHideAddButton() && data.length > 0 && (
         <Fab
           color="primary"
           sx={{ position: 'fixed', bottom: 24, right: 24, zIndex: 1000 }}

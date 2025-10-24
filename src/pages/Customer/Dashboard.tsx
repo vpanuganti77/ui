@@ -43,6 +43,7 @@ import {
 } from '@mui/icons-material';
 import { useNotifications } from '../../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
+import CheckoutRequestDialog from '../../components/CheckoutRequestDialog';
 
 const TenantDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -626,78 +627,13 @@ const TenantDashboard: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Checkout Dialog */}
-      <Dialog open={checkoutOpen} onClose={() => setCheckoutOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Checkout Request</DialogTitle>
-        <DialogContent>
-          <Box sx={{ mb: 3 }}>
-            <Alert severity="info" sx={{ mb: 2 }}>
-              Notice Period: 30 days required for advance refund
-            </Alert>
-            <TextField
-              fullWidth
-              label="Checkout Date"
-              type="date"
-              value={checkoutDate}
-              onChange={(e) => setCheckoutDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              sx={{ mb: 2 }}
-            />
-            {checkoutDate && (() => {
-              const today = new Date();
-              const selectedDate = new Date(checkoutDate);
-              const daysDiff = Math.ceil((selectedDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-              const isValidNotice = daysDiff >= 30;
-              const refundAmount = isValidNotice ? 16000 : 0;
-              
-              return (
-                <Box>
-                  <Alert severity={isValidNotice ? 'success' : 'warning'} sx={{ mb: 2 }}>
-                    {isValidNotice 
-                      ? `✓ Valid notice period (${daysDiff} days). Advance refund: ₹${refundAmount.toLocaleString()}`
-                      : `⚠ Insufficient notice period (${daysDiff} days). No advance refund available.`
-                    }
-                  </Alert>
-                  <Card sx={{ bgcolor: 'grey.50' }}>
-                    <CardContent>
-                      <Typography variant="h6" gutterBottom>Refund Summary</Typography>
-                      <Box display="flex" justifyContent="space-between" mb={1}>
-                        <Typography>Security Deposit:</Typography>
-                        <Typography>₹16,000</Typography>
-                      </Box>
-                      <Box display="flex" justifyContent="space-between" mb={1}>
-                        <Typography>Pending Dues:</Typography>
-                        <Typography>₹{tenantData.pendingDues.toLocaleString()}</Typography>
-                      </Box>
-                      <Box display="flex" justifyContent="space-between" sx={{ fontWeight: 600, borderTop: 1, borderColor: 'divider', pt: 1 }}>
-                        <Typography>Final Refund:</Typography>
-                        <Typography color={refundAmount > 0 ? 'success.main' : 'error.main'}>
-                          ₹{Math.max(0, refundAmount - tenantData.pendingDues).toLocaleString()}
-                        </Typography>
-                      </Box>
-                    </CardContent>
-                  </Card>
-                </Box>
-              );
-            })()}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => { setCheckoutOpen(false); setCheckoutDate(''); }}>Cancel</Button>
-          <Button 
-            variant="contained" 
-            color="error"
-            disabled={!checkoutDate}
-            onClick={() => {
-              console.log('Checkout request submitted for:', checkoutDate);
-              setCheckoutOpen(false);
-              setCheckoutDate('');
-            }}
-          >
-            Submit Checkout Request
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* Checkout Request Dialog */}
+      <CheckoutRequestDialog
+        open={checkoutOpen}
+        onClose={() => setCheckoutOpen(false)}
+        tenant={tenantData}
+        noticePeriod={30}
+      />
 
       {/* Mobile FAB */}
       {isMobile && (

@@ -18,7 +18,7 @@ import ListPage from '../../components/common/ListPage';
 import { userFields } from '../../components/common/FormConfigs';
 import { userCardFields } from '../../components/common/MobileCardConfigs';
 import { update, getById } from '../../services/fileDataService';
-import CopyLoginLinkButton from '../../components/CopyLoginLinkButton';
+import UserCredentialsDialog from '../../components/UserCredentialsDialog';
 import UserFormDialog from '../../components/UserFormDialog';
 
 const UserManagement: React.FC = () => {
@@ -27,6 +27,7 @@ const UserManagement: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [newUserCredentials, setNewUserCredentials] = useState<{email: string, password: string} | null>(null);
+  const [resetCredentials, setResetCredentials] = useState<{name: string, email: string, password: string} | null>(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -76,6 +77,7 @@ const UserManagement: React.FC = () => {
       
       // Set credentials for login link
       setNewUserCredentials({ email, password });
+      setSelectedUser({ name: formData.name });
       
       return newUser;
     }
@@ -86,24 +88,30 @@ const UserManagement: React.FC = () => {
       const newPassword = 'user' + Math.random().toString(36).substring(2, 8);
       await update('users', selectedUser.id, { 
         ...selectedUser, 
-        password: newPassword 
+        password: newPassword,
+        firstLogin: true
       });
       
-      // Show dialog with login link
-      const loginLinkDialog = document.createElement('div');
-      loginLinkDialog.innerHTML = `
-        <div style="padding: 20px; text-align: center;">
-          <p>Password reset successfully!</p>
-          <p><strong>New password:</strong> ${newPassword}</p>
-          <div id="copy-link-container"></div>
-        </div>
-      `;
+      // Show credentials dialog
+      setResetCredentials({
+        name: selectedUser.name,
+        email: selectedUser.email,
+        password: newPassword
+      });
       
       setResetDialog(false);
-      setSelectedUser(null);
       setRefreshKey(prev => prev + 1);
+      setSnackbar({ 
+        open: true, 
+        message: 'Password reset successfully! User will be required to change password on next login.', 
+        severity: 'success' 
+      });
     } catch (error: any) {
-      alert('Failed to reset password');
+      setSnackbar({ 
+        open: true, 
+        message: 'Failed to reset password', 
+        severity: 'error' 
+      });
     }
   };
 
@@ -323,30 +331,36 @@ const UserManagement: React.FC = () => {
       </Dialog>
 
       {/* New User Success Dialog */}
-      <Dialog open={!!newUserCredentials} onClose={() => setNewUserCredentials(null)}>
-        <DialogTitle>User Created Successfully</DialogTitle>
-        <DialogContent>
-          <Typography sx={{ mb: 2 }}>
-            User created with email: <strong>{newUserCredentials?.email}</strong>
-          </Typography>
-          <Typography sx={{ mb: 2 }}>
-            Password: <strong>{newUserCredentials?.password}</strong>
-          </Typography>
-          <Typography sx={{ mb: 2 }}>
-            Copy the login link below to share with the user:
-          </Typography>
-          {newUserCredentials && (
-            <CopyLoginLinkButton 
-              email={newUserCredentials.email} 
-              password={newUserCredentials.password}
-              variant="contained"
-            />
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setNewUserCredentials(null)}>Close</Button>
-        </DialogActions>
-      </Dialog>
+      {newUserCredentials && (
+        <UserCredentialsDialog
+          open={!!newUserCredentials}
+          onClose={() => setNewUserCredentials(null)}
+          userDetails={{
+            name: selectedUser?.name || 'User',
+            email: newUserCredentials.email,
+            password: newUserCredentials.password,
+            hostelName: JSON.parse(localStorage.getItem('user') || '{}').hostelName || 'Hostel',
+            role: 'user',
+            loginUrl: `${window.location.origin}/login?email=${encodeURIComponent(newUserCredentials.email)}&password=${encodeURIComponent(newUserCredentials.password)}`
+          }}
+        />
+      )}
+
+      {/* Reset Password Success Dialog */}
+      {resetCredentials && (
+        <UserCredentialsDialog
+          open={!!resetCredentials}
+          onClose={() => setResetCredentials(null)}
+          userDetails={{
+            name: resetCredentials.name,
+            email: resetCredentials.email,
+            password: resetCredentials.password,
+            hostelName: JSON.parse(localStorage.getItem('user') || '{}').hostelName || 'Hostel',
+            role: 'user',
+            loginUrl: `${window.location.origin}/login?email=${encodeURIComponent(resetCredentials.email)}&password=${encodeURIComponent(resetCredentials.password)}`
+          }}
+        />
+      )}
 
       {/* Snackbar for notifications */}
       <Snackbar

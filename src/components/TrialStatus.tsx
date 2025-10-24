@@ -33,6 +33,13 @@ const TrialStatus: React.FC = () => {
 
   const today = new Date();
   const expiryDate = new Date(hostel.trialExpiryDate);
+  
+  // Check if the expiry date is valid
+  if (isNaN(expiryDate.getTime())) {
+    console.warn('Invalid trial expiry date:', hostel.trialExpiryDate);
+    return null;
+  }
+  
   const daysLeft = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
   if (daysLeft <= 0) {
@@ -83,7 +90,7 @@ const TrialStatus: React.FC = () => {
     <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
       <Chip 
         icon={<Schedule />}
-        label={`Free Trial: ${daysLeft} days left`}
+        label={`Free Trial: ${daysLeft} day${daysLeft !== 1 ? 's' : ''} left`}
         color="info"
         variant="outlined"
         size="small"

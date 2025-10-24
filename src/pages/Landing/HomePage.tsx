@@ -165,7 +165,7 @@ const HomePage: React.FC = () => {
               sx={{ borderColor: 'white', color: 'white' }}
               onClick={() => setContactDialogOpen(true)}
             >
-              Setup Your Hostel
+              Create Account & Setup Hostel
             </Button>
           </Box>
         </Container>

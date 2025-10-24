@@ -74,26 +74,12 @@ const Dashboard: React.FC = () => {
     occupancyRate: 0,
     totalExpenses: 0
   });
-  const [newJoinings, setNewJoinings] = useState<any[]>([]);
-  const [availableRooms, setAvailableRooms] = useState<any[]>([]);
-  const [upcomingVacancies, setUpcomingVacancies] = useState<any[]>([]);
-  const [hostelInfo, setHostelInfo] = useState<any>(null);
-  const [alerts, setAlerts] = useState<any[]>([]);
-  const [alertDetails, setAlertDetails] = useState<any>({ overdue: [], maintenance: [], applications: [] });
-  const [recentActivities, setRecentActivities] = useState<any[]>([]);
-  const [loading] = useState(false);
-  const [alertDialogOpen, setAlertDialogOpen] = useState(false);
-  const [selectedAlert, setSelectedAlert] = useState<string>('');
-  const [fabMenuAnchor, setFabMenuAnchor] = useState<null | HTMLElement>(null);
-  const [tenantDialogOpen, setTenantDialogOpen] = useState(false);
-  const [noticeDialogOpen, setNoticeDialogOpen] = useState(false);
-  const [noticeFormData, setNoticeFormData] = useState({
-    title: '',
-    message: '',
-    priority: 'normal' as 'low' | 'normal' | 'high'
-  });
-  const [noticeError, setNoticeError] = useState('');
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+  
+  // Check if user is pending approval
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  if (user.status === 'pending_approval') {
+    return <PendingApprovalDashboard />;
+  }
 
   useEffect(() => {
     const fetchDashboardStats = async () => {
@@ -190,6 +176,15 @@ const Dashboard: React.FC = () => {
     fetchDashboardStats();
   }, []);
 
+  const [newJoinings, setNewJoinings] = useState<any[]>([]);
+  const [availableRooms, setAvailableRooms] = useState<any[]>([]);
+  const [upcomingVacancies, setUpcomingVacancies] = useState<any[]>([]);
+  const [hostelInfo, setHostelInfo] = useState<any>(null);
+
+  const [alerts, setAlerts] = useState<any[]>([]);
+
+  const [alertDetails, setAlertDetails] = useState<any>({ overdue: [], maintenance: [], applications: [] });
+
   useEffect(() => {
     const loadAlertDetails = async () => {
       try {
@@ -244,6 +239,23 @@ const Dashboard: React.FC = () => {
     setAlertDialogOpen(true);
   };
 
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
+  const [loading] = useState(false);
+  const [alertDialogOpen, setAlertDialogOpen] = useState(false);
+  const [selectedAlert, setSelectedAlert] = useState<string>('');
+  const [fabMenuAnchor, setFabMenuAnchor] = useState<null | HTMLElement>(null);
+  const [tenantDialogOpen, setTenantDialogOpen] = useState(false);
+  const [noticeDialogOpen, setNoticeDialogOpen] = useState(false);
+  const [noticeFormData, setNoticeFormData] = useState({
+    title: '',
+    message: '',
+    priority: 'normal' as 'low' | 'normal' | 'high'
+  });
+  const [noticeError, setNoticeError] = useState('');
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+
+
+
   const statCards = [
     {
       title: 'Total Rooms',
@@ -283,11 +295,10 @@ const Dashboard: React.FC = () => {
     },
   ];
 
-  // Check if user is pending approval
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  if (user.status === 'pending_approval') {
-    return <PendingApprovalDashboard />;
-  }
+  // const roomOccupancyData = [
+  //   { name: 'Occupied', value: stats?.occupiedRooms || 0, color: '#388e3c' },
+  //   { name: 'Vacant', value: stats?.vacantRooms || 0, color: '#1976d2' },
+  // ];
 
   return (
     <Box>
@@ -339,17 +350,6 @@ const Dashboard: React.FC = () => {
           >
             Send Notice
           </Button>
-          {/* Test install prompt */}
-          <Button 
-            variant="outlined" 
-            size="small" 
-            onClick={() => {
-              localStorage.removeItem('install-prompt-shown');
-              window.location.reload();
-            }}
-          >
-            Test Install
-          </Button>
         </Box>
       </Box>
 
@@ -390,6 +390,8 @@ const Dashboard: React.FC = () => {
           </Box>
         </Box>
       )}
+
+
 
       {/* Quick View Cards */}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 2, mb: 4 }}>
@@ -647,6 +649,10 @@ const Dashboard: React.FC = () => {
           </CardContent>
         </Card>
       </Box>
+
+
+
+
 
       {/* Floating Action Button */}
       <Fab
