@@ -49,7 +49,7 @@ const DeactivatedHostelDashboard: React.FC = () => {
               startIcon={<ContactSupport />}
               sx={{ mt: 2 }}
               onClick={() => {
-                window.location.href = 'mailto:admin@pgflow.com?subject=Hostel Account Reactivation Request';
+                window.location.href = 'tel:+919908227236';
               }}
             >
               Contact Master Admin

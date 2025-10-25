@@ -60,8 +60,63 @@ export class NotificationService {
         body,
         icon: icon || '/favicon.ico',
         badge: '/favicon.ico',
-        tag: 'hostel-notification'
+        tag: 'hostel-notification',
+        requireInteraction: true // Keep notification visible until user interacts
       });
+    }
+  }
+
+  // Show hostel deactivation notification
+  static showHostelDeactivatedNotification(hostelName: string): void {
+    this.showNotification(
+      '🚫 Hostel Deactivated',
+      `Your hostel "${hostelName}" has been deactivated. Please contact support to restore access.`,
+      '/favicon.ico'
+    );
+  }
+
+  // Show hostel reactivation notification
+  static showHostelReactivatedNotification(hostelName: string): void {
+    this.showNotification(
+      '✅ Hostel Reactivated',
+      `Great news! Your hostel "${hostelName}" has been reactivated. You can now access all features.`,
+      '/favicon.ico'
+    );
+  }
+
+  // Show new support ticket notification (for master admin)
+  static showNewSupportTicketNotification(subject: string, submittedBy: string): void {
+    this.showNotification(
+      '🎫 New Support Ticket',
+      `${submittedBy} submitted: "${subject}"`,
+      '/favicon.ico'
+    );
+  }
+
+  // Show support ticket resolved notification (for ticket creator)
+  static showSupportTicketResolvedNotification(subject: string): void {
+    this.showNotification(
+      '✅ Support Ticket Resolved',
+      `Your support ticket "${subject}" has been resolved.`,
+      '/favicon.ico'
+    );
+  }
+
+  // Send push notification to backend for specific roles
+  static async sendPushNotification(targetRole: string, title: string, message: string, type: string): Promise<void> {
+    try {
+      await fetch(`${process.env.REACT_APP_API_BASE_URL || 'https://api-production-79b8.up.railway.app/api'}/push-notification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetRole,
+          title,
+          message,
+          type
+        })
+      });
+    } catch (error) {
+      console.warn('Push notification failed:', error);
     }
   }
 
@@ -69,14 +124,15 @@ export class NotificationService {
   static async initializeMobile(user: any): Promise<void> {
     if (!this.isSupported()) return;
 
-    // Auto-request permission on mobile
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    
-    if (isMobile && Notification.permission === 'default') {
+    // Auto-request permission and subscribe to push notifications
+    if (Notification.permission === 'default') {
       const granted = await this.requestPermission();
       if (granted) {
         await this.subscribeToPush(user.id, user.role, user.hostelId);
       }
+    } else if (Notification.permission === 'granted') {
+      // Already granted, just subscribe
+      await this.subscribeToPush(user.id, user.role, user.hostelId);
     }
   }
 

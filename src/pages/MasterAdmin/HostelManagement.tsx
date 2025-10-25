@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { Chip, Typography, Box, Button, Snackbar, Alert } from '@mui/material';
+import { Chip, Typography, Box, Button, Snackbar, Alert, Tooltip } from '@mui/material';
 import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
 import { Business, Add, Verified, Pending, Block, Visibility, PlayArrow, Stop, VpnKey } from '@mui/icons-material';
 import ListPage from '../../components/common/ListPage';
 import { hostelFields } from '../../components/common/FormConfigs';
 import UserCredentialsDialog from '../../components/UserCredentialsDialog';
 import HostelUsageDialog from '../../components/HostelUsageDialog';
+import OwnerDetailsDialog from '../../components/OwnerDetailsDialog';
 import { getAll, create, update } from '../../services/fileDataService';
+import { getHostelsWithOwners, findAdminUserForHostel } from '../../services/hostelUserService';
 
 
 
@@ -19,9 +21,52 @@ const HostelManagement: React.FC = () => {
     open: boolean;
     hostel: any;
   }>({ open: false, hostel: null });
+  const [ownerDialog, setOwnerDialog] = useState<{
+    open: boolean;
+    hostel: any;
+  }>({ open: false, hostel: null });
   const [refreshKey, setRefreshKey] = useState(0);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
   const [resetCredentials, setResetCredentials] = useState<{name: string, email: string, password: string, hostelName: string} | null>(null);
+  const [hostelsWithAdmins, setHostelsWithAdmins] = useState<any[]>([]);
+  
+  React.useEffect(() => {
+    const fetchHostelsWithAdmins = async () => {
+      try {
+        const [hostels, users] = await Promise.all([
+          getAll('hostels'),
+          getAll('users')
+        ]);
+        
+        const hostelsWithOwners = hostels.map((hostel: any) => {
+          const admin = users.find((user: any) => 
+            user.hostelId === hostel.id && user.role === 'admin'
+          );
+          
+          console.log('Hostel:', hostel.name, 'ContactPerson:', hostel.contactPerson, 'Admin:', admin?.name);
+          
+          return {
+            ...hostel,
+            adminName: hostel.contactPerson || admin?.name || 'N/A',
+            adminUserId: admin?.id || null
+          };
+        });
+        
+        console.log('Final hostels with owners:', hostelsWithOwners);
+        
+        setHostelsWithAdmins(hostelsWithOwners);
+      } catch (error) {
+        console.error('Error fetching hostels with admins:', error);
+        setSnackbar({ 
+          open: true, 
+          message: 'Failed to load hostel data', 
+          severity: 'error' 
+        });
+      }
+    };
+    
+    fetchHostelsWithAdmins();
+  }, [refreshKey]);
   
   const handleToggleStatus = async (hostel: any) => {
     try {
@@ -37,19 +82,30 @@ const HostelManagement: React.FC = () => {
       
       await update('hostels', hostel.id, updatedHostel);
       
-      // Also update associated admin user status
+      // Update all admin and receptionist users for this hostel
       const users = await getAll('users');
-      const adminUser = users.find((u: any) => u.hostelId === hostel.id && u.role === 'admin');
-      if (adminUser) {
-        await update('users', adminUser.id, { 
-          ...adminUser, 
-          status: newStatus,
-          statusReason: reason
-        });
+      const hostelUsers = users.filter((u: any) => 
+        u.hostelId === hostel.id && (u.role === 'admin' || u.role === 'receptionist')
+      );
+      
+      console.log(`Updating status for ${hostelUsers.length} users to ${newStatus}`);
+      
+      for (const user of hostelUsers) {
+        try {
+          await update('users', user.id, { 
+            ...user, 
+            status: newStatus,
+            statusReason: reason,
+            statusUpdatedAt: new Date().toISOString()
+          });
+          console.log(`Updated user ${user.name} (${user.email}) status to ${newStatus}`);
+        } catch (userUpdateError) {
+          console.error(`Failed to update user ${user.name}:`, userUpdateError);
+        }
       }
       
-      // Create notification for hostel admin
-      if (adminUser) {
+      // Create notifications for all affected users
+      for (const user of hostelUsers) {
         const notification = {
           id: Date.now().toString(),
           type: 'hostel_status_change',
@@ -57,7 +113,7 @@ const HostelManagement: React.FC = () => {
           message: newStatus === 'active' 
             ? 'Your hostel has been activated by the master administrator. You now have full access to all features.'
             : 'Your hostel has been deactivated by the master administrator. Please contact support for assistance.',
-          userId: adminUser.id,
+          userId: user.id,
           hostelId: hostel.id,
           priority: newStatus === 'active' ? 'medium' : 'high',
           isRead: false,
@@ -90,12 +146,12 @@ const HostelManagement: React.FC = () => {
   const handleResetAdminPassword = async (hostel: any) => {
     try {
       const users = await getAll('users');
-      const adminUser = users.find((u: any) => u.hostelId === hostel.id && u.role === 'admin');
+      const adminUser = findAdminUserForHostel(hostel, users);
       
       if (!adminUser) {
         setSnackbar({ 
           open: true, 
-          message: 'Admin user not found for this hostel', 
+          message: `Admin user account not found for ${hostel.name}. Please create a user account first.`, 
           severity: 'error' 
         });
         return;
@@ -276,7 +332,7 @@ const HostelManagement: React.FC = () => {
       width: 150,
       renderCell: (params) => (
         <Typography variant="body2">
-          {params.value}
+          {params.value || 'N/A'}
         </Typography>
       )
     },
@@ -368,9 +424,10 @@ const HostelManagement: React.FC = () => {
           />,
           <GridActionsCellItem
             key="reset"
-            icon={<VpnKey color="warning" />}
-            label="Reset Admin Password"
+            icon={<VpnKey color={params.row.adminUserId ? "warning" : "disabled"} />}
+            label={params.row.adminUserId ? "Reset Admin Password" : "No Admin User Found"}
             onClick={() => handleResetAdminPassword(params.row)}
+            disabled={!params.row.adminUserId}
           />,
           <GridActionsCellItem
             key="toggle"
@@ -394,16 +451,34 @@ const HostelManagement: React.FC = () => {
       <ListPage
         key={refreshKey}
         title="Hostel Management"
-        data={[]}
+        data={hostelsWithAdmins}
         columns={columns}
         fields={hostelFields}
         entityName="Hostel"
         entityKey="hostels"
         hideActions={true}
+        customDataLoader={async () => {
+          const [hostels, users] = await Promise.all([
+            getAll('hostels'),
+            getAll('users')
+          ]);
+          
+          return hostels.map((hostel: any) => {
+            const admin = users.find((user: any) => 
+              user.hostelId === hostel.id && user.role === 'admin'
+            );
+            
+            return {
+              ...hostel,
+              adminName: hostel.contactPerson || admin?.name || 'N/A',
+              adminUserId: admin?.id || null
+            };
+          });
+        }}
         mobileCardConfig={{
           titleField: 'name',
           fields: [
-            { key: 'adminName', label: 'Admin', value: 'adminName' },
+            { key: 'adminName', label: 'Owner', value: 'adminName' },
             { key: 'planType', label: 'Plan', value: (item: any) => getPlanLabel(item.planType) },
             { key: 'usage', label: 'Usage', value: '0/0 (T/R)' },
             { key: 'status', label: 'Status', value: 'status' }
@@ -423,6 +498,12 @@ const HostelManagement: React.FC = () => {
         open={usageDialog.open}
         onClose={() => setUsageDialog({ open: false, hostel: null })}
         hostel={usageDialog.hostel}
+      />
+      
+      <OwnerDetailsDialog
+        open={ownerDialog.open}
+        onClose={() => setOwnerDialog({ open: false, hostel: null })}
+        hostel={ownerDialog.hostel}
       />
       
       {/* Reset Admin Password Dialog */}

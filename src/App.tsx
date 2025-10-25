@@ -35,11 +35,13 @@ import Notices from './pages/Admin/Notices';
 import CustomerNotices from './pages/Customer/Notices';
 import HostelManagement from './pages/MasterAdmin/HostelManagement';
 import HostelRequests from './pages/MasterAdmin/HostelRequests';
+import SupportTickets from './pages/MasterAdmin/SupportTickets';
 import MasterAdminDashboard from './pages/MasterAdmin/Dashboard';
 import DataManagement from './pages/MasterAdmin/DataManagement';
 import RoleTestPanel from './components/RoleTestPanel';
 import HomePage from './pages/Landing/HomePage';
 import PendingApprovalWrapper from './components/PendingApprovalWrapper';
+import StatusValidator from './components/StatusValidator';
 
 
 
@@ -64,107 +66,109 @@ function App() {
           {/* Session timeout disabled for persistent login */}
           {/* <SessionTimeoutWrapper /> */}
           <FirstLoginWrapper />
-
           <Router>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/login" element={<Login />} />
+            <StatusValidator>
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/login" element={<Login />} />
 
-            <Route path="/test-roles" element={<RoleTestPanel />} />
-            
-            {/* Protected Master Admin Routes */}
-            <Route
-              path="/master-admin/*"
-              element={
-                <ProtectedRoute requiredRole="master_admin">
-                  <Layout>
-                    <Routes>
-                      <Route path="dashboard" element={<MasterAdminDashboard />} />
-                      <Route path="hostels" element={<HostelManagement />} />
-                      <Route path="requests" element={<HostelRequests />} />
-                      <Route path="data" element={<DataManagement />} />
-                      <Route path="users" element={<UserManagement />} />
-                      <Route path="profile" element={<MasterAdminProfile />} />
-                      <Route path="settings" element={<div>Settings Page (Coming Soon)</div>} />
-                    </Routes>
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            
-            {/* Protected Admin Routes */}
-            <Route
-              path="/admin/*"
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <Layout>
-                    <PendingApprovalWrapper>
-                      <Routes>
-                        <Route path="dashboard" element={<Dashboard />} />
-                        <Route path="tenants" element={<Tenants />} />
-                        <Route path="users" element={<UserManagement />} />
-                        <Route path="tenants/:id" element={<TenantDetails />} />
-                        <Route path="payments/:id" element={<PaymentDetails />} />
-                        <Route path="rooms/:id" element={<RoomDetails />} />
-                        <Route path="rooms" element={<Rooms />} />
-                        <Route path="payments" element={<Payments />} />
-                        <Route path="complaints" element={<Complaints />} />
-                        <Route path="reports" element={<Reports />} />
-                        <Route path="expenses" element={<Expenses />} />
-                        <Route path="staff" element={<Staff />} />
-                        <Route path="notices" element={<Notices />} />
-                        <Route path="profile" element={<Profile />} />
-                      </Routes>
-                    </PendingApprovalWrapper>
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            
-            {/* Protected Receptionist Routes */}
-            <Route
-              path="/receptionist/*"
-              element={
-                <ProtectedRoute requiredRole="receptionist">
-                  <Layout>
-                    <PendingApprovalWrapper>
-                      <Routes>
-                        <Route path="dashboard" element={<Dashboard />} />
-                        <Route path="tenants" element={<Tenants />} />
-                        <Route path="rooms" element={<Rooms />} />
-                        <Route path="payments" element={<Payments />} />
-                        <Route path="complaints" element={<Complaints />} />
-                      </Routes>
-                    </PendingApprovalWrapper>
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            
-            {/* Protected Tenant Routes */}
-            <Route
-              path="/tenant/*"
-              element={
-                <ProtectedRoute requiredRole="tenant">
-                  <Layout>
-                    <Routes>
-                      <Route path="dashboard" element={<TenantDashboard />} />
-                      <Route path="room" element={<MyRoom />} />
-                      <Route path="payments" element={<MyPayments />} />
-                      <Route path="complaints" element={<MyComplaints />} />
-                      <Route path="notices" element={<CustomerNotices />} />
-                      <Route path="profile" element={<TenantProfile />} />
-                    </Routes>
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            
-            {/* Default Redirects */}
-            <Route path="/" element={<AuthRedirect />} />
-            <Route path="/home" element={<AuthRedirect />} />
-            <Route path="*" element={<Navigate to="/login" replace />} />
-          </Routes>
+                <Route path="/test-roles" element={<RoleTestPanel />} />
+                
+                {/* Protected Master Admin Routes */}
+                <Route
+                  path="/master-admin/*"
+                  element={
+                    <ProtectedRoute requiredRole="master_admin">
+                      <Layout>
+                        <Routes>
+                          <Route path="dashboard" element={<MasterAdminDashboard />} />
+                          <Route path="hostels" element={<HostelManagement />} />
+                          <Route path="requests" element={<HostelRequests />} />
+                          <Route path="support" element={<SupportTickets />} />
+                          <Route path="data" element={<DataManagement />} />
+                          <Route path="users" element={<UserManagement />} />
+                          <Route path="profile" element={<MasterAdminProfile />} />
+                          <Route path="settings" element={<div>Settings Page (Coming Soon)</div>} />
+                        </Routes>
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+                
+                {/* Protected Admin Routes */}
+                <Route
+                  path="/admin/*"
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <Layout>
+                        <PendingApprovalWrapper>
+                          <Routes>
+                            <Route path="dashboard" element={<Dashboard />} />
+                            <Route path="tenants" element={<Tenants />} />
+                            <Route path="users" element={<UserManagement />} />
+                            <Route path="tenants/:id" element={<TenantDetails />} />
+                            <Route path="payments/:id" element={<PaymentDetails />} />
+                            <Route path="rooms/:id" element={<RoomDetails />} />
+                            <Route path="rooms" element={<Rooms />} />
+                            <Route path="payments" element={<Payments />} />
+                            <Route path="complaints" element={<Complaints />} />
+                            <Route path="reports" element={<Reports />} />
+                            <Route path="expenses" element={<Expenses />} />
+                            <Route path="staff" element={<Staff />} />
+                            <Route path="notices" element={<Notices />} />
+                            <Route path="profile" element={<Profile />} />
+                          </Routes>
+                        </PendingApprovalWrapper>
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+                
+                {/* Protected Receptionist Routes */}
+                <Route
+                  path="/receptionist/*"
+                  element={
+                    <ProtectedRoute requiredRole="receptionist">
+                      <Layout>
+                        <PendingApprovalWrapper>
+                          <Routes>
+                            <Route path="dashboard" element={<Dashboard />} />
+                            <Route path="tenants" element={<Tenants />} />
+                            <Route path="rooms" element={<Rooms />} />
+                            <Route path="payments" element={<Payments />} />
+                            <Route path="complaints" element={<Complaints />} />
+                          </Routes>
+                        </PendingApprovalWrapper>
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+                
+                {/* Protected Tenant Routes */}
+                <Route
+                  path="/tenant/*"
+                  element={
+                    <ProtectedRoute requiredRole="tenant">
+                      <Layout>
+                        <Routes>
+                          <Route path="dashboard" element={<TenantDashboard />} />
+                          <Route path="room" element={<MyRoom />} />
+                          <Route path="payments" element={<MyPayments />} />
+                          <Route path="complaints" element={<MyComplaints />} />
+                          <Route path="notices" element={<CustomerNotices />} />
+                          <Route path="profile" element={<TenantProfile />} />
+                        </Routes>
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+                
+                {/* Default Redirects */}
+                <Route path="/" element={<AuthRedirect />} />
+                <Route path="/home" element={<AuthRedirect />} />
+                <Route path="*" element={<Navigate to="/login" replace />} />
+              </Routes>
+            </StatusValidator>
           </Router>
         </NotificationProvider>
       </AuthProvider>

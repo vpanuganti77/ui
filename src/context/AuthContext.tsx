@@ -2,6 +2,7 @@ import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { User } from '../types';
 import { authService } from '../services/authService';
 import { BiometricService } from '../services/biometricService';
+import { HostelStatusService } from '../services/hostelStatusService';
 
 interface AuthState {
   user: User | null;
@@ -70,6 +71,13 @@ const initialState: AuthState = {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      HostelStatusService.stopMonitoring();
+    };
+  }, []);
+
   useEffect(() => {
     const initAuth = () => {
       const token = authService.getStoredToken() || localStorage.getItem('token');
@@ -78,6 +86,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (token && user) {
         // Always restore session for persistent login
         dispatch({ type: 'LOGIN_SUCCESS', payload: { user, token } });
+        // Start hostel status monitoring
+        HostelStatusService.startMonitoring(user);
       } else {
         dispatch({ type: 'SET_LOADING', payload: false });
       }
@@ -112,6 +122,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { token, user } = await authService.login(email, password);
       authService.storeAuth(token, user);
       dispatch({ type: 'LOGIN_SUCCESS', payload: { user, token } });
+      // Start hostel status monitoring
+      HostelStatusService.startMonitoring(user);
     } catch (error) {
       dispatch({ type: 'LOGIN_FAILURE' });
       throw error;
@@ -121,6 +133,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
   const logout = () => {
+    HostelStatusService.stopMonitoring();
     authService.logout();
     dispatch({ type: 'LOGOUT' });
   };

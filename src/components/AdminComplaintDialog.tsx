@@ -15,7 +15,10 @@ import {
   Chip,
   Tabs,
   Tab,
+  Collapse,
+  IconButton,
 } from '@mui/material';
+import { ExpandMore, ExpandLess } from '@mui/icons-material';
 import ComplaintComments from './ComplaintComments';
 
 interface AdminComplaintDialogProps {
@@ -39,6 +42,7 @@ const AdminComplaintDialog: React.FC<AdminComplaintDialogProps> = ({
   });
   const [tabValue, setTabValue] = useState(0);
   const [comments, setComments] = useState<any[]>([]);
+  const [attachmentsExpanded, setAttachmentsExpanded] = useState(false);
 
   useEffect(() => {
     const loadComplaintData = async () => {
@@ -135,9 +139,9 @@ const AdminComplaintDialog: React.FC<AdminComplaintDialogProps> = ({
   };
 
   const getAvailableStatuses = () => {
-    const allStatuses = [
+    // Admin statuses - exclude 'reopen' as only tenants can reopen complaints
+    const adminStatuses = [
       { value: 'open', label: 'Open' },
-      { value: 'reopen', label: 'Reopened' },
       { value: 'in-progress', label: 'In Progress' },
       { value: 'resolved', label: 'Resolved' },
       { value: 'closed', label: 'Closed' },
@@ -149,22 +153,25 @@ const AdminComplaintDialog: React.FC<AdminComplaintDialogProps> = ({
       return [{ value: 'resolved', label: 'Resolved (Only tenant can reopen)' }];
     }
     
+    // If current status is 'reopen', include it in the list but filter other options
+    if (editingItem && editingItem.status === 'reopen') {
+      return [
+        { value: 'reopen', label: 'Reopened' },
+        ...adminStatuses.filter(status => status.value !== 'open')
+      ];
+    }
+    
     // Prevent reverting from in-progress to open
     if (editingItem && editingItem.status === 'in-progress') {
-      return allStatuses.filter(status => status.value !== 'open');
+      return adminStatuses.filter(status => status.value !== 'open');
     }
     
-    // Prevent reverting from reopen to open
-    if (editingItem && editingItem.status === 'reopen') {
-      return allStatuses.filter(status => status.value !== 'open');
+    // If current status is not 'open', exclude 'open' from options
+    if (editingItem && editingItem.status !== 'open') {
+      return adminStatuses.filter(status => status.value !== 'open');
     }
     
-    // If current status is not 'open' or 'reopen', exclude 'open' from options
-    if (editingItem && editingItem.status !== 'open' && editingItem.status !== 'reopen') {
-      return allStatuses.filter(status => status.value !== 'open');
-    }
-    
-    return allStatuses;
+    return adminStatuses;
   };
 
   return (
@@ -179,6 +186,49 @@ const AdminComplaintDialog: React.FC<AdminComplaintDialogProps> = ({
             <Typography variant="body2" color="text.secondary" gutterBottom>
               {editingItem.description}
             </Typography>
+            {editingItem.attachments && editingItem.attachments.length > 0 && (
+              <Box sx={{ mt: 2 }}>
+                <Box 
+                  sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    cursor: 'pointer',
+                    '&:hover': { bgcolor: 'grey.100' },
+                    borderRadius: 1,
+                    p: 0.5
+                  }}
+                  onClick={() => setAttachmentsExpanded(!attachmentsExpanded)}
+                >
+                  <Typography variant="body2" fontWeight="medium">
+                    Attachments ({editingItem.attachments.length})
+                  </Typography>
+                  <IconButton size="small" sx={{ ml: 1 }}>
+                    {attachmentsExpanded ? <ExpandLess /> : <ExpandMore />}
+                  </IconButton>
+                </Box>
+                <Collapse in={attachmentsExpanded}>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+                    {editingItem.attachments.map((attachment: any, index: number) => (
+                      <Box
+                        key={index}
+                        component="img"
+                        src={`https://api-production-79b8.up.railway.app${attachment.path}`}
+                        alt={attachment.originalName || `Attachment ${index + 1}`}
+                        sx={{
+                          width: 100,
+                          height: 100,
+                          objectFit: 'cover',
+                          borderRadius: 1,
+                          cursor: 'pointer',
+                          border: '1px solid #ddd'
+                        }}
+                        onClick={() => window.open(`https://api-production-79b8.up.railway.app${attachment.path}`, '_blank')}
+                      />
+                    ))}
+                  </Box>
+                </Collapse>
+              </Box>
+            )}
             <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
               <Chip label={editingItem.category} size="small" />
               <Chip label={editingItem.priority} size="small" />

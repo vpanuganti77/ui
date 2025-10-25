@@ -68,8 +68,14 @@ const Login: React.FC = () => {
         // Auto-submit the form
         login(decodedEmail, decodedPassword).then(() => {
           const user = JSON.parse(localStorage.getItem('user') || '{}');
-          const redirectPath = user.role === 'admin' ? '/admin/dashboard' : '/tenant/dashboard';
-          navigate(redirectPath);
+          const roleMap: Record<string, string> = {
+            'master_admin': '/master-admin/dashboard',
+            'admin': '/admin/dashboard',
+            'receptionist': '/admin/dashboard', 
+            'tenant': '/tenant/dashboard'
+          };
+          const redirectPath = roleMap[user.role] || '/admin/dashboard';
+          navigate(redirectPath, { replace: true });
         }).catch((err) => {
           setError('Auto-login failed. Please try manually.');
         });
@@ -119,10 +125,17 @@ const Login: React.FC = () => {
       }
 
       await login(email, password);
+      
       // Navigation will be handled by the auth context
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const redirectPath = user.role === 'admin' ? '/admin/dashboard' : '/tenant/dashboard';
-      navigate(redirectPath);
+      const roleMap: Record<string, string> = {
+        'master_admin': '/master-admin/dashboard',
+        'admin': '/admin/dashboard', 
+        'receptionist': '/admin/dashboard',
+        'tenant': '/tenant/dashboard'
+      };
+      const redirectPath = roleMap[user.role] || '/admin/dashboard';
+      navigate(redirectPath, { replace: true });
     } catch (err: any) {
       let errorMessage = err.message || 'Login failed';
       

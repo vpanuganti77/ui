@@ -21,7 +21,12 @@ class SocketService {
       this.ws.onopen = () => {
         console.log('Connected to WebSocket server');
         console.log('Joining with user data:', userData);
-        this.ws?.send(JSON.stringify({ type: 'join', data: userData }));
+        // Use setTimeout to ensure WebSocket is fully ready
+        setTimeout(() => {
+          if (this.ws?.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({ type: 'join', data: userData }));
+          }
+        }, 100);
       };
 
       this.ws.onmessage = (event) => {

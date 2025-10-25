@@ -300,8 +300,15 @@ export const complaintFields: FieldConfig[] = [
     name: 'description',
     label: 'Description',
     type: 'textarea',
-    required: true,
     rows: 3,
+    flex: '1 1 100%',
+  },
+  {
+    name: 'attachments',
+    label: 'Attachments (Photos/Screenshots)',
+    type: 'file',
+    accept: 'image/*',
+    multiple: true,
     flex: '1 1 100%',
   },
   {
@@ -477,6 +484,49 @@ export const staffFields: FieldConfig[] = [
     type: 'textarea',
     rows: 2,
     flex: '1 1 100%',
+  },
+];
+
+export const supportTicketFields: FieldConfig[] = [
+  {
+    name: 'subject',
+    label: 'Subject',
+    type: 'text',
+    required: true,
+    flex: '1 1 100%',
+  },
+  {
+    name: 'message',
+    label: 'Message',
+    type: 'textarea',
+    required: true,
+    rows: 4,
+    flex: '1 1 100%',
+  },
+  {
+    name: 'priority',
+    label: 'Priority',
+    type: 'select',
+    required: true,
+    options: [
+      { value: 'low', label: 'Low' },
+      { value: 'medium', label: 'Medium' },
+      { value: 'high', label: 'High' },
+      { value: 'urgent', label: 'Urgent' },
+    ],
+  },
+  {
+    name: 'category',
+    label: 'Category',
+    type: 'select',
+    required: true,
+    options: [
+      { value: 'technical', label: 'Technical Issue' },
+      { value: 'account', label: 'Account Issue' },
+      { value: 'billing', label: 'Billing Question' },
+      { value: 'feature', label: 'Feature Request' },
+      { value: 'other', label: 'Other' },
+    ],
   },
 ];
 

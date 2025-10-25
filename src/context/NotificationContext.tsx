@@ -27,6 +27,7 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [hasNewNotifications, setHasNewNotifications] = useState(false);
 
   // Load notifications from localStorage
   const loadStoredNotifications = useCallback(() => {
@@ -87,12 +88,23 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       refreshNotifications();
     };
     
+    // Auto-refresh data when app regains focus after receiving notifications
+    const handleWindowFocus = () => {
+      if (hasNewNotifications) {
+        setHasNewNotifications(false);
+        // Trigger data refresh instead of full page reload
+        window.dispatchEvent(new CustomEvent('refreshData'));
+      }
+    };
+    
     window.addEventListener('notificationRefresh', handleNotificationRefresh);
+    window.addEventListener('focus', handleWindowFocus);
     
     return () => {
       window.removeEventListener('notificationRefresh', handleNotificationRefresh);
+      window.removeEventListener('focus', handleWindowFocus);
     };
-  }, [loadStoredNotifications, refreshNotifications]);
+  }, [loadStoredNotifications, refreshNotifications, hasNewNotifications]);
 
   // Connect to WebSocket for real-time notifications
   useEffect(() => {
@@ -101,7 +113,12 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     if (userData) {
       try {
         const user = JSON.parse(userData);
+        
+        // Connect to WebSocket for real-time notifications when app is open
         socketService.connect(user);
+        
+        // Subscribe to push notifications for when app is closed
+        NotificationService.initializeMobile(user);
         
         socketService.onNotification((notification) => {
           const newNotification: Notification = {
@@ -122,12 +139,11 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
             return updated;
           });
           setUnreadCount(prev => prev + 1);
+          setHasNewNotifications(true);
           
-          // Show mobile notification
-          NotificationService.showNotification(
-            notification.title,
-            notification.message
-          );
+          // Don't show browser notification here - backend handles push notifications
+          // Browser notifications via WebSocket are for when app is open
+          // Push notifications are for when app is closed
         });
       } catch (error) {
         console.error('Error connecting to socket:', error);

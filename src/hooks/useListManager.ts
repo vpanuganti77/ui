@@ -33,8 +33,22 @@ export const useListManager = <T extends Record<string, any>>({
         }
       }
     };
+    
     loadData();
-    return () => { mounted = false; };
+    
+    // Listen for data refresh events
+    const handleRefreshData = () => {
+      if (mounted) {
+        loadData();
+      }
+    };
+    
+    window.addEventListener('refreshData', handleRefreshData);
+    
+    return () => { 
+      mounted = false;
+      window.removeEventListener('refreshData', handleRefreshData);
+    };
   }, [entityKey]);
   const [open, setOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -80,15 +94,12 @@ export const useListManager = <T extends Record<string, any>>({
         }
         
         await remove(entityKey as any, deleteId);
-        const success = true;
-        if (success) {
-          setData(data.filter(item => item[idField] !== deleteId));
-          showSnackbar(`${entityName} deleted successfully`);
-        } else {
-          showSnackbar(`Failed to delete ${entityName.toLowerCase()}`, 'error');
-        }
-      } catch (error) {
-        showSnackbar(`Failed to delete ${entityName.toLowerCase()}`, 'error');
+        setData(data.filter(item => item[idField] !== deleteId));
+        showSnackbar(`${entityName} deleted successfully`);
+      } catch (error: any) {
+        // Show specific error message from backend
+        const errorMessage = error.message || `Failed to delete ${entityName.toLowerCase()}`;
+        showSnackbar(errorMessage, 'error');
       }
     }
     setDeleteOpen(false);

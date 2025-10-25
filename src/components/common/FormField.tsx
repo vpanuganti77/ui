@@ -30,6 +30,7 @@ export interface FieldConfig {
   rows?: number;
   accept?: string;
   capture?: boolean;
+  multiple?: boolean;
   flex?: string;
   width?: string;
   disabled?: boolean;
@@ -239,15 +240,23 @@ const FormField: React.FC<FormFieldProps> = ({
               type="file"
               hidden
               accept={config.accept}
+              multiple={config.multiple}
               onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleChange(file);
+                if (config.multiple) {
+                  const files = Array.from(e.target.files || []);
+                  handleChange(files);
+                } else {
+                  const file = e.target.files?.[0];
+                  if (file) handleChange(file);
+                }
               }}
             />
           </Button>
           {value && (
             <Typography variant="body2" color="success.main" sx={{ mt: 1 }}>
-              ✓ {value.name || 'File selected'}
+              ✓ {config.multiple && Array.isArray(value) 
+                ? `${value.length} file(s) selected` 
+                : (value.name || 'File selected')}
             </Typography>
           )}
         </Box>

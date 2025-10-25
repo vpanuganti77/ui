@@ -45,6 +45,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import DeactivatedHostelDashboard from './DeactivatedHostelDashboard';
 
 const drawerWidth = 240;
 const miniDrawerWidth = 64;
@@ -62,6 +63,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const [sidebarOpen, setSidebarOpen] = React.useState(!isMobile);
   const [hostelStatus, setHostelStatus] = React.useState<string>('active');
+  const [userStatus, setUserStatus] = React.useState<string>('active');
   const [expandedGroups, setExpandedGroups] = React.useState<{ [key: string]: boolean }>({
     management: true,
     financial: false,
@@ -73,8 +75,25 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, [isMobile]);
 
   React.useEffect(() => {
-    const checkHostelStatus = async () => {
+    const checkStatus = async () => {
       try {
+        // Skip status check for master admin and tenants
+        if (!user || user.role === 'master_admin' || user.role === 'tenant') {
+          return;
+        }
+        
+        // Check current user status from backend
+        if (user.role === 'admin' || user.role === 'receptionist') {
+          const { getAll } = await import('../services/fileDataService');
+          const users = await getAll('users');
+          const currentUser = users.find((u: any) => u.id === user.id);
+          
+          if (currentUser) {
+            console.log('Layout - Current user status:', currentUser.status);
+            setUserStatus(currentUser.status || 'active');
+          }
+        }
+        
         // Check if user has hostelDeactivated flag first
         if (user?.hostelDeactivated) {
           setHostelStatus('deactivated');
@@ -87,14 +106,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           const hostel = hostels.find((h: any) => h.id === user.hostelId);
           if (hostel) {
             setHostelStatus(hostel.status || 'active');
+            // Store hostel info in localStorage for dashboard to use
+            localStorage.setItem('currentHostel', JSON.stringify(hostel));
           }
         }
       } catch (error) {
-        console.error('Error checking hostel status:', error);
+        console.error('Error checking status:', error);
       }
     };
     
-    checkHostelStatus();
+    checkStatus();
   }, [user]);
 
   const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -436,8 +457,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <ListItemButton
                       selected={location.pathname === item.path || location.pathname.startsWith(item.path + '/')}
                       onClick={() => {
-                        // Prevent navigation if hostel is deactivated (except for dashboard and profile)
-                        if (hostelStatus === 'deactivated' && (user?.role === 'admin' || user?.role === 'receptionist') && !item.path.includes('/dashboard') && !item.path.includes('/profile')) {
+                        // Prevent navigation if user is inactive or hostel is deactivated (except for dashboard and profile)
+                        const isRestricted = (userStatus === 'inactive' || hostelStatus === 'deactivated') && 
+                                           (user?.role === 'admin' || user?.role === 'receptionist') && 
+                                           !item.path.includes('/dashboard') && !item.path.includes('/profile');
+                        if (isRestricted) {
                           return;
                         }
                         navigate(item.path);
@@ -448,8 +472,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                         minHeight: 48,
                         justifyContent: sidebarOpen ? 'initial' : 'center',
                         px: 2.5,
-                        opacity: (hostelStatus === 'deactivated' && (user?.role === 'admin' || user?.role === 'receptionist') && !item.path.includes('/dashboard') && !item.path.includes('/profile')) ? 0.5 : 1,
-                        cursor: (hostelStatus === 'deactivated' && (user?.role === 'admin' || user?.role === 'receptionist') && !item.path.includes('/dashboard') && !item.path.includes('/profile')) ? 'not-allowed' : 'pointer',
+                        opacity: ((userStatus === 'inactive' || hostelStatus === 'deactivated') && (user?.role === 'admin' || user?.role === 'receptionist') && !item.path.includes('/dashboard') && !item.path.includes('/profile')) ? 0.5 : 1,
+                        cursor: ((userStatus === 'inactive' || hostelStatus === 'deactivated') && (user?.role === 'admin' || user?.role === 'receptionist') && !item.path.includes('/dashboard') && !item.path.includes('/profile')) ? 'not-allowed' : 'pointer',
                         '&.Mui-selected': {
                           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                           borderRadius: '12px',
@@ -459,7 +483,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                           }
                         },
                         '&:hover': {
-                          bgcolor: (hostelStatus === 'deactivated' && (user?.role === 'admin' || user?.role === 'receptionist') && !item.path.includes('/dashboard') && !item.path.includes('/profile')) ? 'transparent' : 'grey.800'
+                          bgcolor: ((userStatus === 'inactive' || hostelStatus === 'deactivated') && (user?.role === 'admin' || user?.role === 'receptionist') && !item.path.includes('/dashboard') && !item.path.includes('/profile')) ? 'transparent' : 'grey.800'
                         }
                       }}
                     >
@@ -538,8 +562,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                       <ListItemButton
                         selected={location.pathname === subItem.path || location.pathname.startsWith(subItem.path + '/')}
                         onClick={() => {
-                          // Prevent navigation if hostel is deactivated (except for profile)
-                          if (hostelStatus === 'deactivated' && (user?.role === 'admin' || user?.role === 'receptionist') && !subItem.path.includes('/profile')) {
+                          // Prevent navigation if user is inactive or hostel is deactivated (except for profile)
+                          const isRestricted = (userStatus === 'inactive' || hostelStatus === 'deactivated') && 
+                                             (user?.role === 'admin' || user?.role === 'receptionist') && 
+                                             !subItem.path.includes('/profile');
+                          if (isRestricted) {
                             return;
                           }
                           navigate(subItem.path);
@@ -549,8 +576,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                           borderRadius: 2,
                           minHeight: 44,
                           px: 2,
-                          opacity: (hostelStatus === 'deactivated' && (user?.role === 'admin' || user?.role === 'receptionist') && !subItem.path.includes('/profile')) ? 0.5 : 1,
-                          cursor: (hostelStatus === 'deactivated' && (user?.role === 'admin' || user?.role === 'receptionist') && !subItem.path.includes('/profile')) ? 'not-allowed' : 'pointer',
+                          opacity: ((userStatus === 'inactive' || hostelStatus === 'deactivated') && (user?.role === 'admin' || user?.role === 'receptionist') && !subItem.path.includes('/profile')) ? 0.5 : 1,
+                          cursor: ((userStatus === 'inactive' || hostelStatus === 'deactivated') && (user?.role === 'admin' || user?.role === 'receptionist') && !subItem.path.includes('/profile')) ? 'not-allowed' : 'pointer',
                           '&.Mui-selected': {
                             bgcolor: 'primary.main',
                             '&:hover': {
@@ -558,7 +585,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                             }
                           },
                           '&:hover': {
-                            bgcolor: (hostelStatus === 'deactivated' && (user?.role === 'admin' || user?.role === 'receptionist') && !subItem.path.includes('/profile')) ? 'transparent' : 'grey.800'
+                            bgcolor: ((userStatus === 'inactive' || hostelStatus === 'deactivated') && (user?.role === 'admin' || user?.role === 'receptionist') && !subItem.path.includes('/profile')) ? 'transparent' : 'grey.800'
                           }
                         }}
                       >
@@ -603,7 +630,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         }}
       >
         <Toolbar sx={{ minHeight: '64px !important' }} />
-        {children}
+        {(userStatus === 'inactive' || hostelStatus === 'deactivated') && (user?.role === 'admin' || user?.role === 'receptionist') ? (
+          <DeactivatedHostelDashboard />
+        ) : (
+          children
+        )}
       </Box>
     </Box>
   );

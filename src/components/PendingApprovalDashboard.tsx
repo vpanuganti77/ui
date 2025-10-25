@@ -1,199 +1,149 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
+  Paper,
+  Button,
+  Stack,
+  LinearProgress,
+  Chip,
   Card,
   CardContent,
-  Alert,
-  Button,
-  Chip,
-  Stack,
-  CircularProgress,
-  Paper
 } from '@mui/material';
-import { Schedule, CheckCircle, Business, Refresh } from '@mui/icons-material';
+import { 
+  HourglassEmpty, 
+  ContactSupport, 
+  ExitToApp, 
+  CheckCircle,
+  Schedule,
+  Email
+} from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getAll } from '../services/fileDataService';
-import { useNotifications } from '../context/NotificationContext';
+import SupportTicketDialog from './SupportTicketDialog';
 
 const PendingApprovalDashboard: React.FC = () => {
-  const { user } = useAuth();
-  const { notifications } = useNotifications();
-  const [requestStatus, setRequestStatus] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const [contactOpen, setContactOpen] = useState(false);
 
-  const checkRequestStatus = async () => {
-    try {
-      const requests = await getAll('hostelRequests');
-      const userRequest = requests.find((r: any) => r.email === user?.email);
-      setRequestStatus(userRequest);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error checking request status:', error);
-      setLoading(false);
-    }
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
   };
 
-  useEffect(() => {
-    checkRequestStatus();
-    
-    // Check for approval notifications
-    const approvalNotifications = notifications.filter(n => 
-      n.type === 'hostel_approved' && !n.isRead
-    );
-    
-    if (approvalNotifications.length > 0) {
-      // Fetch updated user data from database
-      const checkApproval = async () => {
-        try {
-          const { getAll } = await import('../services/fileDataService');
-          const users = await getAll('users');
-          const updatedUser = users.find((u: any) => u.email === user?.email);
-          
-          if (updatedUser && updatedUser.status === 'active') {
-            localStorage.setItem('user', JSON.stringify(updatedUser));
-            window.location.reload();
-          }
-        } catch (error) {
-          console.error('Error checking approval:', error);
-        }
-      };
-      
-      checkApproval();
-    }
-  }, [notifications, user?.email]);
-  
-  // Auto-refresh every 10 seconds to check for approval
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      try {
-        const { getAll } = await import('../services/fileDataService');
-        const users = await getAll('users');
-        const currentUser = users.find((u: any) => 
-          u.email === user?.email && (user?.requestId ? u.requestId === user.requestId : true)
-        );
-        
-        if (currentUser && currentUser.status === 'active') {
-          // Update localStorage with the approved user data
-          const updatedUser = {
-            ...currentUser,
-            isAuthenticated: true
-          };
-          localStorage.setItem('user', JSON.stringify(updatedUser));
-          localStorage.setItem('token', localStorage.getItem('token') || 'approved_token_' + Date.now());
-          window.location.reload();
-        }
-      } catch (error) {
-        console.error('Error checking approval status:', error);
-      }
-    }, 10000); // Check every 10 seconds
-    
-    return () => clearInterval(interval);
-  }, [user?.email, user?.requestId]);
-
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <CircularProgress />
-      </Box>
-    );
-  }
+  const setupSteps = [
+    { label: 'Account Created', completed: true },
+    { label: 'Setup Request Submitted', completed: true },
+    { label: 'Under Review', completed: false, current: true },
+    { label: 'Approval & Activation', completed: false },
+  ];
 
   return (
-    <Box sx={{ maxWidth: 800, mx: 'auto', p: 3 }}>
-      <Box textAlign="center" mb={4}>
-        <Business sx={{ fontSize: 64, color: 'primary.main', mb: 2 }} />
-        <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-          Welcome to PGFlow!
-        </Typography>
-        <Typography variant="h6" color="text.secondary">
-          Your hostel setup is in progress
-        </Typography>
-      </Box>
+    <Box sx={{ maxWidth: 800, mx: 'auto', mt: 2, mb: 4, px: 2 }}>
+      <Paper elevation={3} sx={{ p: 4 }}>
+        <Box sx={{ textAlign: 'center', mb: 4 }}>
+          <HourglassEmpty sx={{ fontSize: 80, color: 'warning.main', mb: 2 }} />
+          <Typography variant="h4" gutterBottom color="text.primary">
+            Setup Pending Approval
+          </Typography>
+          <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
+            Welcome {user?.name}! Your hostel setup is being reviewed.
+          </Typography>
+        </Box>
 
-      <Card elevation={3} sx={{ mb: 3 }}>
-        <CardContent sx={{ p: 4 }}>
-          <Box display="flex" alignItems="center" gap={2} mb={3}>
-            <Schedule sx={{ fontSize: 32, color: 'warning.main' }} />
-            <Box>
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                Account Pending Approval
+        <Card sx={{ mb: 3, bgcolor: 'info.50', border: '1px solid', borderColor: 'info.200' }}>
+          <CardContent>
+            <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+              <Schedule color="info" />
+              <Typography variant="h6" color="info.dark">
+                Setup Progress
               </Typography>
-              <Typography color="text.secondary">
-                Your hostel setup request is being reviewed by our team
+            </Stack>
+            
+            <Box sx={{ mb: 3 }}>
+              {setupSteps.map((step, index) => (
+                <Stack key={index} direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
+                  <CheckCircle 
+                    color={step.completed ? 'success' : step.current ? 'warning' : 'disabled'} 
+                  />
+                  <Typography 
+                    variant="body1" 
+                    color={step.completed ? 'success.main' : step.current ? 'warning.main' : 'text.disabled'}
+                    sx={{ fontWeight: step.current ? 600 : 400 }}
+                  >
+                    {step.label}
+                  </Typography>
+                  {step.current && (
+                    <Chip label="In Progress" color="warning" size="small" />
+                  )}
+                </Stack>
+              ))}
+            </Box>
+            
+            <LinearProgress 
+              variant="determinate" 
+              value={50} 
+              sx={{ height: 8, borderRadius: 4, bgcolor: 'grey.200' }}
+            />
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1, textAlign: 'center' }}>
+              50% Complete
+            </Typography>
+          </CardContent>
+        </Card>
+
+        <Box sx={{ mb: 4, p: 3, bgcolor: 'grey.50', borderRadius: 2 }}>
+          <Stack direction="row" spacing={2} alignItems="flex-start">
+            <Email color="primary" sx={{ mt: 0.5 }} />
+            <Box>
+              <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
+                What happens next?
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Our team is reviewing your hostel setup request for <strong>{user?.hostelName}</strong>. 
+                This typically takes 24-48 hours. You will receive an email notification once approved.
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                • Account verification and validation<br />
+                • Hostel information review<br />
+                • System setup and configuration<br />
+                • Approval and activation
               </Typography>
             </Box>
-          </Box>
+          </Stack>
+        </Box>
 
-          <Alert severity="info" sx={{ mb: 3 }}>
-            <Typography variant="body2">
-              <strong>What happens next?</strong><br/>
-              • Our team will review your hostel details (usually within 24-48 hours)<br/>
-              • You'll receive a notification once approved<br/>
-              • Your dashboard will automatically update with full access<br/>
-              • This page will refresh automatically every 10 seconds to check for approval
-            </Typography>
-          </Alert>
-
-          {requestStatus && (
-            <Paper elevation={1} sx={{ p: 3, bgcolor: 'grey.50' }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
-                Request Details
-              </Typography>
-              <Stack spacing={1}>
-                <Box display="flex" justifyContent="space-between">
-                  <Typography color="text.secondary">Hostel Name:</Typography>
-                  <Typography sx={{ fontWeight: 500 }}>{requestStatus.hostelName}</Typography>
-                </Box>
-                <Box display="flex" justifyContent="space-between">
-                  <Typography color="text.secondary">Plan:</Typography>
-                  <Chip label="Free Trial" color="success" size="small" />
-                </Box>
-                <Box display="flex" justifyContent="space-between">
-                  <Typography color="text.secondary">Status:</Typography>
-                  <Chip 
-                    label={requestStatus.status} 
-                    color={requestStatus.status === 'approved' ? 'success' : 'warning'} 
-                    size="small" 
-                  />
-                </Box>
-                <Box display="flex" justifyContent="space-between">
-                  <Typography color="text.secondary">Submitted:</Typography>
-                  <Typography>{new Date(requestStatus.submittedAt).toLocaleDateString()}</Typography>
-                </Box>
-              </Stack>
-            </Paper>
-          )}
-
-          <Box display="flex" justifyContent="center" mt={3}>
-            <Button 
-              variant="outlined" 
-              startIcon={<Refresh />} 
-              onClick={checkRequestStatus}
-            >
-              Check Status
-            </Button>
-          </Box>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent>
-          <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-            Need Help?
-          </Typography>
-          <Typography color="text.secondary" sx={{ mb: 2 }}>
-            If you have any questions about your setup or need assistance, feel free to contact our support team.
-          </Typography>
-          <Button 
-            variant="contained" 
-            color="primary"
-            onClick={() => window.open('mailto:vpanuganti13@gmail.com?subject=Hostel Setup Support&body=Hi, I need help with my hostel setup request.', '_blank')}
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
+          <Button
+            variant="contained"
+            startIcon={<ContactSupport />}
+            onClick={() => setContactOpen(true)}
+            size="large"
           >
             Contact Support
           </Button>
-        </CardContent>
-      </Card>
+          <Button
+            variant="outlined"
+            startIcon={<ExitToApp />}
+            onClick={handleLogout}
+            size="large"
+          >
+            Logout
+          </Button>
+        </Stack>
+
+        <Box sx={{ mt: 4, p: 2, bgcolor: 'grey.50', borderRadius: 1, textAlign: 'center' }}>
+          <Typography variant="body2" color="text.secondary">
+            <strong>Need immediate assistance?</strong><br />
+            Email: support@hostelpro.com | Phone: +91-XXXX-XXXXXX
+          </Typography>
+        </Box>
+      </Paper>
+      
+      <SupportTicketDialog
+        open={contactOpen}
+        onClose={() => setContactOpen(false)}
+      />
     </Box>
   );
 };

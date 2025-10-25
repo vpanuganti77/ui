@@ -17,7 +17,7 @@ import { Lock, LockOpen, VpnKey, Edit, Delete, MoreVert } from '@mui/icons-mater
 import ListPage from '../../components/common/ListPage';
 import { userFields } from '../../components/common/FormConfigs';
 import { userCardFields } from '../../components/common/MobileCardConfigs';
-import { update, getById } from '../../services/fileDataService';
+import { update, getById, getAll } from '../../services/fileDataService';
 import UserCredentialsDialog from '../../components/UserCredentialsDialog';
 import UserFormDialog from '../../components/UserFormDialog';
 
@@ -193,6 +193,16 @@ const UserManagement: React.FC = () => {
       minWidth: 200
     },
     { 
+      field: 'hostelName', 
+      headerName: 'Hostel', 
+      width: 150,
+      renderCell: (params) => (
+        <Typography variant="body2">
+          {params.value || 'N/A'}
+        </Typography>
+      )
+    },
+    { 
       field: 'phone', 
       headerName: 'Phone', 
       width: 120
@@ -266,11 +276,25 @@ const UserManagement: React.FC = () => {
         idField="id"
         mobileCardConfig={{
           titleField: 'name',
-          fields: userCardFields
+          fields: [...userCardFields, { key: 'hostelName', label: 'Hostel', value: 'hostelName' }]
         }}
         customSubmitLogic={customSubmitLogic}
         hideActions={true}
         CustomDialog={UserFormDialog}
+        customDataLoader={async () => {
+          const [users, hostels] = await Promise.all([
+            getAll('users'),
+            getAll('hostels')
+          ]);
+          
+          return users.map((user: any) => {
+            const hostel = hostels.find((h: any) => h.id === user.hostelId);
+            return {
+              ...user,
+              hostelName: hostel?.displayName || hostel?.name || user.hostelName || 'N/A'
+            };
+          });
+        }}
       />
 
       <Menu

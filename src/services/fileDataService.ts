@@ -16,6 +16,7 @@ interface DataStructure {
   checkoutRequests: any[];
   hostelSettings: any[];
   notifications: any[];
+  supportTickets: any[];
 }
 
 // API helper function
@@ -107,12 +108,47 @@ export const create = async (entityType: keyof DataStructure, item: any): Promis
   };
   
   try {
-    const result = await apiCall(`/${entityType}`, {
-      method: 'POST',
-      body: JSON.stringify(newItem),
-    });
-    
-    return result;
+    // Handle file uploads for complaints
+    if (entityType === 'complaints' && item.attachments && Array.isArray(item.attachments) && item.attachments.length > 0) {
+      const formData = new FormData();
+      
+      // Add all non-file fields
+      Object.keys(newItem).forEach(key => {
+        if (key !== 'attachments' && newItem[key] !== undefined) {
+          formData.append(key, newItem[key]);
+        }
+      });
+      
+      // Add files
+      item.attachments.forEach((file: File, index: number) => {
+        formData.append(`attachments`, file);
+      });
+      
+      const response = await fetch(`${API_BASE_URL}/${entityType}`, {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        let errorMessage = response.statusText;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorData.message || response.statusText;
+        } catch (e) {
+          // If response is not JSON, use status text
+        }
+        throw new Error(errorMessage);
+      }
+      
+      return response.json();
+    } else {
+      const result = await apiCall(`/${entityType}`, {
+        method: 'POST',
+        body: JSON.stringify(newItem),
+      });
+      
+      return result;
+    }
   } catch (error: any) {
     // Handle backend validation errors
     if (error.message.includes('already exists')) {
@@ -182,7 +218,8 @@ export const exportData = async (): Promise<string> => {
     notices: await getAll('notices'),
     checkoutRequests: await getAll('checkoutRequests'),
     hostelSettings: await getAll('hostelSettings'),
-    notifications: await getAll('notifications')
+    notifications: await getAll('notifications'),
+    supportTickets: await getAll('supportTickets')
   };
   return JSON.stringify(data, null, 2);
 };

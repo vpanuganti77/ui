@@ -24,7 +24,9 @@ export const authService = {
     }
     
     // Use the new login API endpoint
-    const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'https://api-production-79b8.up.railway.app/api'}/auth/login`, {
+    const apiUrl = process.env.REACT_APP_API_BASE_URL || 'https://api-production-79b8.up.railway.app/api';
+    
+    const response = await fetch(`${apiUrl}/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -37,32 +39,22 @@ export const authService = {
     if (!response.ok) {
       console.log('Login failed response:', data); // Debug log
       
-      // Special handling for deactivated hostel - allow admin/receptionist login with restrictions
-      if (data.message && data.message.includes('Account is deactivated')) {
-        // Try local authentication for deactivated hostel admins
-        try {
-          const users = await getAll('users');
-          const user = users.find((u: any) => u.email === email && u.password === password);
-          
-          if (user && (user.role === 'admin' || user.role === 'receptionist')) {
-            // Allow login but mark hostel as deactivated
-            return {
-              token: 'token-' + user.id,
-              user: {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                phone: user.phone,
-                role: user.role,
-                hostelId: user.hostelId,
-                hostelName: user.hostelName,
-                isActive: false,
-                hostelDeactivated: true
-              }
-            };
-          }
-        } catch (localAuthError) {
-          console.log('Failed local auth for deactivated hostel:', localAuthError);
+      // Handle specific error cases with proper messages
+      if (data.message) {
+        if (data.message.includes('Account is deactivated') || data.message.includes('inactive')) {
+          const error = new Error('Your account has been deactivated. Please contact support for assistance.');
+          (error as any).status = response.status;
+          throw error;
+        }
+        if (data.message.includes('Hostel is deactivated')) {
+          const error = new Error('Your hostel has been deactivated. Please contact support for assistance.');
+          (error as any).status = response.status;
+          throw error;
+        }
+        if (data.message.includes('User not found') || data.message.includes('Invalid credentials')) {
+          const error = new Error('Invalid email or password. Please check your credentials.');
+          (error as any).status = response.status;
+          throw error;
         }
       }
       

@@ -57,6 +57,8 @@ interface ListPageProps<T> {
   hideAdd?: boolean;
   conditionalEdit?: (item: T) => boolean;
   onAfterCreate?: (newItem: T) => void;
+  onUpdate?: (id: string, data: any, originalData: T) => void;
+  customDataLoader?: () => Promise<T[]>;
   CustomDialog?: React.ComponentType<{
     open: boolean;
     onClose: () => void;
@@ -86,6 +88,8 @@ const ListPage = <T extends Record<string, any>>({
   hideAdd = false,
   conditionalEdit,
   onAfterCreate,
+  onUpdate,
+  customDataLoader,
   CustomDialog
 }: ListPageProps<T>) => {
   const navigate = useNavigate();
@@ -94,6 +98,7 @@ const ListPage = <T extends Record<string, any>>({
   
   const {
     data,
+    setData,
     open,
     deleteOpen,
     editingItem,
@@ -113,6 +118,13 @@ const ListPage = <T extends Record<string, any>>({
     entityKey,
     idField
   });
+  
+  // Use custom data loader if provided
+  React.useEffect(() => {
+    if (customDataLoader) {
+      customDataLoader().then(setData).catch(console.error);
+    }
+  }, [customDataLoader]);
 
   const handleSubmit = (formData: any) => {
     // Get current user's hostel for scoped validation
@@ -158,6 +170,11 @@ const ListPage = <T extends Record<string, any>>({
         showSnackbar(validationError, 'error');
         return;
       }
+    }
+
+    // Call onUpdate callback if editing
+    if (editingItem && onUpdate) {
+      onUpdate(editingItem[idField], formData, editingItem);
     }
 
     baseHandleSubmit(formData, customSubmitLogic, onAfterCreate);

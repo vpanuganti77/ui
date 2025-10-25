@@ -153,8 +153,36 @@ const Dashboard: React.FC = () => {
         ]);
 
         // Get hostel info
-        const currentHostel = hostels.find((h: any) => h.id === user.hostelId);
-        setHostelInfo(currentHostel);
+        let currentHostel = hostels.find((h: any) => h.id === user.hostelId);
+        
+        // If not found in API, try localStorage
+        if (!currentHostel) {
+          const storedHostel = localStorage.getItem('currentHostel');
+          if (storedHostel) {
+            try {
+              currentHostel = JSON.parse(storedHostel);
+            } catch (e) {
+              console.error('Error parsing stored hostel:', e);
+            }
+          }
+        }
+        
+        console.log('Dashboard - Hostel info loaded:', currentHostel);
+        
+        // If no hostel info found, create default trial info
+        if (!currentHostel && user.hostelId) {
+          const defaultHostel = {
+            id: user.hostelId,
+            name: user.hostelName || 'Your Hostel',
+            planType: 'free_trial',
+            trialExpiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
+            status: 'active'
+          };
+          console.log('Dashboard - Using default hostel info:', defaultHostel);
+          setHostelInfo(defaultHostel);
+        } else {
+          setHostelInfo(currentHostel);
+        }
 
         // Filter data by hostelId
         const hostelRooms = rooms.filter((r: any) => r.hostelId === user.hostelId);
@@ -336,39 +364,44 @@ const Dashboard: React.FC = () => {
       <Box display="flex" flexDirection={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} mb={3} gap={2}>
         <Box>
           <Typography variant="h4" sx={{ fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
-            {hostelInfo?.name || 'Dashboard Overview'}
+            Dashboard Overview
           </Typography>
-          {hostelInfo && (
-            <Box display="flex" gap={1} mt={1} flexWrap="wrap">
-              <Chip 
-                label={hostelInfo.planType === 'free_trial' ? 'Free Trial' : (hostelInfo.planType || '').toUpperCase()}
-                color={hostelInfo.planType === 'free_trial' ? 'info' : 'primary'}
-                size="small"
-              />
-              {hostelInfo.trialExpiryDate && (() => {
-                const expiryDate = new Date(hostelInfo.trialExpiryDate);
-                if (isNaN(expiryDate.getTime())) return null;
-                
-                const today = new Date();
-                const daysLeft = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-                
-                return (
+          <Box display="flex" gap={1} mt={1} flexWrap="wrap">
+            <Chip 
+              label={hostelInfo?.planType === 'free_trial' ? 'Free Trial' : (hostelInfo?.planType || 'Basic').toUpperCase()}
+              color={hostelInfo?.planType === 'free_trial' ? 'info' : 'primary'}
+              size="small"
+            />
+            {hostelInfo?.trialExpiryDate && (() => {
+              const expiryDate = new Date(hostelInfo.trialExpiryDate);
+              if (isNaN(expiryDate.getTime())) return null;
+              
+              const today = new Date();
+              const daysLeft = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+              
+              return (
+                <>
+                  <Chip 
+                    label={`${daysLeft > 0 ? daysLeft : 0} days left`}
+                    color={daysLeft <= 0 ? 'error' : daysLeft < 5 ? 'error' : daysLeft <= 10 ? 'warning' : 'success'} 
+                    size="small"
+                  />
                   <Chip 
                     label={`Expires: ${expiryDate.toLocaleDateString()}`}
-                    color={daysLeft <= 0 ? 'error' : daysLeft <= 7 ? 'warning' : 'success'} 
+                    color={daysLeft <= 0 ? 'error' : daysLeft < 5 ? 'error' : daysLeft <= 10 ? 'warning' : 'success'} 
                     size="small"
                     variant="outlined"
                   />
-                );
-              })()}
-              <Chip 
-                label={`Status: ${hostelInfo.status || 'active'}`}
-                color={(hostelInfo.status || 'active') === 'active' ? 'success' : 'error'}
-                size="small"
-                variant="outlined"
-              />
-            </Box>
-          )}
+                </>
+              );
+            })()}
+            <Chip 
+              label={`Status: ${hostelInfo?.status || userStatus || 'active'}`}
+              color={(hostelInfo?.status || userStatus || 'active') === 'active' ? 'success' : 'error'}
+              size="small"
+              variant="outlined"
+            />
+          </Box>
         </Box>
         <Box display="flex" gap={1} flexWrap="wrap">
           <Button 

@@ -1,50 +1,63 @@
-import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Navigate } from 'react-router-dom';
+import { Box, CircularProgress } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
-import { CircularProgress, Box } from '@mui/material';
+import { validateUserStatus, ValidationResult } from '../services/statusValidationService';
+import RestrictedAccess from '../pages/RestrictedAccess';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: 'master_admin' | 'admin' | 'receptionist' | 'tenant';
+  requiredRole?: string;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole }) => {
-  const { isAuthenticated, isLoading, user } = useAuth();
-  const location = useLocation();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  if (isLoading) {
+  useEffect(() => {
+    const checkStatus = async () => {
+      if (!isAuthenticated || !user) {
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      const result = await validateUserStatus();
+      setValidationResult(result);
+      setIsLoading(false);
+    };
+
+    if (!authLoading) {
+      checkStatus();
+    }
+  }, [isAuthenticated, user, authLoading]);
+
+  if (authLoading || isLoading) {
     return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="100vh"
-      >
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
         <CircularProgress />
       </Box>
     );
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+  if (!isAuthenticated || !user) {
+    return <Navigate to="/login" replace />;
   }
 
-  // Redirect pending approval users to dashboard only
-  if (user?.status === 'pending_approval' && !location.pathname.includes('/dashboard')) {
-    return <Navigate to="/admin/dashboard" replace />;
+  // Check role authorization
+  if (requiredRole && user.role !== requiredRole) {
+    return <Navigate to="/login" replace />;
   }
 
-  if (requiredRole && user?.role !== requiredRole) {
-    const getRedirectPath = (role: string) => {
-      switch (role) {
-        case 'master_admin': return '/master-admin/dashboard';
-        case 'admin': return '/admin/dashboard';
-        case 'receptionist': return '/receptionist/dashboard';
-        case 'tenant': return '/tenant/dashboard';
-        default: return '/login';
-      }
-    };
-    return <Navigate to={getRedirectPath(user?.role || '')} replace />;
+  // Check user/hostel status - allow pending approval users to access dashboard
+  if (!validationResult?.isValid && validationResult?.reason !== 'hostel_pending') {
+    return (
+      <RestrictedAccess 
+        reason={validationResult?.reason || 'user_deleted'} 
+        message={validationResult?.message || 'Access denied'} 
+      />
+    );
   }
 
   return <>{children}</>;

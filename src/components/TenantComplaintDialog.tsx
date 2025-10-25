@@ -9,7 +9,10 @@ import {
   Typography,
   Chip,
   TextField,
+  Collapse,
+  IconButton,
 } from '@mui/material';
+import { ExpandMore, ExpandLess } from '@mui/icons-material';
 import toast from 'react-hot-toast';
 import ComplaintComments from './ComplaintComments';
 
@@ -30,6 +33,7 @@ const TenantComplaintDialog: React.FC<TenantComplaintDialogProps> = ({
   const [isReopening, setIsReopening] = useState(false);
   const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
   const [reopenReason, setReopenReason] = useState('');
+  const [attachmentsExpanded, setAttachmentsExpanded] = useState(false);
 
   useEffect(() => {
     const loadComplaintData = async () => {
@@ -176,6 +180,49 @@ const TenantComplaintDialog: React.FC<TenantComplaintDialogProps> = ({
             <Typography variant="body2" color="text.secondary" gutterBottom>
               {complaint.description}
             </Typography>
+            {complaint.attachments && complaint.attachments.length > 0 && (
+              <Box sx={{ mt: 2 }}>
+                <Box 
+                  sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    cursor: 'pointer',
+                    '&:hover': { bgcolor: 'grey.100' },
+                    borderRadius: 1,
+                    p: 0.5
+                  }}
+                  onClick={() => setAttachmentsExpanded(!attachmentsExpanded)}
+                >
+                  <Typography variant="body2" fontWeight="medium">
+                    Attachments ({complaint.attachments.length})
+                  </Typography>
+                  <IconButton size="small" sx={{ ml: 1 }}>
+                    {attachmentsExpanded ? <ExpandLess /> : <ExpandMore />}
+                  </IconButton>
+                </Box>
+                <Collapse in={attachmentsExpanded}>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+                    {complaint.attachments.map((attachment: any, index: number) => (
+                      <Box
+                        key={index}
+                        component="img"
+                        src={`https://api-production-79b8.up.railway.app${attachment.path}`}
+                        alt={attachment.originalName || `Attachment ${index + 1}`}
+                        sx={{
+                          width: 100,
+                          height: 100,
+                          objectFit: 'cover',
+                          borderRadius: 1,
+                          cursor: 'pointer',
+                          border: '1px solid #ddd'
+                        }}
+                        onClick={() => window.open(`https://api-production-79b8.up.railway.app${attachment.path}`, '_blank')}
+                      />
+                    ))}
+                  </Box>
+                </Collapse>
+              </Box>
+            )}
             <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
               <Chip 
                 label={complaint.category} 
