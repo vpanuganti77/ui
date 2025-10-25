@@ -134,20 +134,25 @@ const Dashboard: React.FC = () => {
         hostelId: hostel.id || hostelId
       });
       
-      // Send push notification to backend for hostel admin
+      // Create notification for the hostel admin
+      const notification = {
+        id: `${Date.now()}_${user.id}_approval`,
+        type: 'hostel_approved',
+        title: 'Hostel Approved!',
+        message: `Your hostel "${request.hostelName}" has been approved and is now active. You can now access all features.`,
+        userId: user.id,
+        hostelId: hostel.id || hostelId,
+        priority: 'high',
+        isRead: false,
+        createdAt: new Date().toISOString(),
+        createdBy: 'Master Admin'
+      };
+      
       try {
-        await fetch(`${process.env.REACT_APP_API_BASE_URL || 'https://api-production-79b8.up.railway.app/api'}/push-notification`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            targetEmail: request.email,
-            title: 'Hostel Approved!',
-            message: `Your hostel "${request.hostelName}" has been approved and is now active.`,
-            type: 'hostel_approved'
-          })
-        });
-      } catch (error) {
-        console.warn('Backend push notification failed:', error);
+        await create('notifications', notification);
+        console.log('Created approval notification for user:', user.name);
+      } catch (notificationError) {
+        console.error('Failed to create approval notification:', notificationError);
       }
       
       setSnackbar({ 

@@ -105,9 +105,11 @@ const HostelManagement: React.FC = () => {
       }
       
       // Create notifications for all affected users
-      for (const user of hostelUsers) {
+      const timestamp = Date.now();
+      for (let i = 0; i < hostelUsers.length; i++) {
+        const user = hostelUsers[i];
         const notification = {
-          id: Date.now().toString(),
+          id: `${timestamp}_${user.id}_${i}`,
           type: 'hostel_status_change',
           title: `Hostel ${newStatus === 'active' ? 'Activated' : 'Deactivated'}`,
           message: newStatus === 'active' 
@@ -123,6 +125,7 @@ const HostelManagement: React.FC = () => {
         
         try {
           await create('notifications', notification);
+          console.log(`Created notification for user ${user.name}:`, notification.id);
         } catch (notificationError) {
           console.error('Failed to create notification:', notificationError);
         }

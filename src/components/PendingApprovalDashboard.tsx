@@ -9,6 +9,8 @@ import {
   Chip,
   Card,
   CardContent,
+  useTheme,
+  useMediaQuery,
 } from '@mui/material';
 import { 
   HourglassEmpty, 
@@ -26,6 +28,8 @@ const PendingApprovalDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [contactOpen, setContactOpen] = useState(false);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const handleLogout = () => {
     logout();
@@ -40,42 +44,43 @@ const PendingApprovalDashboard: React.FC = () => {
   ];
 
   return (
-    <Box sx={{ maxWidth: 800, mx: 'auto', mt: 2, mb: 4, px: 2 }}>
-      <Paper elevation={3} sx={{ p: 4 }}>
-        <Box sx={{ textAlign: 'center', mb: 4 }}>
-          <HourglassEmpty sx={{ fontSize: 80, color: 'warning.main', mb: 2 }} />
-          <Typography variant="h4" gutterBottom color="text.primary">
-            Setup Pending Approval
+    <Box sx={{ maxWidth: 800, mx: 'auto', mt: { xs: 1, sm: 2 }, mb: { xs: 2, sm: 4 }, px: { xs: 1, sm: 2 } }}>
+      <Paper elevation={3} sx={{ p: { xs: 2, sm: 4 } }}>
+        <Box sx={{ textAlign: 'center', mb: { xs: 3, sm: 4 } }}>
+          <HourglassEmpty sx={{ fontSize: { xs: 60, sm: 80 }, color: 'warning.main', mb: { xs: 1.5, sm: 2 } }} />
+          <Typography variant={isMobile ? "h5" : "h4"} gutterBottom color="text.primary" sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
+            {isMobile ? 'Pending Approval' : 'Setup Pending Approval'}
           </Typography>
-          <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
+          <Typography variant={isMobile ? "body1" : "h6"} color="text.secondary" sx={{ mb: 2, fontSize: { xs: '0.875rem', sm: '1.25rem' } }}>
             Welcome {user?.name}! Your hostel setup is being reviewed.
           </Typography>
         </Box>
 
-        <Card sx={{ mb: 3, bgcolor: 'info.50', border: '1px solid', borderColor: 'info.200' }}>
-          <CardContent>
+        <Card sx={{ mb: { xs: 2, sm: 3 }, bgcolor: 'info.50', border: '1px solid', borderColor: 'info.200' }}>
+          <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
             <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
               <Schedule color="info" />
-              <Typography variant="h6" color="info.dark">
+              <Typography variant={isMobile ? "subtitle1" : "h6"} color="info.dark">
                 Setup Progress
               </Typography>
             </Stack>
             
-            <Box sx={{ mb: 3 }}>
+            <Box sx={{ mb: { xs: 2, sm: 3 } }}>
               {setupSteps.map((step, index) => (
                 <Stack key={index} direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
                   <CheckCircle 
-                    color={step.completed ? 'success' : step.current ? 'warning' : 'disabled'} 
+                    color={step.completed ? 'success' : step.current ? 'warning' : 'disabled'}
+                    sx={{ fontSize: { xs: 20, sm: 24 } }}
                   />
                   <Typography 
-                    variant="body1" 
+                    variant={isMobile ? "body2" : "body1"}
                     color={step.completed ? 'success.main' : step.current ? 'warning.main' : 'text.disabled'}
-                    sx={{ fontWeight: step.current ? 600 : 400 }}
+                    sx={{ fontWeight: step.current ? 600 : 400, fontSize: { xs: '0.875rem', sm: '1rem' } }}
                   >
                     {step.label}
                   </Typography>
                   {step.current && (
-                    <Chip label="In Progress" color="warning" size="small" />
+                    <Chip label="In Progress" color="warning" size={isMobile ? "small" : "small"} />
                   )}
                 </Stack>
               ))}
@@ -92,22 +97,22 @@ const PendingApprovalDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Box sx={{ mb: 4, p: 3, bgcolor: 'grey.50', borderRadius: 2 }}>
-          <Stack direction="row" spacing={2} alignItems="flex-start">
-            <Email color="primary" sx={{ mt: 0.5 }} />
-            <Box>
-              <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
+        <Box sx={{ mb: { xs: 3, sm: 4 }, p: { xs: 2, sm: 3 }, bgcolor: 'grey.50', borderRadius: 2 }}>
+          <Stack direction={isMobile ? "column" : "row"} spacing={2} alignItems={isMobile ? "center" : "flex-start"}>
+            <Email color="primary" sx={{ mt: 0.5, fontSize: { xs: 20, sm: 24 } }} />
+            <Box sx={{ textAlign: { xs: 'center', sm: 'left' } }}>
+              <Typography variant={isMobile ? "subtitle2" : "body1"} sx={{ fontWeight: 600, mb: 1 }}>
                 What happens next?
               </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              <Typography variant={isMobile ? "caption" : "body2"} color="text.secondary" sx={{ mb: 2, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                 Our team is reviewing your hostel setup request for <strong>{user?.hostelName}</strong>. 
-                This typically takes 24-48 hours. You will receive an email notification once approved.
+                This typically takes 24-48 hours.
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                • Account verification and validation<br />
-                • Hostel information review<br />
-                • System setup and configuration<br />
-                • Approval and activation
+              <Typography variant={isMobile ? "caption" : "body2"} color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                • Account verification<br />
+                • Information review<br />
+                • System setup<br />
+                • Approval & activation
               </Typography>
             </Box>
           </Stack>
@@ -118,7 +123,9 @@ const PendingApprovalDashboard: React.FC = () => {
             variant="contained"
             startIcon={<ContactSupport />}
             onClick={() => setContactOpen(true)}
-            size="large"
+            size={isMobile ? "medium" : "large"}
+            fullWidth={isMobile}
+            sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
           >
             Contact Support
           </Button>
@@ -126,16 +133,18 @@ const PendingApprovalDashboard: React.FC = () => {
             variant="outlined"
             startIcon={<ExitToApp />}
             onClick={handleLogout}
-            size="large"
+            size={isMobile ? "medium" : "large"}
+            fullWidth={isMobile}
+            sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
           >
             Logout
           </Button>
         </Stack>
 
-        <Box sx={{ mt: 4, p: 2, bgcolor: 'grey.50', borderRadius: 1, textAlign: 'center' }}>
-          <Typography variant="body2" color="text.secondary">
+        <Box sx={{ mt: { xs: 3, sm: 4 }, p: { xs: 1.5, sm: 2 }, bgcolor: 'grey.50', borderRadius: 1, textAlign: 'center' }}>
+          <Typography variant={isMobile ? "caption" : "body2"} color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
             <strong>Need immediate assistance?</strong><br />
-            Email: support@hostelpro.com | Phone: +91-XXXX-XXXXXX
+            {isMobile ? 'support@hostelpro.com' : 'Email: support@hostelpro.com | Phone: +91-XXXX-XXXXXX'}
           </Typography>
         </Box>
       </Paper>

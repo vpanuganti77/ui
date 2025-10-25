@@ -97,21 +97,7 @@ const ContactUsDialog: React.FC<ContactUsDialogProps> = ({ open, onClose }) => {
       
       const createdUser = await create('users', userData);
       
-      // Send push notification to backend for master admins
-      try {
-        await fetch(`${process.env.REACT_APP_API_BASE_URL || 'https://api-production-79b8.up.railway.app/api'}/push-notification`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            targetRole: 'master_admin',
-            title: 'New Hostel Setup Request',
-            message: `${formData.name} has requested to setup ${formData.hostelName}`,
-            type: 'hostel_request'
-          })
-        });
-      } catch (error) {
-        console.warn('Backend push notification failed:', error);
-      }
+      // Note: Backend will automatically create notification when hostel request is created
       
       // Auto-login with created user credentials
       setSuccess(true);
