@@ -58,8 +58,8 @@ const HostelRequests: React.FC = () => {
         h.contactEmail === request.email || h.name === request.hostelName
       );
       
-      let hostel;
-      let hostelId;
+      let hostel: any;
+      let hostelId: string;
       
       if (existingHostel) {
         console.log('Using existing hostel:', existingHostel);
@@ -68,13 +68,20 @@ const HostelRequests: React.FC = () => {
       } else {
         // Create hostel with unique ID
         hostelId = `hostel_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        // Generate hostel domain email to match user's email
+        const hostelDomain = request.hostelName.toLowerCase().replace(/[^a-z0-9]/g, '') + '.com';
+        const username = request.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const hostelContactEmail = `${username}@${hostelDomain}`;
+        
         const hostelData = {
           id: hostelId,
           name: `${request.hostelName}_${Date.now()}`, // Make name unique
           displayName: request.hostelName, // Store original name for display
           address: request.address,
           contactPerson: request.name,
-          contactEmail: request.email,
+          contactEmail: hostelContactEmail, // Use hostel domain email
+          originalContactEmail: request.email, // Store original email
           contactPhone: request.phone,
           planType: request.planType,
           status: 'active',
@@ -89,28 +96,81 @@ const HostelRequests: React.FC = () => {
       
       // Find and update existing user (don't create new one)
       const users = await getAll('users');
-      const user = users.find((u: any) => 
-        u.email === request.email || u.requestId === request.id
-      );
+      
+      console.log('Looking for user with request:', {
+        requestId: request.id,
+        requestEmail: request.email,
+        requestName: request.name,
+        hostelName: request.hostelName
+      });
+      
+      console.log('Available users:', users.map(u => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        originalEmail: u.originalEmail,
+        requestId: u.requestId,
+        hostelName: u.hostelName,
+        status: u.status
+      })));
+      
+      // Debug each search attempt
+      console.log('Search 1 - by requestId:', request.id);
+      console.log('Users with matching requestId:', users.filter(u => u.requestId === request.id));
+      
+      console.log('Search 2 - by originalEmail:', request.email);
+      console.log('Users with matching originalEmail:', users.filter(u => u.originalEmail === request.email));
+      
+      console.log('Search 3 - by name and hostelName:', request.name, request.hostelName);
+      console.log('Users with matching name and hostelName:', users.filter(u => u.name === request.name && u.hostelName === request.hostelName));
+      
+      // Try multiple search strategies
+      let user = users.find((u: any) => u.requestId === request.id);
       
       if (!user) {
-        throw new Error('User account not found for this request');
+        user = users.find((u: any) => u.originalEmail === request.email);
       }
       
-      const updatedUser = {
-        ...user,
-        status: 'active',
-        hostelId: hostel.id || hostelId,
-        hostelName: request.hostelName,
-        approvedAt: new Date().toISOString()
-      };
+      if (!user) {
+        user = users.find((u: any) => 
+          u.name === request.name && u.hostelName === request.hostelName
+        );
+      }
       
-      await update('users', user.id, updatedUser);
+      if (!user) {
+        // Generate hostel domain email and search by that
+        const hostelDomain = request.hostelName.toLowerCase().replace(/[^a-z0-9]/g, '') + '.com';
+        const username = request.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const expectedEmail = `${username}@${hostelDomain}`;
+        user = users.find((u: any) => u.email === expectedEmail);
+      }
       
-      // Update localStorage if this is the current user
-      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-      if (currentUser.email === request.email) {
-        localStorage.setItem('user', JSON.stringify(updatedUser));
+      console.log('Found user:', user);
+      
+      // Update user if found, but don't fail the entire process if user not found
+      if (user) {
+        try {
+          const updatedUser = {
+            ...user,
+            status: 'active',
+            hostelId: hostel.id || hostelId,
+            hostelName: request.hostelName,
+            approvedAt: new Date().toISOString()
+          };
+          
+          await update('users', user.id, updatedUser);
+          console.log('Successfully updated user:', user.name);
+          
+          // Update localStorage if this is the current user
+          const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+          if (currentUser.email === user.email || currentUser.originalEmail === request.email) {
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+          }
+        } catch (userUpdateError) {
+          console.error('Failed to update user, but continuing with approval:', userUpdateError);
+        }
+      } else {
+        console.warn('User account not found, but continuing with hostel approval');
       }
       
       // Update request status
@@ -121,42 +181,44 @@ const HostelRequests: React.FC = () => {
         hostelId: hostel.id || hostelId
       });
       
-      // Create notification for the hostel admin
-      const notification = {
-        id: `${Date.now()}_${user.id}_approval`,
-        type: 'hostel_approved',
-        title: 'Hostel Approved!',
-        message: `Your hostel "${request.hostelName}" has been approved and is now active. You can now access all features.`,
-        userId: user.id,
-        hostelId: hostel.id || hostelId,
-        priority: 'high',
-        isRead: false,
-        createdAt: new Date().toISOString(),
-        createdBy: 'Master Admin'
-      };
-      
-      try {
-        await create('notifications', notification);
-        console.log('Created approval notification for user:', user.name);
-      } catch (notificationError) {
-        console.error('Failed to create approval notification:', notificationError);
+      // Create notification for the hostel admin if user was found
+      if (user) {
+        const notification = {
+          id: `${Date.now()}_${user.id}_approval`,
+          type: 'hostel_approved',
+          title: 'Hostel Approved!',
+          message: `Your hostel "${request.hostelName}" has been approved and is now active. You can now access all features.`,
+          userId: user.id,
+          hostelId: hostel.id || hostelId,
+          priority: 'high',
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          createdBy: 'Master Admin'
+        };
+        
+        try {
+          await create('notifications', notification);
+          console.log('Created approval notification for user:', user.name);
+          
+          // Send push notification to the specific user
+          const { NotificationService } = await import('../../services/notificationService');
+          await NotificationService.sendPushNotificationToUser(
+            user.email,
+            notification.title,
+            notification.message,
+            'hostel_approved'
+          );
+        } catch (notificationError) {
+          console.error('Failed to create approval notification:', notificationError);
+        }
       }
       
-      // Send push notification to backend for hostel admin
-      try {
-        await fetch(`${process.env.REACT_APP_API_BASE_URL || 'https://api-production-79b8.up.railway.app/api'}/push-notification`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            targetEmail: request.email,
-            title: 'Hostel Approved!',
-            message: `Your hostel "${request.hostelName}" has been approved and is now active.`,
-            type: 'hostel_approved'
-          })
-        });
-      } catch (error) {
-        console.warn('Backend push notification failed:', error);
-      }
+      // Trigger notification and dashboard refresh
+      window.dispatchEvent(new CustomEvent('notificationRefresh'));
+      window.dispatchEvent(new CustomEvent('dashboardRefresh'));
+      window.dispatchEvent(new CustomEvent('refreshData'));
+      
+
       
       // User credentials already provided during setup - no popup needed
       

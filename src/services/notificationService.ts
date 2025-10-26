@@ -35,7 +35,7 @@ export class NotificationService {
       });
 
       // Send subscription to server
-      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'https://api-production-79b8.up.railway.app/api'}/push-subscription`, {
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api'}/push-subscription`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -56,13 +56,22 @@ export class NotificationService {
   // Show local notification
   static showNotification(title: string, body: string, icon?: string): void {
     if (Notification.permission === 'granted') {
-      new Notification(title, {
+      const notification = new Notification(title, {
         body,
         icon: icon || '/favicon.ico',
         badge: '/favicon.ico',
         tag: 'hostel-notification',
         requireInteraction: true // Keep notification visible until user interacts
       });
+      
+      // Handle notification click to focus app
+      notification.onclick = () => {
+        window.focus();
+        notification.close();
+        // Trigger notification refresh and dashboard refresh
+        window.dispatchEvent(new CustomEvent('notificationRefresh'));
+        window.dispatchEvent(new CustomEvent('dashboardRefresh'));
+      };
     }
   }
 
@@ -84,11 +93,29 @@ export class NotificationService {
     );
   }
 
+  // Show hostel approval notification
+  static showHostelApprovedNotification(hostelName: string): void {
+    this.showNotification(
+      '🎉 Hostel Approved!',
+      `Your hostel "${hostelName}" has been approved and is now active. You can now access all features.`,
+      '/favicon.ico'
+    );
+  }
+
   // Show new support ticket notification (for master admin)
   static showNewSupportTicketNotification(subject: string, submittedBy: string): void {
     this.showNotification(
       '🎫 New Support Ticket',
       `${submittedBy} submitted: "${subject}"`,
+      '/favicon.ico'
+    );
+  }
+
+  // Show new hostel request notification (for master admin)
+  static showNewHostelRequestNotification(hostelName: string, requesterName: string): void {
+    this.showNotification(
+      '🏢 New Hostel Setup Request',
+      `${requesterName} has requested to setup ${hostelName}. Please review and approve.`,
       '/favicon.ico'
     );
   }
@@ -105,7 +132,7 @@ export class NotificationService {
   // Send push notification to backend for specific roles
   static async sendPushNotification(targetRole: string, title: string, message: string, type: string): Promise<void> {
     try {
-      await fetch(`${process.env.REACT_APP_API_BASE_URL || 'https://api-production-79b8.up.railway.app/api'}/push-notification`, {
+      await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api'}/push-notification`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -117,6 +144,24 @@ export class NotificationService {
       });
     } catch (error) {
       console.warn('Push notification failed:', error);
+    }
+  }
+
+  // Send push notification to specific user by email
+  static async sendPushNotificationToUser(targetEmail: string, title: string, message: string, type: string): Promise<void> {
+    try {
+      await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api'}/push-notification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetEmail,
+          title,
+          message,
+          type
+        })
+      });
+    } catch (error) {
+      console.warn('Push notification failed for user:', targetEmail, error);
     }
   }
 

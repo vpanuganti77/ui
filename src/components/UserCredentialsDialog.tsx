@@ -12,6 +12,7 @@ import {
   Alert
 } from '@mui/material';
 import { ContentCopy, CheckCircle } from '@mui/icons-material';
+import { generateLoginLink } from '../utils/loginLink';
 
 interface UserCredentialsDialogProps {
   open: boolean;
@@ -23,6 +24,7 @@ interface UserCredentialsDialogProps {
     hostelName: string;
     role: string;
     loginUrl?: string;
+    isNewUser?: boolean;
   } | null;
 }
 
@@ -36,6 +38,18 @@ const UserCredentialsDialog: React.FC<UserCredentialsDialogProps> = ({
   const handleCopyToClipboard = async () => {
     if (!userDetails) return;
 
+    const loginUrl = userDetails.password !== '••••••••' 
+      ? generateLoginLink(userDetails.email, userDetails.password)
+      : userDetails.loginUrl || `${window.location.origin}/login`;
+    
+    // Debug logging
+    console.log('UserCredentialsDialog - Copying credentials:', {
+      email: userDetails.email,
+      password: userDetails.password,
+      loginUrl,
+      isPasswordMasked: userDetails.password === '••••••••'
+    });
+      
     const credentialsText = `
 Hostel Management System - Login Credentials
 
@@ -45,7 +59,7 @@ Email: ${userDetails.email}
 Password: ${userDetails.password}
 Role: ${userDetails.role}
 
-Login URL: ${userDetails.loginUrl || `${window.location.origin}/login`}
+Login URL: ${loginUrl}
 
 Please keep these credentials safe and change the password after first login.
     `.trim();
@@ -66,13 +80,15 @@ Please keep these credentials safe and change the password after first login.
       <DialogTitle>
         <Box display="flex" alignItems="center" gap={1}>
           <CheckCircle color="success" />
-          User Created Successfully
+          {userDetails.isNewUser !== false ? 'User Created Successfully' : 'User Credentials'}
         </Box>
       </DialogTitle>
       
       <DialogContent>
-        <Alert severity="success" sx={{ mb: 3 }}>
-          Admin user has been created successfully! Please share these credentials with the hostel admin.
+        <Alert severity={userDetails.isNewUser !== false ? "success" : "info"} sx={{ mb: 3 }}>
+          {userDetails.isNewUser !== false 
+            ? 'Admin user has been created successfully! Please share these credentials with the hostel admin.'
+            : 'Here are the user credentials. You can copy and share them securely.'}
         </Alert>
 
         <Paper 
@@ -157,7 +173,10 @@ Please keep these credentials safe and change the password after first login.
                 Login URL:
               </Typography>
               <Typography variant="body1" sx={{ fontFamily: 'monospace', bgcolor: 'white', p: 1, borderRadius: 1, wordBreak: 'break-all' }}>
-                {userDetails.loginUrl || `${window.location.origin}/login`}
+                {userDetails.password !== '••••••••' 
+                  ? generateLoginLink(userDetails.email, userDetails.password)
+                  : userDetails.loginUrl || `${window.location.origin}/login`
+                }
               </Typography>
             </Box>
           </Box>

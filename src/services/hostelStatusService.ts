@@ -7,8 +7,20 @@ export class HostelStatusService {
 
   // Start monitoring hostel status for admin/receptionist users
   static startMonitoring(user: any): void {
-    // Temporarily disabled to prevent API calls
-    return;
+    if (!user || user.role === 'master_admin' || user.role === 'tenant' || !user.hostelId) {
+      return;
+    }
+
+    // Clear any existing interval
+    this.stopMonitoring();
+
+    // Check status every 30 seconds
+    this.checkInterval = setInterval(() => {
+      this.checkHostelStatus(user);
+    }, 30000);
+
+    // Initial check
+    this.checkHostelStatus(user);
   }
 
   // Stop monitoring
@@ -49,12 +61,16 @@ export class HostelStatusService {
   private static handleStatusChange(oldStatus: string, newStatus: string, hostelName: string): void {
     if (newStatus === 'inactive' || newStatus === 'deactivated') {
       NotificationService.showHostelDeactivatedNotification(hostelName);
+      // Trigger dashboard refresh immediately
+      window.dispatchEvent(new CustomEvent('dashboardRefresh'));
       // Force page reload after a short delay to show restricted access
       setTimeout(() => {
         window.location.reload();
       }, 3000);
     } else if (newStatus === 'active' && (oldStatus === 'inactive' || oldStatus === 'deactivated')) {
       NotificationService.showHostelReactivatedNotification(hostelName);
+      // Trigger dashboard refresh immediately
+      window.dispatchEvent(new CustomEvent('dashboardRefresh'));
       // Force page reload after a short delay to restore access
       setTimeout(() => {
         window.location.reload();

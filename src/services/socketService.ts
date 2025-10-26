@@ -15,8 +15,8 @@ class SocketService {
     if (this.ws?.readyState === WebSocket.OPEN) return;
 
     try {
-      const config = await fetch('/config.json').then(r => r.json()).catch(() => ({ REACT_APP_WS_URL: 'wss://api-production-79b8.up.railway.app' }));
-      this.ws = new WebSocket(config.REACT_APP_WS_URL || 'wss://api-production-79b8.up.railway.app');
+      const config = await fetch('/config.json').then(r => r.json()).catch(() => ({ WS_URL: 'ws://localhost:5000' }));
+      this.ws = new WebSocket(config.WS_URL || 'ws://localhost:5000');
       
       this.ws.onopen = () => {
         console.log('Connected to WebSocket server');
@@ -31,13 +31,37 @@ class SocketService {
 
       this.ws.onmessage = (event) => {
         try {
+          console.log('Raw WebSocket message:', event.data);
           const data = JSON.parse(event.data);
-          console.log('WebSocket message received:', data);
-          if (data.type === 'notification' && this.notificationCallback) {
-            this.notificationCallback(data.payload);
+          console.log('Parsed WebSocket message:', data);
+          
+          if (data.type === 'notification') {
+            console.log('Notification received, callback exists:', !!this.notificationCallback);
+            
+            // Force immediate UI refresh for hostel status changes
+            if (data.payload.type === 'hostel_status_change') {
+              console.log('HOSTEL STATUS CHANGE - Showing confirmation dialog');
+              
+              // Show browser notification
+              if (Notification.permission === 'granted') {
+                new Notification(data.payload.title, {
+                  body: data.payload.message,
+                  icon: '/favicon.ico'
+                });
+              }
+              
+              // Show beautiful dialog (skip NotificationContext to prevent double reload)
+              this.showHostelStatusDialog(data.payload);
+              return; // Don't call notification callback for hostel status changes
+            }
+            
+            if (this.notificationCallback) {
+              console.log('Calling notification callback with:', data.payload);
+              this.notificationCallback(data.payload);
+            }
           }
         } catch (error) {
-          console.error('Error parsing message:', error);
+          console.error('Error parsing WebSocket message:', error);
         }
       };
 
@@ -77,6 +101,39 @@ class SocketService {
 
   onNotification(callback: (notification: NotificationData) => void) {
     this.notificationCallback = callback;
+  }
+
+  private showHostelStatusDialog(payload: any) {
+    // Create dialog container
+    const dialogContainer = document.createElement('div');
+    dialogContainer.id = 'hostel-status-dialog';
+    document.body.appendChild(dialogContainer);
+
+    // Import React and render dialog
+    import('react').then(React => {
+      import('react-dom/client').then(ReactDOM => {
+        import('../components/HostelStatusDialog').then(({ default: HostelStatusDialog }) => {
+          const root = ReactDOM.createRoot(dialogContainer);
+          
+          const isActivated = payload.title.includes('Activated');
+          const message = isActivated 
+            ? 'Your hostel has been activated! You now have full access to all features.'
+            : 'Your hostel has been deactivated! Please contact support for assistance.';
+          
+          root.render(
+            React.createElement(HostelStatusDialog, {
+              open: true,
+              title: payload.title,
+              message: message,
+              isActivated: isActivated,
+              onConfirm: () => {
+                window.location.reload();
+              }
+            })
+          );
+        });
+      });
+    });
   }
 }
 

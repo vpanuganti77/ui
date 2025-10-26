@@ -12,6 +12,7 @@ import {
 import { Business, Person, RequestPage, CheckCircle } from '@mui/icons-material';
 import { getAll, update, create } from '../../services/fileDataService';
 import { socketService } from '../../services/socketService';
+import TestNotification from '../../components/TestNotification';
 
 
 const Dashboard: React.FC = () => {
@@ -79,25 +80,47 @@ const Dashboard: React.FC = () => {
         h.contactEmail === request.email || h.name === request.hostelName
       );
       
-      let hostel;
-      let hostelId;
+      let hostel: any;
+      let hostelId: string;
       
       if (existingHostel) {
-        hostel = existingHostel;
+        // Update existing hostel's contactEmail to match user's email domain
+        const hostelDomain = request.hostelName.toLowerCase().replace(/[^a-z0-9]/g, '') + '.com';
+        const username = request.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const hostelContactEmail = `${username}@${hostelDomain}`;
+        
+        const updatedHostelData = {
+          ...existingHostel,
+          contactEmail: hostelContactEmail,
+          originalContactEmail: request.email,
+          domain: hostelDomain, // Add domain field for validation
+          allowedDomains: [hostelDomain] // Add allowed domains array
+        };
+        
+        hostel = await update('hostels', existingHostel.id, updatedHostelData);
         hostelId = existingHostel.id;
       } else {
         // Create hostel with unique ID
         hostelId = `hostel_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        // Generate hostel domain email to match user's email
+        const hostelDomain = request.hostelName.toLowerCase().replace(/[^a-z0-9]/g, '') + '.com';
+        const username = request.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const hostelContactEmail = `${username}@${hostelDomain}`;
+        
         const hostelData = {
           id: hostelId,
           name: `${request.hostelName}_${Date.now()}`,
           displayName: request.hostelName,
           address: request.address,
           contactPerson: request.name,
-          contactEmail: request.email,
+          contactEmail: hostelContactEmail, // Use hostel domain email
+          originalContactEmail: request.email, // Store original email
           contactPhone: request.phone,
           planType: request.planType,
           status: 'active',
+          domain: hostelDomain, // Add domain field for validation
+          allowedDomains: [hostelDomain], // Add allowed domains array
           trialExpiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
           createdAt: new Date().toISOString(),
           createdBy: 'Master Admin'
@@ -109,7 +132,7 @@ const Dashboard: React.FC = () => {
       // Find and update existing user (don't create new one)
       const users = await getAll('users');
       const user = users.find((u: any) => 
-        u.email === request.email || u.requestId === request.id
+        u.originalEmail === request.email || u.requestId === request.id
       );
       
       if (!user) {
@@ -119,12 +142,30 @@ const Dashboard: React.FC = () => {
       const updatedUser = {
         ...user,
         status: 'active',
-        hostelId: hostel.id || hostelId,
+        hostelId: hostel.id || hostelId, // This should be the actual hostel ID
         hostelName: request.hostelName,
         approvedAt: new Date().toISOString()
       };
       
+      console.log('Updating user hostelId from', user.hostelId, 'to', hostel.id || hostelId);
+      
       await update('users', user.id, updatedUser);
+      
+      // If this is the current user, update localStorage and reconnect WebSocket
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      if (currentUser.email === user.email) {
+        // Update localStorage with new hostelId
+        const updatedCurrentUser = { ...currentUser, hostelId: hostel.id || hostelId, status: 'active' };
+        localStorage.setItem('user', JSON.stringify(updatedCurrentUser));
+        
+        // Force WebSocket reconnection with updated user data
+        socketService.disconnect();
+        setTimeout(() => {
+          socketService.connect(updatedCurrentUser);
+        }, 1000);
+        
+        console.log('Updated current user hostelId and reconnected WebSocket');
+      }
       
       // Update request status
       await update('hostelRequests', requestId, {
@@ -151,6 +192,24 @@ const Dashboard: React.FC = () => {
       try {
         await create('notifications', notification);
         console.log('Created approval notification for user:', user.name);
+        
+        // Send push notification
+        if ('serviceWorker' in navigator && 'PushManager' in window) {
+          navigator.serviceWorker.ready.then(registration => {
+            registration.showNotification(notification.title, {
+              body: notification.message,
+              icon: '/favicon.svg',
+              badge: '/favicon.svg',
+              tag: `hostel-approved-${(hostel?.id || hostelId) ?? 'unknown'}`,
+              requireInteraction: true,
+              data: { type: 'hostel_approved', userId: user.id }
+            });
+          });
+        }
+        
+        // Trigger dashboard refresh for current user
+        window.dispatchEvent(new CustomEvent('dashboardRefresh'));
+        window.dispatchEvent(new CustomEvent('refreshData'));
       } catch (notificationError) {
         console.error('Failed to create approval notification:', notificationError);
       }
@@ -189,6 +248,8 @@ const Dashboard: React.FC = () => {
       <Typography variant="h4" sx={{ mb: 4 }}>
         Master Admin Dashboard
       </Typography>
+      
+      <TestNotification />
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr 1fr' }, gap: 3, mb: 4 }}>
         <Card>

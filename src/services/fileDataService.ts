@@ -55,6 +55,7 @@ export const getAll = async (entityType: keyof DataStructure): Promise<any[]> =>
         const user = JSON.parse(userData);
         console.log(`Filtering ${entityType} for user:`, user);
         
+        // Only apply filtering for regular admin users, not master admin
         if (user.role === 'admin' && user.hostelId) {
           // Filter data by hostelId for admin users
           const entitiesWithHostelId = ['rooms', 'tenants', 'payments', 'complaints', 'expenses', 'staff', 'notices'];

@@ -15,6 +15,10 @@ import {
   MenuItem
 } from '@mui/material';
 import ContactUsDialog from '../../components/ContactUsDialog';
+import LandingHero from '../../components/LandingHero';
+import StatsCounter from '../../components/StatsCounter';
+import TestimonialsSection from '../../components/TestimonialsSection';
+import DashboardCard from '../../components/DashboardCard';
 import {
   Business,
   People,
@@ -133,42 +137,9 @@ const HomePage: React.FC = () => {
         </Toolbar>
       </AppBar>
 
-      {/* Hero Section */}
-      <Box
-        sx={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          color: 'white',
-          pt: 12,
-          pb: 8,
-          textAlign: 'center'
-        }}
-      >
-        <Container maxWidth="lg">
-          <Typography variant="h2" sx={{ fontWeight: 800, mb: 3, fontSize: { xs: '2.5rem', md: '3.5rem' } }}>
-            Streamline Your PG & Hostel Management
-          </Typography>
-          <Typography variant="h5" sx={{ mb: 4, opacity: 0.9, fontSize: { xs: '1.2rem', md: '1.5rem' } }}>
-            Complete solution for managing tenants, payments, and operations with ease
-          </Typography>
-          <Box display="flex" gap={2} justifyContent="center" flexWrap="wrap">
-            <Button 
-              variant="contained" 
-              size="large" 
-              sx={{ bgcolor: 'white', color: 'primary.main', '&:hover': { bgcolor: 'grey.100' } }}
-              onClick={() => navigate('/login')}
-            >
-              Get Started
-            </Button>
-            <Button 
-              variant="outlined" 
-              size="large" 
-              sx={{ borderColor: 'white', color: 'white' }}
-              onClick={() => setContactDialogOpen(true)}
-            >
-              Setup Your Hostel
-            </Button>
-          </Box>
-        </Container>
+      {/* New Professional Hero Section */}
+      <Box sx={{ pt: 8 }}>
+        <LandingHero />
       </Box>
 
       {/* Features Section */}
@@ -206,45 +177,11 @@ const HomePage: React.FC = () => {
         </Box>
       </Container>
 
-      {/* Stats Section */}
-      <Box sx={{ bgcolor: 'grey.50', py: 8 }}>
-        <Container maxWidth="lg">
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 4, textAlign: 'center' }}>
-            <Box>
-              <Typography variant="h3" color="primary.main" sx={{ fontWeight: 800 }}>
-                500+
-              </Typography>
-              <Typography variant="h6" color="text.secondary">
-                Properties Managed
-              </Typography>
-            </Box>
-            <Box>
-              <Typography variant="h3" color="primary.main" sx={{ fontWeight: 800 }}>
-                10K+
-              </Typography>
-              <Typography variant="h6" color="text.secondary">
-                Tenants Served
-              </Typography>
-            </Box>
-            <Box>
-              <Typography variant="h3" color="primary.main" sx={{ fontWeight: 800 }}>
-                99.9%
-              </Typography>
-              <Typography variant="h6" color="text.secondary">
-                Uptime
-              </Typography>
-            </Box>
-            <Box>
-              <Typography variant="h3" color="primary.main" sx={{ fontWeight: 800 }}>
-                24/7
-              </Typography>
-              <Typography variant="h6" color="text.secondary">
-                Support
-              </Typography>
-            </Box>
-          </Box>
-        </Container>
-      </Box>
+      {/* Professional Stats Counter */}
+      <StatsCounter />
+      
+      {/* Testimonials Section */}
+      <TestimonialsSection />
 
       {/* Contact Section */}
       <Container id="contact-section" maxWidth="lg" sx={{ py: 8 }}>

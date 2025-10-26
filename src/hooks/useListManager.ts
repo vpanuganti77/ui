@@ -43,11 +43,19 @@ export const useListManager = <T extends Record<string, any>>({
       }
     };
     
+    const handleDashboardRefresh = () => {
+      if (mounted) {
+        loadData();
+      }
+    };
+    
     window.addEventListener('refreshData', handleRefreshData);
+    window.addEventListener('dashboardRefresh', handleDashboardRefresh);
     
     return () => { 
       mounted = false;
       window.removeEventListener('refreshData', handleRefreshData);
+      window.removeEventListener('dashboardRefresh', handleDashboardRefresh);
     };
   }, [entityKey]);
   const [open, setOpen] = useState(false);

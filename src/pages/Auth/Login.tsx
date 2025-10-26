@@ -57,8 +57,26 @@ const Login: React.FC = () => {
     if (urlEmail && urlPassword && !autoLoginAttempted) {
       setAutoLoginAttempted(true);
       try {
-        const decodedEmail = decodeURIComponent(urlEmail);
-        const decodedPassword = decodeURIComponent(urlPassword);
+        // Handle both base64 encoded (from loginLink.ts) and URL encoded (from UserCredentialsDialog) parameters
+        let decodedEmail: string;
+        let decodedPassword: string;
+        
+        try {
+          // First URL decode, then base64 decode (from loginLink.ts)
+          const urlDecodedEmail = decodeURIComponent(urlEmail);
+          const urlDecodedPassword = decodeURIComponent(urlPassword);
+          decodedEmail = atob(urlDecodedEmail);
+          decodedPassword = atob(urlDecodedPassword);
+          console.log('Login.tsx - URL + Base64 decoded successfully:', { decodedEmail, decodedPassword });
+        } catch {
+          // Fallback to just URL decoding
+          decodedEmail = decodeURIComponent(urlEmail);
+          decodedPassword = decodeURIComponent(urlPassword);
+          console.log('Login.tsx - URL decoded as fallback:', { decodedEmail, decodedPassword });
+        }
+        
+        console.log('Login.tsx - Original URL params:', { urlEmail, urlPassword });
+        
         setEmail(decodedEmail);
         setPassword(decodedPassword);
         

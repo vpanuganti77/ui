@@ -24,7 +24,7 @@ export const authService = {
     }
     
     // Use the new login API endpoint
-    const apiUrl = process.env.REACT_APP_API_BASE_URL || 'https://api-production-79b8.up.railway.app/api';
+    const apiUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
     
     const response = await fetch(`${apiUrl}/auth/login`, {
       method: 'POST',

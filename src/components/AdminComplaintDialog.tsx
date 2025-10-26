@@ -103,7 +103,7 @@ const AdminComplaintDialog: React.FC<AdminComplaintDialogProps> = ({
   const handleAddComment = async (comment: string) => {
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'https://api-production-79b8.up.railway.app/api'}/complaints/${editingItem.id}/comments`, {
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api'}/complaints/${editingItem.id}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -212,7 +212,7 @@ const AdminComplaintDialog: React.FC<AdminComplaintDialogProps> = ({
                       <Box
                         key={index}
                         component="img"
-                        src={`https://api-production-79b8.up.railway.app${attachment.path}`}
+                        src={`http://localhost:5000${attachment.path}`}
                         alt={attachment.originalName || `Attachment ${index + 1}`}
                         sx={{
                           width: 100,
@@ -222,7 +222,7 @@ const AdminComplaintDialog: React.FC<AdminComplaintDialogProps> = ({
                           cursor: 'pointer',
                           border: '1px solid #ddd'
                         }}
-                        onClick={() => window.open(`https://api-production-79b8.up.railway.app${attachment.path}`, '_blank')}
+                        onClick={() => window.open(`http://localhost:5000${attachment.path}`, '_blank')}
                       />
                     ))}
                   </Box>

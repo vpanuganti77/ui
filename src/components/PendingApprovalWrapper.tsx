@@ -29,19 +29,28 @@ const PendingApprovalWrapper: React.FC<PendingApprovalWrapperProps> = ({ childre
           if (currentUser) {
             console.log('Found user in backend:', currentUser);
             console.log('Backend user status:', currentUser.status);
+            console.log('Local user status:', user.status);
             console.log('Is status pending_approval?', currentUser.status === 'pending_approval');
+            
+            // If backend status is active but local is pending, force update immediately
+            if (currentUser.status === 'active' && user.status === 'pending_approval') {
+              console.log('FORCING STATUS UPDATE: Backend active, local pending');
+              const updatedUser = { ...user, status: 'active', isActive: true };
+              localStorage.setItem('user', JSON.stringify(updatedUser));
+              window.location.reload();
+              return;
+            }
             
             // Show pending only if user has pending_approval status
             const shouldShowPending = currentUser.status === 'pending_approval';
             console.log('Setting isPending to:', shouldShowPending);
             setIsPending(shouldShowPending);
             
-            // Update local storage if status changed from pending to approved
-            if (user.status === 'pending_approval' && currentUser.status !== 'pending_approval') {
+            // Update local storage if status changed
+            if (user.status !== currentUser.status) {
               const updatedUser = { ...user, status: currentUser.status, isActive: currentUser.status === 'active' };
               localStorage.setItem('user', JSON.stringify(updatedUser));
-              console.log('Updated local user status from pending to:', currentUser.status);
-              // Force page reload to refresh AuthContext with updated user
+              console.log('Updated local user status from', user.status, 'to:', currentUser.status);
               window.location.reload();
             }
           } else {

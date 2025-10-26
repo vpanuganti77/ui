@@ -79,17 +79,23 @@ const ContactUsDialog: React.FC<ContactUsDialogProps> = ({ open, onClose }) => {
 
       const hostelRequest = await create('hostelRequests', request);
       
+      // Generate hostel domain email
+      const hostelDomain = formData.hostelName.toLowerCase().replace(/[^a-z0-9]/g, '') + '.com';
+      const username = formData.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const hostelEmail = `${username}@${hostelDomain}`;
+      
       // Create user account immediately with unique ID
       const userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const userData = {
         id: userId,
         name: formData.name,
-        email: formData.email,
+        email: hostelEmail, // Use hostel domain email
+        originalEmail: formData.email, // Store original email for reference
         password: tempPassword,
         phone: formData.phone,
         role: 'admin',
         hostelName: formData.hostelName,
-        hostelId: requestId, // Use request ID as temporary hostel ID
+        hostelId: null, // Will be set when hostel is approved
         status: 'pending_approval',
         createdAt: new Date().toISOString(),
         requestId: requestId
@@ -97,15 +103,58 @@ const ContactUsDialog: React.FC<ContactUsDialogProps> = ({ open, onClose }) => {
       
       const createdUser = await create('users', userData);
       
-      // Note: Backend will automatically create notification when hostel request is created
+      // Create notifications for all master admin users
+      try {
+        const { getAll } = await import('../services/fileDataService');
+        const allUsers = await getAll('users');
+        const masterAdmins = allUsers.filter((user: any) => user.role === 'masterAdmin');
+        
+        // Create notification for each master admin (exclude the requesting user)
+        for (const masterAdmin of masterAdmins) {
+          // Skip if this master admin is the same as the requesting user
+          if (masterAdmin.email === hostelEmail || masterAdmin.originalEmail === formData.email) {
+            continue;
+          }
+          
+          const masterAdminNotification = {
+            id: `${Date.now()}_${masterAdmin.id}_request`,
+            type: 'hostel_request',
+            title: 'New Hostel Setup Request',
+            message: `${formData.name} has requested to setup ${formData.hostelName}. Please review and approve.`,
+            userId: masterAdmin.id,
+            hostelId: requestId,
+            priority: 'high',
+            isRead: false,
+            createdAt: new Date().toISOString(),
+            createdBy: formData.name
+          };
+          
+          await create('notifications', masterAdminNotification);
+          console.log('Created notification for master admin:', masterAdmin.name);
+        }
+        
+        // Send push notification to master admins
+        const { NotificationService } = await import('../services/notificationService');
+        await NotificationService.sendPushNotification(
+          'masterAdmin',
+          'New Hostel Setup Request',
+          `${formData.name} has requested to setup ${formData.hostelName}. Please review and approve.`,
+          'hostel_request'
+        );
+        
+        // Trigger notification refresh for all users
+        window.dispatchEvent(new CustomEvent('notificationRefresh'));
+      } catch (notificationError) {
+        console.error('Failed to create master admin notifications:', notificationError);
+      }
       
-      // Auto-login with created user credentials
+      // Don't send notification to the requesting user - they should not get their own request notification
       setSuccess(true);
       
       setTimeout(async () => {
         try {
-          console.log('Attempting auto-login with:', formData.email, tempPassword);
-          await login(formData.email, tempPassword);
+          console.log('Attempting auto-login with:', hostelEmail, tempPassword);
+          await login(hostelEmail, tempPassword);
           console.log('Auto-login successful, navigating to dashboard');
           onClose();
           navigate('/admin/dashboard');

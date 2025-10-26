@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { ThemeProvider } from '@mui/material/styles';
+import professionalTheme from './theme/professionalTheme';
 import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
@@ -45,21 +46,12 @@ import StatusValidator from './components/StatusValidator';
 
 
 
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#1976d2',
-    },
-    secondary: {
-      main: '#dc004e',
-    },
-  },
-});
+// Using professional theme
 
 function App() {
 
   return (
-    <ThemeProvider theme={theme}>
+    <ThemeProvider theme={professionalTheme}>
       <CssBaseline />
       <AuthProvider>
         <NotificationProvider>

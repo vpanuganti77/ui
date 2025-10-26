@@ -104,32 +104,9 @@ const HostelManagement: React.FC = () => {
         }
       }
       
-      // Create notifications for all affected users
-      const timestamp = Date.now();
-      for (let i = 0; i < hostelUsers.length; i++) {
-        const user = hostelUsers[i];
-        const notification = {
-          id: `${timestamp}_${user.id}_${i}`,
-          type: 'hostel_status_change',
-          title: `Hostel ${newStatus === 'active' ? 'Activated' : 'Deactivated'}`,
-          message: newStatus === 'active' 
-            ? 'Your hostel has been activated by the master administrator. You now have full access to all features.'
-            : 'Your hostel has been deactivated by the master administrator. Please contact support for assistance.',
-          userId: user.id,
-          hostelId: hostel.id,
-          priority: newStatus === 'active' ? 'medium' : 'high',
-          isRead: false,
-          createdAt: new Date().toISOString(),
-          createdBy: 'Master Admin'
-        };
-        
-        try {
-          await create('notifications', notification);
-          console.log(`Created notification for user ${user.name}:`, notification.id);
-        } catch (notificationError) {
-          console.error('Failed to create notification:', notificationError);
-        }
-      }
+      console.log(`Updated ${hostelUsers.length} users for hostel ${hostel.name}`);
+      
+      // Backend will automatically send WebSocket notifications when hostel status changes
       
       setSnackbar({ 
         open: true, 
