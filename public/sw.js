@@ -2,35 +2,54 @@
 self.addEventListener('push', function(event) {
   console.log('Push notification received:', event);
   
+  let notificationData = {
+    title: 'HostelPro Notification',
+    body: 'You have a new notification',
+    icon: '/favicon.ico',
+    badge: '/favicon.ico'
+  };
+  
   if (event.data) {
-    const data = event.data.json();
-    console.log('Push data:', data);
-    
-    const options = {
-      body: data.body || data.message,
-      icon: '/favicon.ico',
-      badge: '/favicon.ico',
-      tag: 'hostel-notification',
-      requireInteraction: true,
-      vibrate: [200, 100, 200],
-      data: data.data || {},
-      actions: [
-        {
-          action: 'view',
-          title: 'View',
-          icon: '/favicon.ico'
-        },
-        {
-          action: 'dismiss',
-          title: 'Dismiss'
-        }
-      ]
-    };
-
-    event.waitUntil(
-      self.registration.showNotification(data.title, options)
-    );
+    try {
+      const data = event.data.json();
+      console.log('Push data:', data);
+      
+      notificationData = {
+        title: data.title || notificationData.title,
+        body: data.body || data.message || notificationData.body,
+        icon: data.icon || notificationData.icon,
+        badge: data.badge || notificationData.badge
+      };
+    } catch (error) {
+      console.error('Error parsing push data:', error);
+      notificationData.body = event.data.text() || notificationData.body;
+    }
   }
+  
+  const options = {
+    body: notificationData.body,
+    icon: notificationData.icon,
+    badge: notificationData.badge,
+    tag: 'hostel-notification',
+    requireInteraction: true,
+    vibrate: [200, 100, 200],
+    data: event.data ? (event.data.json ? event.data.json() : {}) : {},
+    actions: [
+      {
+        action: 'view',
+        title: 'View',
+        icon: '/favicon.ico'
+      },
+      {
+        action: 'dismiss',
+        title: 'Dismiss'
+      }
+    ]
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(notificationData.title, options)
+  );
 });
 
 self.addEventListener('notificationclick', function(event) {
@@ -53,9 +72,14 @@ self.addEventListener('notificationclick', function(event) {
           }
         }
         // If app is not open, open it
-        return clients.openWindow('/');
+        return clients.openWindow(self.location.origin);
       })
   );
+});
+
+// Handle notification close
+self.addEventListener('notificationclose', function(event) {
+  console.log('Notification closed:', event);
 });
 
 // Handle background sync for offline notifications

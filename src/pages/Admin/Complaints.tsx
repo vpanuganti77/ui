@@ -79,6 +79,19 @@ const Complaints: React.FC = () => {
     handleNotificationClick();
   }, [complaints]);
 
+  const refreshComplaints = async () => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const { getAll } = await import('../../services/fileDataService');
+      const allComplaints = await getAll('complaints');
+      const hostelComplaints = allComplaints.filter((c: any) => c.hostelId === user.hostelId);
+      setComplaints(hostelComplaints);
+      setRefreshKey(prev => prev + 1);
+    } catch (error) {
+      console.error('Error refreshing complaints:', error);
+    }
+  };
+
   const customSubmitLogic = async (formData: any, editingItem: any) => {
     // If this is called from ListPage edit action, open our custom dialog
     if (editingItem && !formData) {
@@ -95,18 +108,13 @@ const Complaints: React.FC = () => {
         // Show success toast
         toast.success('Complaint updated successfully!');
         
-        // Close dialog and refresh complaints data after update
+        // Immediately refresh complaints list to show updated status
+        await refreshComplaints();
+        
+        // Close dialog after refresh
         setDialogOpen(false);
         setSelectedComplaint(null);
         setOpenToComments(false);
-        
-        // Refresh complaints data
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        const { getAll } = await import('../../services/fileDataService');
-        const allComplaints = await getAll('complaints');
-        const hostelComplaints = allComplaints.filter((c: any) => c.hostelId === user.hostelId);
-        setComplaints(hostelComplaints);
-        setRefreshKey(prev => prev + 1);
         
         return { ...editingItem, ...formData, updatedAt: new Date().toISOString() };
       } catch (error) {
@@ -277,11 +285,8 @@ const Complaints: React.FC = () => {
       <Button variant="outlined" startIcon={<Download />} size="small">
         Export
       </Button>
-      <Button variant="outlined" startIcon={<Refresh />} size="small">
+      <Button variant="outlined" startIcon={<Refresh />} size="small" onClick={refreshComplaints}>
         Refresh
-      </Button>
-      <Button variant="outlined" startIcon={<NotificationsActive />} size="small">
-        Notify
       </Button>
     </>
   );

@@ -9,8 +9,8 @@ const loadConfig = async () => {
     } catch (error) {
       console.warn('Failed to load config.json, using defaults');
       config = {
-        API_BASE_URL: 'http://localhost:5000/api',
-        WS_URL: 'ws://localhost:5000',
+        API_BASE_URL: 'https://api-production-79b8.up.railway.app/api',
+        WS_URL: 'wss://api-production-79b8.up.railway.app',
         FRONTEND_URL: 'http://localhost:3000'
       };
     }
@@ -23,8 +23,8 @@ const getConfig = () => {
   if (!config) {
     // Fallback defaults if config not loaded yet
     return {
-      API_BASE_URL: 'http://localhost:5000/api',
-      WS_URL: 'ws://localhost:5000',
+      API_BASE_URL: 'https://api-production-79b8.up.railway.app/api',
+      WS_URL: 'wss://api-production-79b8.up.railway.app',
       FRONTEND_URL: 'http://localhost:3000'
     };
   }

@@ -241,7 +241,7 @@ const TenantDialog: React.FC<TenantDialogProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // If on first tab, validate basic fields and move to next tab

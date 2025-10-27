@@ -11,6 +11,11 @@ import {
   MenuItem,
   Snackbar,
   Alert,
+  Card,
+  CardContent,
+  Box,
+  Stack,
+  IconButton,
 } from '@mui/material';
 import { GridColDef } from '@mui/x-data-grid';
 import { Lock, LockOpen, VpnKey, Edit, Delete, MoreVert, ContentCopy } from '@mui/icons-material';
@@ -305,10 +310,91 @@ const UserManagement: React.FC = () => {
         entityName="User"
         entityKey="users"
         idField="id"
-        mobileCardConfig={{
-          titleField: 'name',
-          fields: [...userCardFields, { key: 'hostelName', label: 'Hostel', value: 'hostelName' }]
-        }}
+        renderMobileCard={(item, onEdit, onDelete) => (
+          <Card 
+            key={item.id} 
+            sx={{ 
+              mb: 2,
+              boxShadow: 2,
+              borderRadius: 3,
+              border: '1px solid',
+              borderColor: 'divider',
+              transition: 'all 0.2s ease-in-out',
+              '&:hover': {
+                boxShadow: 4,
+                transform: 'translateY(-2px)'
+              }
+            }}
+          >
+            <CardContent sx={{ pb: '16px !important', p: 2 }}>
+              <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    fontWeight: 600, 
+                    fontSize: '1.1rem',
+                    color: 'text.primary'
+                  }}
+                >
+                  {item.name}
+                </Typography>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={(e) => {
+                    setAnchorEl(e.currentTarget);
+                    setSelectedUser(item);
+                  }}
+                  disabled={isCurrentUser(item)}
+                  sx={{ minWidth: 'auto', px: 1 }}
+                >
+                  Actions
+                </Button>
+              </Box>
+              <Stack spacing={1.5}>
+                <Box display="flex" justifyContent="space-between" alignItems="center">
+                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>Email:</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>{item.email}</Typography>
+                </Box>
+                <Box display="flex" justifyContent="space-between" alignItems="center">
+                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>Phone:</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>{item.phone}</Typography>
+                </Box>
+                <Box display="flex" justifyContent="space-between" alignItems="center">
+                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>Role:</Typography>
+                  <Chip 
+                    label={item.role} 
+                    color={getRoleColor(item.role) as any}
+                    size="small"
+                    variant="filled"
+                  />
+                </Box>
+                <Box display="flex" justifyContent="space-between" alignItems="center">
+                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>Status:</Typography>
+                  {item.isLocked ? (
+                    <Chip 
+                      label="Locked" 
+                      color="error"
+                      size="small"
+                      variant="filled"
+                    />
+                  ) : (
+                    <Chip 
+                      label={item.status || 'active'} 
+                      color={getStatusColor(item.status || 'active') as any}
+                      size="small"
+                      variant="filled"
+                    />
+                  )}
+                </Box>
+                <Box display="flex" justifyContent="space-between" alignItems="center">
+                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>Hostel:</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>{item.hostelName || 'N/A'}</Typography>
+                </Box>
+              </Stack>
+            </CardContent>
+          </Card>
+        )}
         customSubmitLogic={customSubmitLogic}
         hideActions={true}
         CustomDialog={UserFormDialog}

@@ -4,7 +4,8 @@
 
 [build.environment]
   NODE_VERSION = "18"
-   CI = "false"
+  CI = "false"
+  GENERATE_SOURCEMAP = "false"
 
 [[redirects]]
   from = "/*"

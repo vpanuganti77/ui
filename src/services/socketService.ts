@@ -15,8 +15,8 @@ class SocketService {
     if (this.ws?.readyState === WebSocket.OPEN) return;
 
     try {
-      const config = await fetch('/config.json').then(r => r.json()).catch(() => ({ WS_URL: 'ws://localhost:5000' }));
-      this.ws = new WebSocket(config.WS_URL || 'ws://localhost:5000');
+      const config = await fetch('/config.json').then(r => r.json()).catch(() => ({ WS_URL: 'wss://api-production-79b8.up.railway.app' }));
+      this.ws = new WebSocket(config.WS_URL || 'wss://api-production-79b8.up.railway.app');
       
       this.ws.onopen = () => {
         console.log('Connected to WebSocket server');
@@ -38,7 +38,13 @@ class SocketService {
           if (data.type === 'notification') {
             console.log('Notification received, callback exists:', !!this.notificationCallback);
             
-            // Force immediate UI refresh for hostel status changes
+            // Always process notifications through NotificationContext first
+            if (this.notificationCallback) {
+              console.log('Calling notification callback with:', data.payload);
+              this.notificationCallback(data.payload);
+            }
+            
+            // Handle special UI for hostel status changes
             if (data.payload.type === 'hostel_status_change') {
               console.log('HOSTEL STATUS CHANGE - Showing confirmation dialog');
               
@@ -50,14 +56,8 @@ class SocketService {
                 });
               }
               
-              // Show beautiful dialog (skip NotificationContext to prevent double reload)
+              // Show beautiful dialog
               this.showHostelStatusDialog(data.payload);
-              return; // Don't call notification callback for hostel status changes
-            }
-            
-            if (this.notificationCallback) {
-              console.log('Calling notification callback with:', data.payload);
-              this.notificationCallback(data.payload);
             }
           }
         } catch (error) {
@@ -135,6 +135,8 @@ class SocketService {
       });
     });
   }
+
+
 }
 
 export const socketService = new SocketService();

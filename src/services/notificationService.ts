@@ -27,15 +27,30 @@ export class NotificationService {
   // Subscribe to push notifications
   static async subscribeToPush(userId: string, userRole: string, hostelId?: string): Promise<boolean> {
     try {
+      // Wait for service worker to be ready
       const registration = await navigator.serviceWorker.ready;
+      console.log('Service worker ready for push subscription');
       
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: this.urlBase64ToUint8Array(this.vapidPublicKey)
-      });
+      // Check if already subscribed
+      let subscription = await registration.pushManager.getSubscription();
+      
+      if (!subscription) {
+        // Subscribe to push notifications
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: this.urlBase64ToUint8Array(this.vapidPublicKey)
+        });
+        console.log('New push subscription created:', subscription);
+      } else {
+        console.log('Using existing push subscription:', subscription);
+      }
+
+      // Get API base URL from config
+      const config = await fetch('/config.json').then(r => r.json()).catch(() => ({ API_BASE_URL: 'https://api-production-79b8.up.railway.app/api' }));
+      const apiBaseUrl = config.API_BASE_URL || 'https://api-production-79b8.up.railway.app/api';
 
       // Send subscription to server
-      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api'}/push-subscription`, {
+      const response = await fetch(`${apiBaseUrl}/push-subscription`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -46,7 +61,13 @@ export class NotificationService {
         })
       });
 
-      return response.ok;
+      if (response.ok) {
+        console.log('Push subscription sent to server successfully');
+        return true;
+      } else {
+        console.error('Failed to send push subscription to server:', response.status);
+        return false;
+      }
     } catch (error) {
       console.error('Error subscribing to push notifications:', error);
       return false;
@@ -132,7 +153,10 @@ export class NotificationService {
   // Send push notification to backend for specific roles
   static async sendPushNotification(targetRole: string, title: string, message: string, type: string): Promise<void> {
     try {
-      await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api'}/push-notification`, {
+      const config = await fetch('/config.json').then(r => r.json()).catch(() => ({ API_BASE_URL: 'https://api-production-79b8.up.railway.app/api' }));
+      const apiBaseUrl = config.API_BASE_URL || 'https://api-production-79b8.up.railway.app/api';
+      
+      await fetch(`${apiBaseUrl}/push-notification`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -147,10 +171,36 @@ export class NotificationService {
     }
   }
 
+  // Test push notification (for debugging)
+  static async testPushNotification(): Promise<void> {
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription();
+        
+        if (subscription) {
+          console.log('Testing push notification...');
+          // Show a local notification to test
+          registration.showNotification('Test Notification', {
+            body: 'This is a test push notification',
+            icon: '/favicon.ico',
+            badge: '/favicon.ico',
+            tag: 'test-notification',
+            requireInteraction: true
+          });
+        } else {
+          console.log('No push subscription found');
+        }
+      } catch (error) {
+        console.error('Test notification failed:', error);
+      }
+    }
+  }
+
   // Send push notification to specific user by email
   static async sendPushNotificationToUser(targetEmail: string, title: string, message: string, type: string): Promise<void> {
     try {
-      await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api'}/push-notification`, {
+      await fetch(`${process.env.REACT_APP_API_BASE_URL || 'https://api-production-79b8.up.railway.app/api'}/push-notification`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -167,17 +217,29 @@ export class NotificationService {
 
   // Initialize notifications for mobile
   static async initializeMobile(user: any): Promise<void> {
-    if (!this.isSupported()) return;
+    if (!this.isSupported()) {
+      console.log('Push notifications not supported on this device');
+      return;
+    }
+
+    console.log('Initializing mobile notifications for user:', user.id);
 
     // Auto-request permission and subscribe to push notifications
     if (Notification.permission === 'default') {
+      console.log('Requesting notification permission...');
       const granted = await this.requestPermission();
       if (granted) {
+        console.log('Permission granted, subscribing to push notifications...');
         await this.subscribeToPush(user.id, user.role, user.hostelId);
+      } else {
+        console.log('Notification permission denied');
       }
     } else if (Notification.permission === 'granted') {
+      console.log('Permission already granted, subscribing to push notifications...');
       // Already granted, just subscribe
       await this.subscribeToPush(user.id, user.role, user.hostelId);
+    } else {
+      console.log('Notification permission denied or blocked');
     }
   }
 

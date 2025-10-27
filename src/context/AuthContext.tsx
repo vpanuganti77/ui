@@ -3,6 +3,7 @@ import { User } from '../types';
 import { authService } from '../services/authService';
 import { BiometricService } from '../services/biometricService';
 import { HostelStatusService } from '../services/hostelStatusService';
+import { NotificationService } from '../services/notificationService';
 
 interface AuthState {
   user: User | null;
@@ -88,6 +89,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         dispatch({ type: 'LOGIN_SUCCESS', payload: { user, token } });
         // Start hostel status monitoring
         HostelStatusService.startMonitoring(user);
+        // Initialize push notifications
+        NotificationService.initializeMobile(user);
       } else {
         dispatch({ type: 'SET_LOADING', payload: false });
       }
@@ -124,6 +127,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       dispatch({ type: 'LOGIN_SUCCESS', payload: { user, token } });
       // Start hostel status monitoring
       HostelStatusService.startMonitoring(user);
+      // Initialize push notifications
+      NotificationService.initializeMobile(user);
     } catch (error) {
       dispatch({ type: 'LOGIN_FAILURE' });
       throw error;

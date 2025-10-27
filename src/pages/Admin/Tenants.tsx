@@ -76,10 +76,26 @@ const Tenants: React.FC = () => {
     }
   };
 
-  const additionalValidation = (formData: any) => {
+  const additionalValidation = async (formData: any) => {
     if (!formData.aadharFront || !formData.aadharBack) {
       return 'Aadhar card photos are mandatory';
     }
+    
+    // Check for duplicate email
+    try {
+      const { getAll } = await import('../../services/fileDataService');
+      const existingTenants = await getAll('tenants');
+      const emailExists = existingTenants.some((tenant: any) => 
+        tenant.email.toLowerCase() === formData.email.toLowerCase()
+      );
+      
+      if (emailExists) {
+        return `Email ${formData.email} is already in use. Please use a different email address.`;
+      }
+    } catch (error) {
+      console.error('Error checking for duplicate email:', error);
+    }
+    
     return null;
   };
 

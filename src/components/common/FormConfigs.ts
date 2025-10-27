@@ -325,12 +325,21 @@ export const complaintFields: FieldConfig[] = [
         { value: 'closed', label: 'Closed' }
       ];
       
-      // If editing and current status is not 'open', exclude 'open' from options
-      if (editingItem && editingItem.status !== 'open') {
-        return allStatuses.filter(status => status.value !== 'open');
+      // If not editing (new complaint), only allow 'open'
+      if (!editingItem) {
+        return [{ value: 'open', label: 'Open' }];
       }
       
-      return allStatuses;
+      // Define status progression order
+      const statusOrder = ['open', 'in-progress', 'resolved', 'closed'];
+      const currentStatusIndex = statusOrder.indexOf(editingItem.status);
+      
+      // Only allow current status and future statuses (no going backwards)
+      const allowedStatuses = allStatuses.filter((status, index) => {
+        return index >= currentStatusIndex;
+      });
+      
+      return allowedStatuses;
     },
   },
   {

@@ -49,7 +49,7 @@ interface ListPageProps<T> {
     fields: CardField[];
   };
   customSubmitLogic?: (formData: any, editingItem: T | null) => T;
-  additionalValidation?: (formData: any) => string | null;
+  additionalValidation?: (formData: any) => string | null | Promise<string | null>;
   additionalActions?: React.ReactNode;
   hideDelete?: boolean;
   hideEdit?: boolean;
@@ -126,7 +126,7 @@ const ListPage = <T extends Record<string, any>>({
     }
   }, [customDataLoader]);
 
-  const handleSubmit = (formData: any) => {
+  const handleSubmit = async (formData: any) => {
     // Get current user's hostel for scoped validation
     const userData = localStorage.getItem('user');
     let currentHostelId: string | null = null;
@@ -165,9 +165,15 @@ const ListPage = <T extends Record<string, any>>({
     
     // Run additional validation if provided
     if (additionalValidation) {
-      const validationError = additionalValidation(formData);
-      if (validationError) {
-        showSnackbar(validationError, 'error');
+      try {
+        const validationError = await additionalValidation(formData);
+        if (validationError) {
+          showSnackbar(validationError, 'error');
+          return;
+        }
+      } catch (error) {
+        console.error('Validation error:', error);
+        showSnackbar('Validation failed. Please try again.', 'error');
         return;
       }
     }
