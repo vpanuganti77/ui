@@ -1,44 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Chip, Typography, Button } from '@mui/material';
 import { GridColDef } from '@mui/x-data-grid';
 import { Receipt } from '@mui/icons-material';
 import ListPage from '../../components/common/ListPage';
 import { paymentFields } from '../../components/common/FormConfigs';
-import { paymentCardFields } from '../../components/common/MobileCardConfigs';
-import PaymentDialog from '../../components/PaymentDialog';
 
-const initialPayments = [
-  {
-    id: '1',
-    tenantName: 'John Doe',
-    amount: 8000,
-    type: 'rent',
-    month: '2024-03',
-    paymentDate: '2024-03-05',
-    status: 'paid',
-    paymentMethod: 'online',
-    transactionId: 'TXN123456',
-    lastModifiedBy: 'Admin',
-    lastModifiedDate: '2024-03-05T10:30:00Z'
-  },
-  {
-    id: '2',
-    tenantName: 'Jane Smith',
-    amount: 6000,
-    type: 'rent',
-    month: '2024-03',
-    paymentDate: null,
-    status: 'pending',
-    paymentMethod: null,
-    transactionId: null,
-    lastModifiedBy: 'Manager',
-    lastModifiedDate: '2024-03-10T14:20:00Z'
-  }
-];
+import PaymentDialog from '../../components/PaymentDialog';
+import { getPaymentFilters } from '../../utils/mobileFilterHelpers';
+
+
 
 const Payments: React.FC = () => {
+
   const navigate = useNavigate();
+
 
   const handleItemClick = (id: string) => {
     navigate(`/admin/payments/${id}`);
@@ -132,29 +108,43 @@ const Payments: React.FC = () => {
     </Button>
   );
 
+  const { filterOptions, sortOptions, filterFields, sortFields } = getPaymentFilters();
+
   return (
-    <ListPage
-      title="Payments"
-      data={[]}
-      columns={columns}
-      fields={paymentFields}
-      entityName="Payment"
-      entityKey="payments"
-      onItemClick={handleItemClick}
-      mobileCardConfig={{
-        titleField: 'tenantId',
-        fields: [
-          { key: 'amount', label: 'Amount', value: 'amount', render: (value: number) => `₹${value.toLocaleString()}` },
-          { key: 'month', label: 'Month', value: 'month' },
-          { key: 'year', label: 'Year', value: 'year' },
-          { key: 'status', label: 'Status', value: 'status' },
-          { key: 'createdAt', label: 'Date', value: 'createdAt', render: (value: string) => new Date(value).toLocaleDateString() }
-        ]
-      }}
-      customSubmitLogic={customSubmitLogic}
-      additionalActions={additionalActions}
-      CustomDialog={PaymentDialog}
+    <>
+      <ListPage
+        title="Payments"
+        data={[]}
+        customDataLoader={async () => {
+          const { getAll } = await import('../../services/fileDataService');
+          return await getAll('payments');
+        }}
+        enableMobileFilters={true}
+        searchFields={['tenantName', 'transactionId']}
+        filterOptions={filterOptions}
+        sortOptions={sortOptions}
+        filterFields={filterFields}
+        sortFields={sortFields}
+        entityKey="payments"
+        columns={columns}
+        fields={paymentFields}
+        entityName="Payment"
+        onItemClick={handleItemClick}
+        mobileCardConfig={{
+          titleField: 'tenantId',
+          fields: [
+            { key: 'amount', label: 'Amount', value: 'amount', render: (value: number) => `₹${value.toLocaleString()}` },
+            { key: 'month', label: 'Month', value: 'month' },
+            { key: 'year', label: 'Year', value: 'year' },
+            { key: 'status', label: 'Status', value: 'status' },
+            { key: 'createdAt', label: 'Date', value: 'createdAt', render: (value: string) => new Date(value).toLocaleDateString() }
+          ]
+        }}
+        customSubmitLogic={customSubmitLogic}
+        additionalActions={additionalActions}
+        CustomDialog={PaymentDialog}
     />
+    </>
   );
 };
 

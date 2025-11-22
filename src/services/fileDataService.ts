@@ -1,4 +1,6 @@
 import { API_CONFIG } from '../config/api';
+import { CapacitorHttpService } from './capacitorHttpService';
+import { Capacitor } from '@capacitor/core';
 
 const API_BASE_URL = API_CONFIG.BASE_URL;
 
@@ -21,16 +23,31 @@ interface DataStructure {
 
 // API helper function
 const apiCall = async (endpoint: string, options?: RequestInit) => {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-    ...options,
-  });
+  const url = `${API_BASE_URL}${endpoint}`;
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options?.headers,
+  };
+  
+  let response;
+  
+  if (Capacitor.isNativePlatform()) {
+    // Use CapacitorHttp for Android
+    response = await CapacitorHttpService.request(url, {
+      method: options?.method || 'GET',
+      headers,
+      body: options?.body
+    });
+  } else {
+    // Use regular fetch for web
+    response = await fetch(url, {
+      headers,
+      ...options,
+    });
+  }
   
   if (!response.ok) {
-    let errorMessage = response.statusText;
+    let errorMessage = response.statusText || 'Request failed';
     try {
       const errorData = await response.json();
       errorMessage = errorData.error || errorData.message || response.statusText;
@@ -125,10 +142,21 @@ export const create = async (entityType: keyof DataStructure, item: any): Promis
         formData.append(`attachments`, file);
       });
       
-      const response = await fetch(`${API_BASE_URL}/${entityType}`, {
-        method: 'POST',
-        body: formData,
-      });
+      let response;
+      
+      if (Capacitor.isNativePlatform()) {
+        // For file uploads on Android, we need to handle differently
+        // For now, fallback to regular fetch for file uploads
+        response = await fetch(`${API_BASE_URL}/${entityType}`, {
+          method: 'POST',
+          body: formData,
+        });
+      } else {
+        response = await fetch(`${API_BASE_URL}/${entityType}`, {
+          method: 'POST',
+          body: formData,
+        });
+      }
       
       if (!response.ok) {
         let errorMessage = response.statusText;

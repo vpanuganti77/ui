@@ -79,14 +79,22 @@ export const tenantFields: FieldConfig[] = [
     label: 'Select Room',
     type: 'select',
     required: true,
-    options: [],
+    options: [], // Will be populated by loadOptions
     loadOptions: async (editingItem?: any) => {
       try {
         const { getAll } = await import('../../services/fileDataService');
         const rooms = await getAll('rooms');
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         
-        const hostelRooms = rooms.filter((room: any) => room.hostelId === user.hostelId);
+        console.log('All rooms:', rooms);
+        console.log('Current user:', user);
+        
+        const hostelRooms = rooms.filter((room: any) => 
+          room.hostelId === user.hostelId || 
+          !room.hostelId || 
+          room.hostelId === ''
+        );
+        console.log('Hostel rooms:', hostelRooms);
         
         const filteredRooms = hostelRooms.filter((room: any) => {
           if (editingItem && room.roomNumber === editingItem.room) {
@@ -95,11 +103,16 @@ export const tenantFields: FieldConfig[] = [
           return room.status === 'available';
         });
         
-        return filteredRooms.map((room: any) => ({
+        console.log('Filtered available rooms:', filteredRooms);
+        
+        const options = filteredRooms.map((room: any) => ({
           value: room.roomNumber,
           label: `${room.roomNumber} - ${room.type} (₹${room.rent.toLocaleString()}) - ${room.status === 'available' ? 'Available' : 'Current'}`,
           rent: room.rent
         }));
+        
+        console.log('Room options for dropdown:', options);
+        return options;
       } catch (error) {
         console.error('Failed to load rooms:', error);
         return [];

@@ -1,5 +1,8 @@
 import { User } from '../types';
 import { getAll, create } from './fileDataService';
+import { CapacitorHttpService } from './capacitorHttpService';
+import { Capacitor } from '@capacitor/core';
+import { API_CONFIG } from '../config/api';
 
 // Master admin user (always available)
 const MASTER_ADMIN = {
@@ -24,15 +27,17 @@ export const authService = {
     }
     
     // Use the new login API endpoint
-    const apiUrl = process.env.REACT_APP_API_BASE_URL || 'https://api-production-79b8.up.railway.app/api';
+    const apiUrl = API_CONFIG.BASE_URL;
     
-    const response = await fetch(`${apiUrl}/auth/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email, password }),
-    });
+    const response = Capacitor.isNativePlatform() 
+      ? await CapacitorHttpService.post(`${apiUrl}/auth/login`, { email, password })
+      : await fetch(`${apiUrl}/auth/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email, password }),
+        });
     
     const data = await response.json();
     

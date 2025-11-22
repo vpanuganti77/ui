@@ -14,38 +14,57 @@ export const useListManager = <T extends Record<string, any>>({
   entityKey,
   idField = 'id'
 }: UseListManagerProps<T>) => {
-  const [data, setData] = useState<T[]>([]);
+  const [data, setData] = useState<T[]>(initialData);
+
+  // Update data when initialData changes (for filtered/sorted data)
+  useEffect(() => {
+    setData(initialData);
+  }, [initialData]);
 
   useEffect(() => {
     let mounted = true;
-    const loadData = async () => {
-      try {
-        console.log(`Loading data for ${entityKey}...`);
-        const storedData = await getAll(entityKey as any);
-        console.log(`Loaded ${storedData?.length || 0} items for ${entityKey}:`, storedData);
-        if (mounted) {
-          setData(Array.isArray(storedData) ? storedData : []);
-        }
-      } catch (error) {
-        console.error('Failed to load data:', error);
-        if (mounted) {
-          setData([]);
-        }
-      }
-    };
     
-    loadData();
+    // Only load from service if no initialData provided
+    if (initialData.length === 0) {
+      const loadData = async () => {
+        try {
+          console.log(`Loading data for ${entityKey}...`);
+          const storedData = await getAll(entityKey as any);
+          console.log(`Loaded ${storedData?.length || 0} items for ${entityKey}:`, storedData);
+          if (mounted) {
+            setData(Array.isArray(storedData) ? storedData : []);
+          }
+        } catch (error) {
+          console.error('Failed to load data:', error);
+          if (mounted) {
+            setData([]);
+          }
+        }
+      };
+      
+      loadData();
+    }
     
     // Listen for data refresh events
     const handleRefreshData = () => {
-      if (mounted) {
+      if (mounted && initialData.length === 0) {
+        const loadData = async () => {
+          try {
+            const storedData = await getAll(entityKey as any);
+            if (mounted) {
+              setData(Array.isArray(storedData) ? storedData : []);
+            }
+          } catch (error) {
+            console.error('Failed to load data:', error);
+          }
+        };
         loadData();
       }
     };
     
     const handleDashboardRefresh = () => {
-      if (mounted) {
-        loadData();
+      if (mounted && initialData.length === 0) {
+        handleRefreshData();
       }
     };
     
@@ -57,7 +76,7 @@ export const useListManager = <T extends Record<string, any>>({
       window.removeEventListener('refreshData', handleRefreshData);
       window.removeEventListener('dashboardRefresh', handleDashboardRefresh);
     };
-  }, [entityKey]);
+  }, [entityKey, initialData.length]);
   const [open, setOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);

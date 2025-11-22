@@ -24,12 +24,14 @@ import { ArrowBack, Visibility, VisibilityOff, Fingerprint } from '@mui/icons-ma
 import { BiometricService } from '../../services/biometricService';
 import { FEATURE_FLAGS } from '../../config/features';
 
+
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [setupMessage, setSetupMessage] = useState('');
   const [contactOpen, setContactOpen] = useState(false);
   const [quickAuthOpen, setQuickAuthOpen] = useState(false);
   const [autoLoginAttempted, setAutoLoginAttempted] = useState(false);
@@ -51,8 +53,16 @@ const Login: React.FC = () => {
     if (autoLoginAttempted) return;
     
     const urlParams = new URLSearchParams(window.location.search);
+    const setupComplete = urlParams.get('setupComplete');
     const urlEmail = urlParams.get('email');
     const urlPassword = urlParams.get('password');
+    
+    // Show setup completion message
+    if (setupComplete === 'true') {
+      setSetupMessage('Your hostel setup request has been submitted. Our team will create your account and notify you once approved.');
+      // Clear URL parameter
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
     
     if (urlEmail && urlPassword && !autoLoginAttempted) {
       setAutoLoginAttempted(true);
@@ -236,6 +246,7 @@ const Login: React.FC = () => {
           </Box>
 
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+          {setupMessage && <Alert severity="info" sx={{ mb: 2 }}>{setupMessage}</Alert>}
 
           <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
             <TextField
@@ -334,6 +345,8 @@ const Login: React.FC = () => {
             onClose={() => setQuickAuthOpen(false)}
             onAuthenticate={login}
           />
+          
+
         </Paper>
       </Container>
     </Box>

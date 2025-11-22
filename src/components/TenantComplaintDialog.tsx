@@ -64,7 +64,7 @@ const TenantComplaintDialog: React.FC<TenantComplaintDialogProps> = ({
   const handleAddComment = async (comment: string) => {
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'https://api-production-79b8.up.railway.app/api'}/complaints/${complaint.id}/comments`, {
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://192.168.0.138:5000/api'}/complaints/${complaint.id}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -82,6 +82,27 @@ const TenantComplaintDialog: React.FC<TenantComplaintDialogProps> = ({
       
       const result = await response.json();
       setComments(result.complaint.comments || []);
+      
+      // Send notification for new comment
+      try {
+        const config = await fetch('/config.json').then(r => r.json()).catch(() => ({ API_BASE_URL: 'http://192.168.0.138:5000/api' }));
+        const apiBaseUrl = config.API_BASE_URL || 'http://192.168.0.138:5000/api';
+        
+        await fetch(`${apiBaseUrl}/notifications/complaint-comment`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            complaintId: complaint.id,
+            complaintTitle: complaint.title,
+            comment,
+            author: user.name,
+            role: 'tenant',
+            hostelId: user.hostelId
+          })
+        });
+      } catch (notificationError) {
+        console.warn('Failed to send comment notification:', notificationError);
+      }
     } catch (error) {
       console.error('Error adding comment:', error);
       throw error;
@@ -98,7 +119,7 @@ const TenantComplaintDialog: React.FC<TenantComplaintDialogProps> = ({
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       
       // First add the reopen reason as a system comment
-      await fetch(`${process.env.REACT_APP_API_BASE_URL || 'https://api-production-79b8.up.railway.app/api'}/complaints/${complaint.id}/comments`, {
+      await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://192.168.0.138:5000/api'}/complaints/${complaint.id}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -119,6 +140,27 @@ const TenantComplaintDialog: React.FC<TenantComplaintDialogProps> = ({
         reopenReason: reopenReason.trim(),
         updatedAt: new Date().toISOString()
       });
+      
+      // Send notification for complaint reopen
+      try {
+        const config = await fetch('/config.json').then(r => r.json()).catch(() => ({ API_BASE_URL: 'http://192.168.0.138:5000/api' }));
+        const apiBaseUrl = config.API_BASE_URL || 'http://192.168.0.138:5000/api';
+        
+        await fetch(`${apiBaseUrl}/notifications/complaint-update`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            complaintId: complaint.id,
+            complaintTitle: complaint.title,
+            newStatus: 'reopen',
+            updatedBy: user.name,
+            hostelId: user.hostelId,
+            reopenReason: reopenReason.trim()
+          })
+        });
+      } catch (notificationError) {
+        console.warn('Failed to send reopen notification:', notificationError);
+      }
       
       setReopenDialogOpen(false);
       setReopenReason('');
@@ -170,7 +212,20 @@ const TenantComplaintDialog: React.FC<TenantComplaintDialogProps> = ({
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <Dialog 
+        open={open} 
+        onClose={onClose} 
+        maxWidth="md" 
+        fullWidth
+        fullScreen={window.innerWidth < 600}
+        sx={{
+          '& .MuiDialog-paper': {
+            margin: { xs: 1, sm: 2 },
+            width: { xs: 'calc(100% - 16px)', sm: '100%' },
+            maxHeight: { xs: 'calc(100% - 16px)', sm: '90vh' }
+          }
+        }}
+      >
         <DialogTitle>
           Complaint Details
         </DialogTitle>
@@ -206,7 +261,7 @@ const TenantComplaintDialog: React.FC<TenantComplaintDialogProps> = ({
                       <Box
                         key={index}
                         component="img"
-                        src={`https://api-production-79b8.up.railway.app${attachment.path}`}
+                        src={`http://192.168.0.138:5000${attachment.path}`}
                         alt={attachment.originalName || `Attachment ${index + 1}`}
                         sx={{
                           width: 100,
@@ -216,7 +271,7 @@ const TenantComplaintDialog: React.FC<TenantComplaintDialogProps> = ({
                           cursor: 'pointer',
                           border: '1px solid #ddd'
                         }}
-                        onClick={() => window.open(`https://api-production-79b8.up.railway.app${attachment.path}`, '_blank')}
+                        onClick={() => window.open(`http://192.168.0.138:5000${attachment.path}`, '_blank')}
                       />
                     ))}
                   </Box>

@@ -3,9 +3,7 @@ import { Chip, Typography, Avatar, Box } from '@mui/material';
 import { GridColDef } from '@mui/x-data-grid';
 import ListPage from '../../components/common/ListPage';
 import { staffFields } from '../../components/common/FormConfigs';
-import { staffCardFields } from '../../components/common/MobileCardConfigs';
 
-const initialStaff: any[] = [];
 
 const Staff: React.FC = () => {
   const customSubmitLogic = (formData: any, editingItem: any) => {
@@ -140,15 +138,74 @@ const Staff: React.FC = () => {
     }
   ];
 
+  const filterOptions = [
+    {
+      key: 'status',
+      label: 'Status',
+      options: [
+        { value: 'active', label: '🟢 Active' },
+        { value: 'inactive', label: '🔴 Inactive' },
+        { value: 'on-leave', label: '🟡 On Leave' }
+      ]
+    },
+    {
+      key: 'shift',
+      label: 'Shift',
+      options: [
+        { value: 'day', label: '☀️ Day' },
+        { value: 'night', label: '🌙 Night' },
+        { value: 'rotating', label: '🔄 Rotating' }
+      ]
+    },
+    {
+      key: 'role',
+      label: 'Role',
+      options: [
+        { value: 'manager', label: '👨💼 Manager' },
+        { value: 'receptionist', label: '👩💼 Receptionist' },
+        { value: 'security', label: '👮 Security' },
+        { value: 'cleaner', label: '🧹 Cleaner' },
+        { value: 'cook', label: '👨🍳 Cook' }
+      ]
+    }
+  ];
+
+  const sortOptions = [
+    { key: 'name', label: '👤 Name A-Z', order: 'asc' as const },
+    { key: 'joiningDate', label: '📅 Newest First', order: 'desc' as const },
+    { key: 'joiningDate', label: '📅 Oldest First', order: 'asc' as const },
+    { key: 'salary', label: '💰 Salary High to Low', order: 'desc' as const },
+    { key: 'salary', label: '💰 Salary Low to High', order: 'asc' as const }
+  ];
+
   return (
-    <ListPage
-      title="Staff Management"
-      data={initialStaff}
-      columns={columns}
-      fields={staffFields}
-      entityName="Staff"
-      entityKey="staff"
-      idField="id"
+    <>
+      <ListPage
+        title="Staff Management"
+        data={[]}
+        customDataLoader={async () => {
+          const { getAll } = await import('../../services/fileDataService');
+          return await getAll('staff');
+        }}
+        enableMobileFilters={true}
+        searchFields={['name', 'role', 'phone']}
+        filterOptions={filterOptions}
+        sortOptions={sortOptions}
+        filterFields={{
+          status: (item) => item.status,
+          shift: (item) => item.shift,
+          role: (item) => item.role
+        }}
+        sortFields={{
+          name: (a, b) => a.name.localeCompare(b.name),
+          joiningDate: (a, b) => new Date(a.joiningDate || 0).getTime() - new Date(b.joiningDate || 0).getTime(),
+          salary: (a, b) => (a.salary || 0) - (b.salary || 0)
+        }}
+        entityKey="staff"
+        columns={columns}
+        fields={staffFields}
+        entityName="Staff"
+        idField="id"
       mobileCardConfig={{
         titleField: 'name',
         fields: [
@@ -160,6 +217,7 @@ const Staff: React.FC = () => {
       }}
       customSubmitLogic={customSubmitLogic}
     />
+    </>
   );
 };
 

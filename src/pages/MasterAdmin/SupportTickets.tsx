@@ -125,6 +125,60 @@ const SupportTickets: React.FC = () => {
     <ListPage
       title="Support Tickets"
       data={[]}
+      enableMobileFilters={true}
+      searchFields={['subject', 'submittedBy', 'hostelName']}
+      filterOptions={[
+        {
+          key: 'status',
+          label: 'Status',
+          options: [
+            { value: 'open', label: '🔴 Open' },
+            { value: 'in-progress', label: '🟡 In Progress' },
+            { value: 'resolved', label: '🟢 Resolved' },
+            { value: 'closed', label: '⚪ Closed' }
+          ]
+        },
+        {
+          key: 'priority',
+          label: 'Priority',
+          options: [
+            { value: 'urgent', label: '🔴 Urgent' },
+            { value: 'high', label: '🟡 High' },
+            { value: 'medium', label: '🔵 Medium' },
+            { value: 'low', label: '🟢 Low' }
+          ]
+        },
+        {
+          key: 'category',
+          label: 'Category',
+          options: [
+            { value: 'technical', label: '💻 Technical' },
+            { value: 'billing', label: '💳 Billing' },
+            { value: 'feature', label: '✨ Feature Request' },
+            { value: 'other', label: '📋 Other' }
+          ]
+        }
+      ]}
+      sortOptions={[
+        { key: 'createdAt', label: '📅 Newest First', order: 'desc' },
+        { key: 'createdAt', label: '📅 Oldest First', order: 'asc' },
+        { key: 'priority', label: '🔴 High Priority First', order: 'desc' },
+        { key: 'subject', label: '📝 Subject A-Z', order: 'asc' }
+      ]}
+      filterFields={{
+        status: (item) => item.status,
+        priority: (item) => item.priority,
+        category: (item) => item.category
+      }}
+      sortFields={{
+        createdAt: (a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime(),
+        priority: (a, b) => {
+          const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
+          return (priorityOrder[a.priority as keyof typeof priorityOrder] || 0) - 
+                 (priorityOrder[b.priority as keyof typeof priorityOrder] || 0);
+        },
+        subject: (a, b) => a.subject.localeCompare(b.subject)
+      }}
       columns={columns}
       fields={updateFields}
       entityName="Support Ticket"

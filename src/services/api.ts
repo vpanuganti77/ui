@@ -1,35 +1,82 @@
-import axios from 'axios';
+import { CapacitorHttpService } from './capacitorHttpService';
+import { Capacitor } from '@capacitor/core';
+import { API_CONFIG } from '../config/api';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://https://api-production-79b8.up.railway.app/api';
+const API_BASE_URL = API_CONFIG.BASE_URL;
 
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Request interceptor to add auth token
-api.interceptors.request.use(
-  (config) => {
+class ApiService {
+  private getHeaders() {
+    const headers: any = {
+      'Content-Type': 'application/json',
+    };
+    
     const token = localStorage.getItem('token');
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      headers.Authorization = `Bearer ${token}`;
     }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
+    
+    return headers;
   }
-);
 
-// Response interceptor to handle auth errors
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    // Don't auto-redirect on 401, let components handle it
-    return Promise.reject(error);
+  async get(endpoint: string) {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const headers = this.getHeaders();
+    
+    if (Capacitor.isNativePlatform()) {
+      return CapacitorHttpService.get(url, headers);
+    } else {
+      return fetch(url, { method: 'GET', headers });
+    }
   }
-);
 
+  async post(endpoint: string, data: any) {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const headers = this.getHeaders();
+    
+    if (Capacitor.isNativePlatform()) {
+      return CapacitorHttpService.post(url, data, headers);
+    } else {
+      return fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data)
+      });
+    }
+  }
+
+  async put(endpoint: string, data: any) {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const headers = this.getHeaders();
+    
+    if (Capacitor.isNativePlatform()) {
+      return CapacitorHttpService.request(url, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(data)
+      });
+    } else {
+      return fetch(url, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(data)
+      });
+    }
+  }
+
+  async delete(endpoint: string) {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const headers = this.getHeaders();
+    
+    if (Capacitor.isNativePlatform()) {
+      return CapacitorHttpService.request(url, {
+        method: 'DELETE',
+        headers
+      });
+    } else {
+      return fetch(url, { method: 'DELETE', headers });
+    }
+  }
+}
+
+const api = new ApiService();
 export default api;

@@ -95,6 +95,8 @@ const AdminComplaintDialog: React.FC<AdminComplaintDialogProps> = ({
     e.preventDefault();
     try {
       await onSubmit(formData);
+      
+
     } catch (error) {
       console.error('Error updating complaint:', error);
     }
@@ -103,7 +105,7 @@ const AdminComplaintDialog: React.FC<AdminComplaintDialogProps> = ({
   const handleAddComment = async (comment: string) => {
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'https://api-production-79b8.up.railway.app/api'}/complaints/${editingItem.id}/comments`, {
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://192.168.0.138:5000/api'}/complaints/${editingItem.id}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -121,6 +123,26 @@ const AdminComplaintDialog: React.FC<AdminComplaintDialogProps> = ({
       
       const result = await response.json();
       setComments(result.complaint.comments || []);
+      
+      // Send notification for new comment
+      try {
+        const { CompleteNotificationService } = await import('../services/completeNotificationService');
+        const { FCMTokenService } = await import('../services/fcmTokenService');
+        
+        // Send both local and push notifications
+        await CompleteNotificationService.newComment(
+          editingItem.id,
+          user.name || 'Admin'
+        );
+        
+        await FCMTokenService.sendCommentNotification(
+          editingItem.id,
+          user.name || 'Admin',
+          user.hostelId
+        );
+      } catch (notificationError) {
+        console.warn('Failed to send comment notification:', notificationError);
+      }
     } catch (error) {
       console.error('Error adding comment:', error);
       throw error;
@@ -175,118 +197,145 @@ const AdminComplaintDialog: React.FC<AdminComplaintDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>
-        {editingItem ? 'Complaint Details' : 'Complaint Details'}
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="md" 
+      fullWidth
+      fullScreen={window.innerWidth < 600}
+      sx={{
+        '& .MuiDialog-paper': {
+          margin: { xs: 0, sm: 2 },
+          width: { xs: '100%', sm: '100%' },
+          height: { xs: '100%', sm: 'auto' },
+          maxHeight: { xs: '100%', sm: '90vh' },
+          borderRadius: { xs: 0, sm: 2 },
+          display: 'flex',
+          flexDirection: 'column'
+        },
+        '& .MuiDialogContent-root': {
+          flex: 1,
+          overflow: 'auto',
+          px: { xs: 2, sm: 3 },
+          py: { xs: 1, sm: 2 }
+        }
+      }}
+    >
+      <DialogTitle sx={{ 
+        pb: 1,
+        fontSize: { xs: '1.1rem', sm: '1.25rem' },
+        fontWeight: 600,
+        borderBottom: '1px solid',
+        borderColor: 'divider'
+      }}>
+        🎯 Complaint Management
       </DialogTitle>
       <DialogContent>
         {editingItem && (
-          <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-            <Typography variant="h6" gutterBottom>{editingItem.title}</Typography>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              {editingItem.description}
-            </Typography>
-            {editingItem.attachments && editingItem.attachments.length > 0 && (
-              <Box sx={{ mt: 2 }}>
-                <Box 
-                  sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    cursor: 'pointer',
-                    '&:hover': { bgcolor: 'grey.100' },
-                    borderRadius: 1,
-                    p: 0.5
-                  }}
-                  onClick={() => setAttachmentsExpanded(!attachmentsExpanded)}
-                >
-                  <Typography variant="body2" fontWeight="medium">
-                    Attachments ({editingItem.attachments.length})
-                  </Typography>
-                  <IconButton size="small" sx={{ ml: 1 }}>
-                    {attachmentsExpanded ? <ExpandLess /> : <ExpandMore />}
-                  </IconButton>
-                </Box>
-                <Collapse in={attachmentsExpanded}>
-                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
-                    {editingItem.attachments.map((attachment: any, index: number) => (
-                      <Box
-                        key={index}
-                        component="img"
-                        src={`https://api-production-79b8.up.railway.app${attachment.path}`}
-                        alt={attachment.originalName || `Attachment ${index + 1}`}
-                        sx={{
-                          width: 100,
-                          height: 100,
-                          objectFit: 'cover',
-                          borderRadius: 1,
-                          cursor: 'pointer',
-                          border: '1px solid #ddd'
-                        }}
-                        onClick={() => window.open(`https://api-production-79b8.up.railway.app${attachment.path}`, '_blank')}
-                      />
-                    ))}
-                  </Box>
-                </Collapse>
-              </Box>
-            )}
-            <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-              <Chip label={editingItem.category} size="small" />
-              <Chip label={editingItem.priority} size="small" />
-              <Chip label={`Room ${editingItem.room}`} size="small" />
-              <Chip label={editingItem.tenantName} size="small" />
-              <Chip 
-                label={editingItem.status} 
-                size="small" 
-                color={getStatusColor(editingItem.status) as any}
-              />
-            </Box>
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="caption" color="text.secondary">
-                Submitted: {new Date(editingItem.createdAt).toLocaleString()}
+          <Box sx={{ mb: 3 }}>
+            {/* Complaint Details Section */}
+            <Box sx={{ 
+              mb: 3, 
+              p: { xs: 1.5, sm: 2 }, 
+              bgcolor: 'primary.50', 
+              borderRadius: { xs: 1, sm: 2 }, 
+              border: '1px solid', 
+              borderColor: 'primary.200' 
+            }}>
+              <Typography variant="h6" color="primary.main" gutterBottom sx={{ fontWeight: 600 }}>
+                📋 Complaint Details
               </Typography>
-              {editingItem.updatedAt && editingItem.updatedAt !== editingItem.createdAt && (
-                <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
-                  Last Updated: {new Date(editingItem.updatedAt).toLocaleString()}
+              <Typography variant="h6" gutterBottom sx={{ color: 'text.primary' }}>
+                {editingItem.title}
+              </Typography>
+              <Typography variant="body1" color="text.secondary" gutterBottom sx={{ mb: 2 }}>
+                {editingItem.description}
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+                <Chip label={editingItem.category} size="small" color="primary" variant="outlined" />
+                <Chip label={editingItem.priority} size="small" color="warning" variant="outlined" />
+                <Chip label={`Room ${editingItem.room}`} size="small" color="info" variant="outlined" />
+                <Chip label={editingItem.tenantName} size="small" color="secondary" variant="outlined" />
+                <Chip 
+                  label={editingItem.status} 
+                  size="small" 
+                  color={getStatusColor(editingItem.status) as any}
+                  variant="filled"
+                />
+              </Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                  📅 Submitted: {new Date(editingItem.createdAt).toLocaleString()}
                 </Typography>
-              )}
+                {editingItem.updatedAt && editingItem.updatedAt !== editingItem.createdAt && (
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                    🔄 Last Updated: {new Date(editingItem.updatedAt).toLocaleString()}
+                  </Typography>
+                )}
+              </Box>
             </Box>
+
+
+            
+
           </Box>
         )}
         
-        <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)} sx={{ mb: 2 }}>
-          <Tab label="Update Status" />
-          <Tab label={`Comments (${comments.length})`} />
+        <Tabs 
+          value={tabValue} 
+          onChange={(e, newValue) => setTabValue(newValue)} 
+          variant="scrollable"
+          scrollButtons="auto"
+          sx={{ 
+            mb: 2,
+            '& .MuiTab-root': {
+              fontWeight: 600,
+              fontSize: { xs: '0.8rem', sm: '0.9rem' },
+              minWidth: { xs: 'auto', sm: 160 },
+              px: { xs: 1, sm: 2 }
+            },
+            '& .MuiTabs-scrollButtons': {
+              display: { xs: 'flex', sm: 'none' }
+            }
+          }}
+        >
+          <Tab label="⚙️ Update Status" />
+          <Tab label={`💬 Comments (${comments.length})`} />
+          <Tab label={`📎 Attachments (${editingItem?.attachments?.length || 0})`} />
         </Tabs>
         
         {tabValue === 0 && (
-          <form onSubmit={handleSubmit}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <FormControl fullWidth>
-                <InputLabel>Status</InputLabel>
-                <Select
-                  value={formData.status}
-                  label="Status"
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  disabled={editingItem && editingItem.status === 'resolved'}
-                >
-                  {getAvailableStatuses().map(status => (
-                    <MenuItem key={status.value} value={status.value}>
-                      {status.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+          <Box sx={{ p: { xs: 1, sm: 2 }, bgcolor: 'grey.50', borderRadius: 1 }}>
+            <form onSubmit={handleSubmit}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 1.5, sm: 2 } }}>
+                <FormControl fullWidth size={window.innerWidth < 600 ? 'small' : 'medium'}>
+                  <InputLabel>Status</InputLabel>
+                  <Select
+                    value={formData.status}
+                    label="Status"
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    disabled={editingItem && editingItem.status === 'resolved'}
+                  >
+                    {getAvailableStatuses().map(status => (
+                      <MenuItem key={status.value} value={status.value}>
+                        {status.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
 
-              <TextField
-                label="Assigned To"
-                value={formData.assignedTo}
-                onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
-                placeholder="e.g., Maintenance Team, John Doe"
-                fullWidth
-                disabled={editingItem && editingItem.status === 'resolved'}
-              />
-            </Box>
-          </form>
+                <TextField
+                  label="Assigned To"
+                  value={formData.assignedTo}
+                  onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
+                  placeholder="e.g., Maintenance Team, John Doe"
+                  fullWidth
+                  size={window.innerWidth < 600 ? 'small' : 'medium'}
+                  disabled={editingItem && editingItem.status === 'resolved'}
+                />
+              </Box>
+            </form>
+          </Box>
         )}
         
         {tabValue === 1 && editingItem && (
@@ -299,6 +348,73 @@ const AdminComplaintDialog: React.FC<AdminComplaintDialogProps> = ({
               role: 'admin'
             }}
           />
+        )}
+        
+        {tabValue === 2 && editingItem && (
+          <Box sx={{ 
+            p: { xs: 1, sm: 2 }, 
+            bgcolor: 'success.50', 
+            borderRadius: { xs: 1, sm: 2 }, 
+            border: '1px solid', 
+            borderColor: 'success.200' 
+          }}>
+            <Typography variant="h6" color="success.main" sx={{ 
+              fontWeight: 600, 
+              mb: 2,
+              fontSize: { xs: '1rem', sm: '1.25rem' }
+            }}>
+              📎 Attachments ({editingItem.attachments ? editingItem.attachments.length : 0})
+            </Typography>
+            {editingItem.attachments && editingItem.attachments.length > 0 ? (
+              <Box sx={{ 
+                display: 'grid', 
+                gridTemplateColumns: { xs: 'repeat(auto-fill, minmax(100px, 1fr))', sm: 'repeat(auto-fill, minmax(120px, 1fr))' }, 
+                gap: { xs: 1, sm: 2 } 
+              }}>
+                {editingItem.attachments.map((attachment: any, index: number) => (
+                  <Box
+                    key={index}
+                    sx={{
+                      position: 'relative',
+                      borderRadius: { xs: 1, sm: 2 },
+                      overflow: 'hidden',
+                      cursor: 'pointer',
+                      border: '2px solid',
+                      borderColor: 'success.300',
+                      '&:hover': { borderColor: 'success.500' }
+                    }}
+                    onClick={() => window.open(`http://192.168.0.138:5000${attachment.path}`, '_blank')}
+                  >
+                    <Box
+                      component="img"
+                      src={`http://192.168.0.138:5000${attachment.path}`}
+                      alt={attachment.originalName || `Attachment ${index + 1}`}
+                      sx={{
+                        width: '100%',
+                        height: { xs: 100, sm: 120 },
+                        objectFit: 'cover'
+                      }}
+                    />
+                    <Box sx={{ p: { xs: 0.5, sm: 1 }, bgcolor: 'white', borderTop: '1px solid', borderColor: 'success.200' }}>
+                      <Typography variant="caption" sx={{ 
+                        fontSize: { xs: '0.65rem', sm: '0.7rem' }, 
+                        fontWeight: 500 
+                      }}>
+                        🖼️ Image {index + 1}
+                      </Typography>
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
+            ) : (
+              <Typography variant="body2" color="text.secondary" sx={{ 
+                fontStyle: 'italic',
+                fontSize: { xs: '0.9rem', sm: '1rem' }
+              }}>
+                No attachments provided with this complaint
+              </Typography>
+            )}
+          </Box>
         )}
       </DialogContent>
       <DialogActions>

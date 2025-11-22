@@ -2,15 +2,15 @@ import React from 'react';
 import {
   Box,
   Typography,
-  Chip,
+  Chip
 } from '@mui/material';
 import { GridColDef } from '@mui/x-data-grid';
 import ListPage from '../../components/common/ListPage';
 import { expenseFields } from '../../components/common/FormConfigs';
 import { getCategoryColor } from '../../components/common/MobileCardConfigs';
 
-const Expenses: React.FC = () => {
 
+const Expenses: React.FC = () => {
   const columns: GridColDef[] = [
     {
       field: 'title',
@@ -84,15 +84,58 @@ const Expenses: React.FC = () => {
     }
   };
 
+  const filterOptions = [
+    {
+      key: 'category',
+      label: 'Category',
+      options: [
+        { value: 'maintenance', label: '🔧 Maintenance' },
+        { value: 'utilities', label: '💡 Utilities' },
+        { value: 'supplies', label: '📦 Supplies' },
+        { value: 'food', label: '🍽️ Food' },
+        { value: 'other', label: '📋 Other' }
+      ]
+    }
+  ];
+
+  const sortOptions = [
+    { key: 'date', label: '📅 Latest First', order: 'desc' as const },
+    { key: 'date', label: '📅 Oldest First', order: 'asc' as const },
+    { key: 'amount', label: '💰 Amount High to Low', order: 'desc' as const },
+    { key: 'amount', label: '💰 Amount Low to High', order: 'asc' as const },
+    { key: 'title', label: '📝 Title A-Z', order: 'asc' as const }
+  ];
+
+  const filterFields = {
+    category: (item: any) => item.category
+  };
+
+  const sortFields = {
+    date: (a: any, b: any) => new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime(),
+    amount: (a: any, b: any) => (a.amount || 0) - (b.amount || 0),
+    title: (a: any, b: any) => (a.title || '').localeCompare(b.title || '')
+  };
+
   return (
-    <ListPage
-      title="Expenses"
-      data={[]}
-      columns={columns}
-      fields={expenseFields}
-      entityName="Expense"
-      entityKey="expenses"
-      mobileCardConfig={{
+    <>
+      <ListPage
+        title="Expenses"
+        data={[]}
+        customDataLoader={async () => {
+          const { getAll } = await import('../../services/fileDataService');
+          return await getAll('expenses');
+        }}
+        enableMobileFilters={true}
+        searchFields={['title', 'description']}
+        filterOptions={filterOptions}
+        sortOptions={sortOptions}
+        filterFields={filterFields}
+        sortFields={sortFields}
+        entityKey="expenses"
+        columns={columns}
+        fields={expenseFields}
+        entityName="Expense"
+        mobileCardConfig={{
         titleField: 'title',
         fields: [
           { key: 'category', label: 'Category', value: 'category' },
@@ -102,6 +145,7 @@ const Expenses: React.FC = () => {
       }}
       customSubmitLogic={customSubmitLogic}
     />
+    </>
   );
 };
 

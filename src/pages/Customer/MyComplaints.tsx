@@ -19,7 +19,7 @@ import {
   Fab,
   IconButton,
 } from '@mui/material';
-import { Add, Comment, Inbox } from '@mui/icons-material';
+import { Add, Comment, Inbox, AttachFile, Delete } from '@mui/icons-material';
 import toast from 'react-hot-toast';
 import { useNotifications } from '../../context/NotificationContext';
 import TenantComplaintDialog from '../../components/TenantComplaintDialog';
@@ -127,12 +127,15 @@ const MyComplaints: React.FC = () => {
     category: '',
     priority: 'medium'
   });
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setUploading(true);
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const { create, getAll } = await import('../../services/fileDataService');
+      const { getAll } = await import('../../services/fileDataService');
       
       // Get room information if not available in user object
       let roomNumber = user.room;
@@ -147,20 +150,41 @@ const MyComplaints: React.FC = () => {
         }
       }
       
-      const complaintData = {
-        ...formData,
-        tenantId: user.tenantId || user.id,
-        tenantName: user.name,
-        tenantPhone: user.phone,
-        room: roomNumber,
-        hostel: user.hostelName || 'Hostel',
-        hostelId: user.hostelId,
-        status: 'open',
-        createdAt: new Date().toISOString(),
-        createdBy: user.name
-      };
+      // Create FormData for file upload
+      const formDataToSend = new FormData();
+      formDataToSend.append('title', formData.title);
+      formDataToSend.append('description', formData.description);
+      formDataToSend.append('category', formData.category);
+      formDataToSend.append('priority', formData.priority);
+      formDataToSend.append('tenantId', user.tenantId || user.id);
+      formDataToSend.append('tenantName', user.name);
+      formDataToSend.append('tenantPhone', user.phone);
+      formDataToSend.append('room', roomNumber);
+      formDataToSend.append('hostel', user.hostelName || 'Hostel');
+      formDataToSend.append('hostelId', user.hostelId);
+      formDataToSend.append('status', 'open');
+      formDataToSend.append('createdAt', new Date().toISOString());
+      formDataToSend.append('createdBy', user.name);
       
-      const newComplaint = await create('complaints', complaintData);
+      // Add attachments
+      attachments.forEach((file, index) => {
+        formDataToSend.append('attachments', file);
+      });
+      
+      // Submit complaint with attachments
+      const config = await fetch('/config.json').then(r => r.json()).catch(() => ({ API_BASE_URL: 'http://192.168.0.138:5000/api' }));
+      const apiBaseUrl = config.API_BASE_URL || 'http://192.168.0.138:5000/api';
+      
+      const response = await fetch(`${apiBaseUrl}/complaints`, {
+        method: 'POST',
+        body: formDataToSend
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to submit complaint');
+      }
+      
+      const newComplaint = await response.json();
       setComplaints([newComplaint, ...complaints]);
       
       // Show success toast
@@ -173,10 +197,42 @@ const MyComplaints: React.FC = () => {
         category: '',
         priority: 'medium'
       });
+      setAttachments([]);
     } catch (error) {
       console.error('Error submitting complaint:', error);
       toast.error('Failed to submit complaint');
+    } finally {
+      setUploading(false);
     }
+  };
+  
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const validFiles = files.filter(file => {
+      const isValidType = file.type.startsWith('image/');
+      const isValidSize = file.size <= 5 * 1024 * 1024; // 5MB limit
+      
+      if (!isValidType) {
+        toast.error(`${file.name} is not a valid image file`);
+        return false;
+      }
+      if (!isValidSize) {
+        toast.error(`${file.name} is too large. Maximum size is 5MB`);
+        return false;
+      }
+      return true;
+    });
+    
+    if (attachments.length + validFiles.length > 5) {
+      toast.error('Maximum 5 attachments allowed');
+      return;
+    }
+    
+    setAttachments([...attachments, ...validFiles]);
+  };
+  
+  const removeAttachment = (index: number) => {
+    setAttachments(attachments.filter((_, i) => i !== index));
   };
 
   const getStatusColor = (status: string) => {
@@ -378,11 +434,74 @@ const MyComplaints: React.FC = () => {
                   </Select>
                 </FormControl>
               </Box>
+              
+              {/* Attachment Upload */}
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Attachments (Optional)
+                </Typography>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                  style={{ display: 'none' }}
+                  id="attachment-upload"
+                />
+                <label htmlFor="attachment-upload">
+                  <Button
+                    variant="outlined"
+                    component="span"
+                    startIcon={<AttachFile />}
+                    disabled={attachments.length >= 5}
+                    sx={{ mb: 1 }}
+                  >
+                    Add Images ({attachments.length}/5)
+                  </Button>
+                </label>
+                
+                {attachments.length > 0 && (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                    {attachments.map((file, index) => (
+                      <Box
+                        key={index}
+                        sx={{
+                          position: 'relative',
+                          border: '1px solid #ddd',
+                          borderRadius: 1,
+                          p: 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                          bgcolor: 'grey.50'
+                        }}
+                      >
+                        <Typography variant="caption" sx={{ maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {file.name}
+                        </Typography>
+                        <IconButton
+                          size="small"
+                          onClick={() => removeAttachment(index)}
+                          sx={{ p: 0.5 }}
+                        >
+                          <Delete fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+                
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                  Maximum 5 images, 5MB each. Supported formats: JPG, PNG, GIF
+                </Typography>
+              </Box>
             </Box>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit" variant="contained">Submit</Button>
+            <Button onClick={() => setOpen(false)} disabled={uploading}>Cancel</Button>
+            <Button type="submit" variant="contained" disabled={uploading}>
+              {uploading ? 'Submitting...' : 'Submit'}
+            </Button>
           </DialogActions>
         </form>
       </Dialog>

@@ -63,6 +63,8 @@ import PendingApprovalDashboard from '../../components/PendingApprovalDashboard'
 import DeactivatedHostelDashboard from '../../components/DeactivatedHostelDashboard';
 import { socketService } from '../../services/socketService';
 
+
+
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState({
@@ -307,6 +309,39 @@ const Dashboard: React.FC = () => {
     setAlertDialogOpen(true);
   };
 
+  const handleBulkPaymentReminder = async () => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const response = await fetch('/api/notifications/bulk-payment-reminder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hostelId: user.hostelId })
+      });
+      
+      const result = await response.json();
+      if (response.ok) {
+        setSnackbar({ 
+          open: true, 
+          message: `Payment reminders sent to ${result.count} tenants with pending dues`, 
+          severity: 'success' 
+        });
+      } else {
+        setSnackbar({ 
+          open: true, 
+          message: result.error || 'Failed to send payment reminders', 
+          severity: 'error' 
+        });
+      }
+    } catch (error) {
+      console.error('Error sending bulk payment reminders:', error);
+      setSnackbar({ 
+        open: true, 
+        message: 'Failed to send payment reminders', 
+        severity: 'error' 
+      });
+    }
+  };
+
   const statCards = [
     {
       title: 'Total Rooms',
@@ -411,6 +446,16 @@ const Dashboard: React.FC = () => {
             onClick={() => setNoticeDialogOpen(true)}
           >
             Send Notice
+          </Button>
+          <Button 
+            variant="outlined" 
+            size="small" 
+            color="warning"
+            startIcon={<AttachMoney />}
+            onClick={handleBulkPaymentReminder}
+            disabled={!stats?.totalDues || stats.totalDues <= 0}
+          >
+            Remind Dues
           </Button>
         </Box>
       </Box>

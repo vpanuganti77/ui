@@ -4,9 +4,6 @@ import { Chip, Typography } from '@mui/material';
 import { GridColDef } from '@mui/x-data-grid';
 import ListPage from '../../components/common/ListPage';
 import { roomFields } from '../../components/common/FormConfigs';
-import { roomCardFields } from '../../components/common/MobileCardConfigs';
-
-const initialRooms: any[] = [];
 
 const Rooms: React.FC = () => {
   const navigate = useNavigate();
@@ -138,17 +135,68 @@ const Rooms: React.FC = () => {
     }
   ];
 
+  const filterOptions = [
+    {
+      key: 'status',
+      label: 'Status',
+      options: [
+        { value: 'available', label: '🟢 Available' },
+        { value: 'occupied', label: '🔴 Occupied' },
+        { value: 'maintenance', label: '🟡 Maintenance' }
+      ]
+    },
+    {
+      key: 'type',
+      label: 'Type',
+      options: [
+        { value: 'single', label: 'Single' },
+        { value: 'double', label: 'Double' },
+        { value: 'triple', label: 'Triple' },
+        { value: 'quad', label: 'Quad' },
+        { value: 'dormitory', label: 'Dormitory' }
+      ]
+    }
+  ];
+
+  const sortOptions = [
+    { key: 'roomNumber', label: '🏠 Room Number A-Z', order: 'asc' as const },
+    { key: 'rent', label: '💰 Rent Low to High', order: 'asc' as const },
+    { key: 'rent', label: '💰 Rent High to Low', order: 'desc' as const },
+    { key: 'capacity', label: '👥 Capacity Low to High', order: 'asc' as const },
+    { key: 'floor', label: '🏢 Floor Low to High', order: 'asc' as const }
+  ];
+
   return (
-    <ListPage
-      title="Rooms"
-      data={initialRooms}
-      columns={columns}
-      fields={roomFields}
-      entityName="Room"
-      entityKey="rooms"
-      idField="id"
-      onItemClick={handleItemClick}
-      mobileCardConfig={{
+    <>
+      <ListPage
+        title="Rooms"
+        data={[]}
+        customDataLoader={async () => {
+          const { getAll } = await import('../../services/fileDataService');
+          return await getAll('rooms');
+        }}
+        enableMobileFilters={true}
+        searchFields={['roomNumber', 'type']}
+        filterOptions={filterOptions}
+        sortOptions={sortOptions}
+        filterFields={{
+          status: (item) => item.status,
+          type: (item) => item.type,
+          floor: (item) => item.floor?.toString()
+        }}
+        sortFields={{
+          roomNumber: (a, b) => a.roomNumber.localeCompare(b.roomNumber),
+          rent: (a, b) => (a.rent || 0) - (b.rent || 0),
+          capacity: (a, b) => (a.capacity || 0) - (b.capacity || 0),
+          floor: (a, b) => (a.floor || 0) - (b.floor || 0)
+        }}
+        entityKey="rooms"
+        columns={columns}
+        fields={roomFields}
+        entityName="Room"
+        idField="id"
+        onItemClick={handleItemClick}
+        mobileCardConfig={{
         titleField: 'roomNumber',
         fields: [
           { key: 'type', label: 'Type', value: 'type', render: (value: string) => value ? value.charAt(0).toUpperCase() + value.slice(1) : '-' },
@@ -160,6 +208,7 @@ const Rooms: React.FC = () => {
       }}
       customSubmitLogic={customSubmitLogic}
     />
+    </>
   );
 };
 

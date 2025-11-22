@@ -11,7 +11,7 @@ import {
   Alert,
   MenuItem
 } from '@mui/material';
-import { create } from '../services/fileDataService';
+import { create, getAll } from '../services/fileDataService';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -36,6 +36,7 @@ const ContactUsDialog: React.FC<ContactUsDialogProps> = ({ open, onClose }) => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loginCredentials, setLoginCredentials] = useState<any>(null);
 
   const validateForm = () => {
     if (!formData.name.trim()) return 'Name is required';
@@ -61,11 +62,8 @@ const ContactUsDialog: React.FC<ContactUsDialogProps> = ({ open, onClose }) => {
     }
     
     try {
-      // Generate temporary password
-      const tempPassword = Math.random().toString(36).slice(-8);
-      
-      // Create unique hostel request ID
-      const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      // Create unique hostel request ID using timestamp only
+      const requestId = Date.now().toString();
       
       // Create hostel request with user data
       const request = {
@@ -73,49 +71,38 @@ const ContactUsDialog: React.FC<ContactUsDialogProps> = ({ open, onClose }) => {
         ...formData,
         status: 'pending',
         isRead: false,
-        submittedAt: new Date().toISOString(),
-        tempPassword // Store temp password for auto-login
+        submittedAt: new Date().toISOString()
       };
 
       const hostelRequest = await create('hostelRequests', request);
       
-      // Generate hostel domain email
-      const hostelDomain = formData.hostelName.toLowerCase().replace(/[^a-z0-9]/g, '') + '.com';
-      const username = formData.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-      const hostelEmail = `${username}@${hostelDomain}`;
-      
-      // Create user account immediately with unique ID
-      const userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const userData = {
-        id: userId,
-        name: formData.name,
-        email: hostelEmail, // Use hostel domain email
-        originalEmail: formData.email, // Store original email for reference
-        password: tempPassword,
-        phone: formData.phone,
-        role: 'admin',
-        hostelName: formData.hostelName,
-        hostelId: null, // Will be set when hostel is approved
-        status: 'pending_approval',
-        createdAt: new Date().toISOString(),
-        requestId: requestId
-      };
-      
-      const createdUser = await create('users', userData);
+      // Store login credentials if provided
+      if (hostelRequest.userCredentials) {
+        setLoginCredentials(hostelRequest.userCredentials);
+        
+        // Auto-login the user
+        try {
+          await login(hostelRequest.userCredentials.email, hostelRequest.userCredentials.password);
+          console.log('Auto-login successful');
+          // Close dialog and navigate to dashboard
+          setTimeout(() => {
+            onClose();
+            navigate('/admin/dashboard');
+          }, 3000);
+          return; // Skip the manual redirect
+        } catch (loginError) {
+          console.error('Auto-login failed:', loginError);
+          // Continue with manual login flow
+        }
+      }
       
       // Create notifications for all master admin users
       try {
-        const { getAll } = await import('../services/fileDataService');
         const allUsers = await getAll('users');
-        const masterAdmins = allUsers.filter((user: any) => user.role === 'masterAdmin');
+        const masterAdmins = allUsers.filter((user: any) => user.role === 'master_admin');
         
-        // Create notification for each master admin (exclude the requesting user)
+        // Create notification for each master admin
         for (const masterAdmin of masterAdmins) {
-          // Skip if this master admin is the same as the requesting user
-          if (masterAdmin.email === hostelEmail || masterAdmin.originalEmail === formData.email) {
-            continue;
-          }
-          
           const masterAdminNotification = {
             id: `${Date.now()}_${masterAdmin.id}_request`,
             type: 'hostel_request',
@@ -136,7 +123,7 @@ const ContactUsDialog: React.FC<ContactUsDialogProps> = ({ open, onClose }) => {
         // Send push notification to master admins
         const { NotificationService } = await import('../services/notificationService');
         await NotificationService.sendPushNotification(
-          'masterAdmin',
+          'master_admin',
           'New Hostel Setup Request',
           `${formData.name} has requested to setup ${formData.hostelName}. Please review and approve.`,
           'hostel_request'
@@ -148,25 +135,15 @@ const ContactUsDialog: React.FC<ContactUsDialogProps> = ({ open, onClose }) => {
         console.error('Failed to create master admin notifications:', notificationError);
       }
       
-      // Don't send notification to the requesting user - they should not get their own request notification
       setSuccess(true);
       
-      setTimeout(async () => {
-        try {
-          console.log('Attempting auto-login with:', hostelEmail, tempPassword);
-          await login(hostelEmail, tempPassword);
-          console.log('Auto-login successful, navigating to dashboard');
+      // Only redirect to login if auto-login didn't work
+      if (!loginCredentials) {
+        setTimeout(() => {
           onClose();
-          navigate('/admin/dashboard');
-        } catch (loginError) {
-          console.error('Auto-login failed:', loginError);
-          console.error('Login error details:', loginError);
-          // Stay on current page and show error instead of redirecting to login
-          setError('Auto-login failed. Please try logging in manually.');
-          setSuccess(false);
-          setIsSubmitting(false);
-        }
-      }, 3000);
+          navigate('/login?setupComplete=true');
+        }, 5000);
+      }
       
     } catch (err: any) {
       setError(err.message || 'Failed to submit request');
@@ -186,23 +163,39 @@ const ContactUsDialog: React.FC<ContactUsDialogProps> = ({ open, onClose }) => {
           {success ? (
             <Alert severity="success" sx={{ textAlign: 'center' }}>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                <Box sx={{ 
-                  width: 60, 
-                  height: 60, 
-                  border: '4px solid #e0e0e0', 
-                  borderTop: '4px solid #4caf50', 
-                  borderRadius: '50%', 
-                  animation: 'spin 1s linear infinite',
-                  '@keyframes spin': {
-                    '0%': { transform: 'rotate(0deg)' },
-                    '100%': { transform: 'rotate(360deg)' }
-                  }
-                }} />
-                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, color: 'success.main' }}>
                   🎉 Hostel Setup Complete!
                 </Typography>
                 <Typography variant="body2">
-                  Your account has been created successfully. Redirecting to dashboard...
+                  Your hostel and admin account have been created. You can now login with the credentials below:
+                </Typography>
+                
+                {loginCredentials && (
+                  <Box sx={{ 
+                    bgcolor: 'grey.50', 
+                    p: 2, 
+                    borderRadius: 1, 
+                    width: '100%',
+                    border: '1px solid',
+                    borderColor: 'success.main'
+                  }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                      Your Login Credentials:
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontFamily: 'monospace', mb: 0.5 }}>
+                      <strong>Email:</strong> {loginCredentials.email}
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontFamily: 'monospace', mb: 1 }}>
+                      <strong>Password:</strong> {loginCredentials.password}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Please save these credentials. Your hostel is pending approval by our admin team.
+                    </Typography>
+                  </Box>
+                )}
+                
+                <Typography variant="body2" color="text.secondary">
+                  {loginCredentials ? 'Logging you in automatically...' : 'Redirecting to login page in 5 seconds...'}
                 </Typography>
               </Box>
             </Alert>

@@ -39,6 +39,7 @@ const UserManagement: React.FC = () => {
     open: boolean;
     userDetails: any;
   }>({ open: false, userDetails: null });
+  const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -461,6 +462,17 @@ const UserManagement: React.FC = () => {
             {selectedUser?.status === 'active' ? 'Deactivate' : 'Activate'}
           </MenuItem>
         )}
+        <MenuItem 
+          onClick={() => {
+            setDeleteUserId(selectedUser?.id);
+            setAnchorEl(null);
+          }}
+          disabled={isCurrentUser(selectedUser)}
+          sx={{ color: 'error.main' }}
+        >
+          <Delete sx={{ mr: 1 }} color="error" />
+          Delete User
+        </MenuItem>
 
       </Menu>
 
@@ -518,6 +530,44 @@ const UserManagement: React.FC = () => {
         onClose={() => setCredentialsDialog({ open: false, userDetails: null })}
         userDetails={credentialsDialog.userDetails}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteUserId} onClose={() => setDeleteUserId(null)}>
+        <DialogTitle>Delete User</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete {selectedUser?.name}? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteUserId(null)}>Cancel</Button>
+          <Button 
+            onClick={async () => {
+              try {
+                const { remove } = await import('../../services/fileDataService');
+                await remove('users', deleteUserId!);
+                setRefreshKey(prev => prev + 1);
+                setSnackbar({ 
+                  open: true, 
+                  message: 'User deleted successfully', 
+                  severity: 'success' 
+                });
+              } catch (error) {
+                setSnackbar({ 
+                  open: true, 
+                  message: 'Failed to delete user', 
+                  severity: 'error' 
+                });
+              }
+              setDeleteUserId(null);
+            }}
+            color="error" 
+            variant="contained"
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Snackbar for notifications */}
       <Snackbar

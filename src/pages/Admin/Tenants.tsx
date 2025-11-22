@@ -3,23 +3,35 @@ import { useNavigate } from 'react-router-dom';
 import {
   Typography,
   Chip,
+  Button,
+  IconButton,
+  Tooltip,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
+import { NotificationsActive } from '@mui/icons-material';
+import toast from 'react-hot-toast';
 import { GridColDef } from '@mui/x-data-grid';
 import ListPage from '../../components/common/ListPage';
 import TenantDialog from '../../components/tenant/TenantDialog';
 import TenantCredentialsDialog from '../../components/tenant/TenantCredentialsDialog';
 import { tenantFields } from '../../components/common/FormConfigs';
 import { tenantCardFields } from '../../components/common/MobileCardConfigs';
+import { getTenantFilters } from '../../utils/mobileFilterHelpers';
+
 
 const initialTenants: any[] = [];
 
 const Tenants: React.FC = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
   const [credentialsDialog, setCredentialsDialog] = useState<{
     open: boolean;
     credentials: any;
     tenantName: string;
   }>({ open: false, credentials: null, tenantName: '' });
+
 
   const handleItemClick = (id: string) => {
     navigate(`/admin/tenants/${id}`);
@@ -28,7 +40,16 @@ const Tenants: React.FC = () => {
   const customSubmitLogic = (formData: any, editingItem: any) => {
     const userData = localStorage.getItem('user');
     const user = userData ? JSON.parse(userData) : null;
-    const hostelId = user?.hostelId || '';
+    const hostelId = user?.hostelId;
+    
+    console.log('User data:', user);
+    console.log('Hostel ID:', hostelId);
+    
+    if (!hostelId) {
+      console.error('ERROR: No hostelId found in user data! User must be logged in with valid hostelId');
+      alert('Error: No hostel ID found. Please ensure you are logged in properly.');
+      return null;
+    }
     
     if (editingItem) {
       return {
@@ -42,10 +63,11 @@ const Tenants: React.FC = () => {
         joiningDate: formData.joiningDate,
         aadharNumber: formData.aadharNumber,
         aadharFront: formData.aadharFront,
-        aadharBack: formData.aadharBack
+        aadharBack: formData.aadharBack,
+        hostelId
       };
     } else {
-      return {
+      const tenantData = {
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
@@ -56,23 +78,49 @@ const Tenants: React.FC = () => {
         status: 'active',
         joiningDate: formData.joiningDate,
         pendingDues: 0,
-        lastModifiedBy: 'Admin',
+        lastModifiedBy: user?.name || 'Admin',
         lastModifiedDate: new Date().toISOString(),
         aadharNumber: formData.aadharNumber,
         aadharFront: formData.aadharFront,
         aadharBack: formData.aadharBack,
         hostelId
       };
+      
+      console.log('Tenant data being created:', tenantData);
+      return tenantData;
     }
   };
   
-  const handleAfterCreate = (newItem: any) => {
-    if (newItem.userCredentials) {
-      setCredentialsDialog({
-        open: true,
-        credentials: newItem.userCredentials,
-        tenantName: newItem.name
-      });
+  const handleAfterCreate = async (newItem: any) => {
+    // Backend automatically creates user account, just fetch the credentials
+    try {
+      // Wait a moment for backend to create user
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Fetch the user created by backend
+      const { getAll } = await import('../../services/fileDataService');
+      const users = await getAll('users');
+      const createdUser = users.find((u: any) => 
+        u.name.toLowerCase() === newItem.name.toLowerCase() && 
+        u.role === 'tenant'
+      );
+      
+      if (createdUser) {
+        // Show credentials dialog with actual backend-generated credentials
+        setCredentialsDialog({
+          open: true,
+          credentials: {
+            email: createdUser.email,
+            password: createdUser.password,
+            loginUrl: window.location.origin
+          },
+          tenantName: newItem.name
+        });
+      } else {
+        console.log('User not found after tenant creation');
+      }
+    } catch (error) {
+      console.error('Failed to fetch user credentials:', error);
     }
   };
 
@@ -105,6 +153,31 @@ const Tenants: React.FC = () => {
       case 'vacated': return 'default';
       case 'notice': return 'warning';
       default: return 'default';
+    }
+  };
+
+  const handlePaymentReminder = async (tenant: any) => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const response = await fetch('/api/notifications/payment-reminder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenantId: tenant.id,
+          tenantName: tenant.name,
+          amount: tenant.pendingDues,
+          hostelId: user.hostelId
+        })
+      });
+      
+      if (response.ok) {
+        toast.success(`Payment reminder sent to ${tenant.name}`);
+      } else {
+        toast.error('Failed to send payment reminder');
+      }
+    } catch (error) {
+      console.error('Error sending payment reminder:', error);
+      toast.error('Failed to send payment reminder');
     }
   };
 
@@ -147,13 +220,34 @@ const Tenants: React.FC = () => {
     {
       field: 'pendingDues',
       headerName: 'Dues',
-      width: 100,
-      valueFormatter: (params: any) => {
-        if (!params) return '-';
+      width: 140,
+      renderCell: (params: any) => {
         const value = params.value || params.row?.pendingDues || 0;
-        return value > 0 ? `₹${value.toLocaleString()}` : '-';
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                color: value > 0 ? 'error.main' : 'text.primary',
+                fontWeight: value > 0 ? 600 : 400
+              }}
+            >
+              {value > 0 ? `₹${value.toLocaleString()}` : '-'}
+            </Typography>
+            {value > 0 && (
+              <Tooltip title="Send payment reminder">
+                <IconButton
+                  size="small"
+                  color="warning"
+                  onClick={() => handlePaymentReminder(params.row)}
+                >
+                  <NotificationsActive fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+          </div>
+        );
       },
-      cellClassName: (params: any) => (params.value && params.value > 0) ? 'text-error' : '',
       align: 'right',
       headerAlign: 'right'
     },
@@ -162,9 +256,10 @@ const Tenants: React.FC = () => {
       headerName: 'Next Due',
       width: 120,
       valueFormatter: (params: any) => {
-        if (!params || !params.value) {
+        if (!params || !params.row) return 'N/A';
+        if (!params.value) {
           // Calculate from joining date if nextDueDate is not set
-          const joiningDate = params.row?.joiningDate;
+          const joiningDate = params.row.joiningDate;
           if (joiningDate) {
             const joining = new Date(joiningDate);
             const today = new Date();
@@ -190,11 +285,23 @@ const Tenants: React.FC = () => {
 
 
 
+  const { filterOptions, sortOptions, filterFields, sortFields } = getTenantFilters();
+
   return (
     <>
       <ListPage
         title="Tenants"
-        data={initialTenants}
+        data={[]}
+        customDataLoader={async () => {
+          const { getAll } = await import('../../services/fileDataService');
+          return await getAll('tenants');
+        }}
+        enableMobileFilters={true}
+        searchFields={['name', 'phone', 'room']}
+        filterOptions={filterOptions}
+        sortOptions={sortOptions}
+        filterFields={filterFields}
+        sortFields={sortFields}
         entityKey="tenants"
         columns={columns}
         fields={tenantFields}
@@ -234,6 +341,7 @@ const Tenants: React.FC = () => {
         additionalValidation={additionalValidation}
         CustomDialog={TenantDialog}
         onAfterCreate={handleAfterCreate}
+
       />
       
       <TenantCredentialsDialog

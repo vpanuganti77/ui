@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Component, ErrorInfo, ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import professionalTheme from './theme/professionalTheme';
@@ -6,6 +6,11 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { NotificationService } from './services/notificationService';
+import { CapacitorNotificationService } from './services/capacitorNotificationService';
+import { Capacitor } from '@capacitor/core';
+
+
+import { socketService } from './services/socketService';
 import ProtectedRoute from './components/ProtectedRoute';
 import { useSessionTimeout } from './hooks/useSessionTimeout';
 import Layout from './components/Layout';
@@ -46,12 +51,45 @@ import StatusValidator from './components/StatusValidator';
 
 
 
-// Using professional theme
+// Error Boundary Component
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error?: Error;
+}
+
+class ErrorBoundary extends Component<{children: ReactNode}, ErrorBoundaryState> {
+  constructor(props: {children: ReactNode}) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('App Error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '20px', textAlign: 'center' }}>
+          <h2>Something went wrong</h2>
+          <p>Please refresh the app</p>
+          <button onClick={() => window.location.reload()}>Refresh</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function App() {
 
   return (
-    <ThemeProvider theme={professionalTheme}>
+    <ErrorBoundary>
+      <ThemeProvider theme={professionalTheme}>
       <CssBaseline />
       <AuthProvider>
         <NotificationProvider>
@@ -165,6 +203,7 @@ function App() {
         </NotificationProvider>
       </AuthProvider>
     </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 
@@ -223,7 +262,21 @@ const FirstLoginWrapper: React.FC = () => {
   // Initialize mobile notifications
   useEffect(() => {
     if (isAuthenticated && user) {
-      NotificationService.initializeMobile(user);
+      if (Capacitor.isNativePlatform()) {
+        // Initialize FCM notifications
+        import('./services/cleanNotificationService').then(({ CleanNotificationService }) => {
+          console.log('🚀 Initializing FCM for user:', user.role);
+          CleanNotificationService.initialize();
+        });
+        
+        // Also connect to WebSocket for real-time notifications
+        socketService.connect(user);
+        
+        // Force notification context to work on Android
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('notificationRefresh'));
+        }, 2000);
+      }
     }
   }, [isAuthenticated, user]);
 

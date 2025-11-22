@@ -1,44 +1,34 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
   Chip,
   Button,
-  InputAdornment,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Card,
   CardContent,
-
+  useMediaQuery,
+  useTheme,
+  IconButton
 } from '@mui/material';
 import { GridColDef } from '@mui/x-data-grid';
-import { Search, Download, Refresh, NotificationsActive, Warning, ReportProblem, Schedule, CheckCircle, PriorityHigh } from '@mui/icons-material';
+import { Download, Refresh, Warning, ReportProblem, Schedule, CheckCircle, PriorityHigh, Visibility } from '@mui/icons-material';
 import toast from 'react-hot-toast';
 import ListPage from '../../components/common/ListPage';
 import { complaintFields } from '../../components/common/FormConfigs';
-import { complaintCardFields } from '../../components/common/MobileCardConfigs';
 import AdminComplaintDialog from '../../components/AdminComplaintDialog';
+import { getComplaintFilters } from '../../utils/mobileFilterHelpers';
 
 
 
 const Complaints: React.FC = () => {
+  const theme = useTheme();
   const [complaints, setComplaints] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedComplaint, setSelectedComplaint] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [openToComments, setOpenToComments] = useState(false);
 
-  const [filters, setFilters] = useState({
-    search: '',
-    status: '',
-    category: '',
-    priority: '',
-    dateRange: 'all'
-  });
+
 
   useEffect(() => {
     const loadComplaints = async () => {
@@ -48,14 +38,12 @@ const Complaints: React.FC = () => {
         const allComplaints = await getAll('complaints');
         const hostelComplaints = allComplaints.filter((c: any) => c.hostelId === user.hostelId);
         setComplaints(hostelComplaints);
-        setLoading(false);
       } catch (error) {
         console.error('Error loading complaints:', error);
-        setLoading(false);
       }
     };
     loadComplaints();
-  }, []);
+  }, [refreshKey]);
   
   // Handle notification clicks
   useEffect(() => {
@@ -101,17 +89,68 @@ const Complaints: React.FC = () => {
     
     if (editingItem && formData) {
       try {
-        // Actually update the complaint via API
-        const { update } = await import('../../services/fileDataService');
+        const { update, create } = await import('../../services/fileDataService');
+        const { CompleteNotificationService } = await import('../../services/completeNotificationService');
+        
+        // Handle new complaint creation
+        if (!editingItem && formData) {
+          const user = JSON.parse(localStorage.getItem('user') || '{}');
+          const { FCMTokenService } = await import('../../services/fcmTokenService');
+          
+          const newComplaint = {
+            ...formData,
+            hostelId: user.hostelId,
+            createdAt: new Date().toISOString(),
+            status: 'open'
+          };
+          const result = await create('complaints', newComplaint);
+          
+          // Send both local and push notifications
+          await CompleteNotificationService.newComplaint(
+            result.id,
+            result.title,
+            result.tenantName || 'Unknown'
+          );
+          
+          await FCMTokenService.sendComplaintNotification(
+            result.id,
+            result.title,
+            result.tenantName || 'Unknown',
+            user.hostelId
+          );
+          
+          return result;
+        }
+        
+        // Handle complaint update
+        const oldStatus = editingItem.status;
         await update('complaints', editingItem.id, formData);
         
-        // Show success toast
+        // Trigger notification if status changed
+        if (oldStatus !== formData.status) {
+          const { FCMTokenService } = await import('../../services/fcmTokenService');
+          const user = JSON.parse(localStorage.getItem('user') || '{}');
+          
+          // Send both local and push notifications
+          await CompleteNotificationService.statusChanged(
+            editingItem.id,
+            oldStatus,
+            formData.status
+          );
+          
+          await FCMTokenService.sendStatusChangeNotification(
+            editingItem.id,
+            oldStatus,
+            formData.status,
+            user.hostelId,
+            editingItem.tenantId
+          );
+        }
+        
         toast.success('Complaint updated successfully!');
-        
-        // Immediately refresh complaints list to show updated status
         await refreshComplaints();
+        window.dispatchEvent(new CustomEvent('refreshData'));
         
-        // Close dialog after refresh
         setDialogOpen(false);
         setSelectedComplaint(null);
         setOpenToComments(false);
@@ -127,9 +166,11 @@ const Complaints: React.FC = () => {
   };
   
   const handleComplaintEdit = (complaint: any) => {
+    console.log('handleComplaintEdit called with:', complaint);
     setSelectedComplaint(complaint);
     setOpenToComments(false);
     setDialogOpen(true);
+    console.log('Dialog should be opening, dialogOpen set to true');
   };
 
 
@@ -166,20 +207,9 @@ const Complaints: React.FC = () => {
     }
   };
 
-  const filteredComplaints = useMemo(() => {
-    return complaints.filter(complaint => {
-      const matchesSearch = !filters.search || 
-        complaint.title.toLowerCase().includes(filters.search.toLowerCase()) ||
-        complaint.tenantName.toLowerCase().includes(filters.search.toLowerCase()) ||
-        complaint.room.toLowerCase().includes(filters.search.toLowerCase());
-      
-      const matchesStatus = !filters.status || complaint.status === filters.status;
-      const matchesCategory = !filters.category || complaint.category === filters.category;
-      const matchesPriority = !filters.priority || complaint.priority === filters.priority;
-      
-      return matchesSearch && matchesStatus && matchesCategory && matchesPriority;
-    });
-  }, [complaints, filters]);
+  const { filterOptions, sortOptions, filterFields, sortFields } = getComplaintFilters();
+
+
 
   const columns: GridColDef[] = [
     {
@@ -258,7 +288,12 @@ const Complaints: React.FC = () => {
       width: 80,
       renderCell: (params) => (
         <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
-          {params.value ? new Date(params.value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}
+          {params.value ? new Date(params.value).toLocaleString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            hour: '2-digit', 
+            minute: '2-digit' 
+          }) : 'N/A'}
         </Typography>
       )
     },
@@ -268,14 +303,14 @@ const Complaints: React.FC = () => {
       headerName: 'Actions',
       width: 100,
       getActions: (params) => [
-        <Button
-          key="manage"
+        <IconButton
+          key="view"
           size="small"
-          variant="contained"
           onClick={() => handleComplaintEdit(params.row)}
+          title="View Details"
         >
-          Manage
-        </Button>
+          <Visibility fontSize="small" />
+        </IconButton>
       ]
     }
   ];
@@ -348,99 +383,83 @@ const Complaints: React.FC = () => {
     </Box>
   );
 
-  const filtersCard = (
-    <Card sx={{ mb: 3 }}>
-      <CardContent>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '2fr 1fr 1fr', md: '2fr 1fr 1fr 1fr 1fr auto' }, gap: 2, alignItems: 'center' }}>
-          <TextField
-            size="small"
-            placeholder="Search complaints..."
-            value={filters.search}
-            onChange={(e) => setFilters({...filters, search: e.target.value})}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search fontSize="small" />
-                </InputAdornment>
-              )
-            }}
-          />
-          <FormControl size="small">
-            <InputLabel>Status</InputLabel>
-            <Select
-              value={filters.status}
-              label="Status"
-              onChange={(e) => setFilters({...filters, status: e.target.value})}
-            >
-              <MenuItem value="">All</MenuItem>
-              <MenuItem value="open">Open</MenuItem>
-              <MenuItem value="in-progress">In Progress</MenuItem>
-              <MenuItem value="resolved">Resolved</MenuItem>
-            </Select>
-          </FormControl>
-          <FormControl size="small">
-            <InputLabel>Category</InputLabel>
-            <Select
-              value={filters.category}
-              label="Category"
-              onChange={(e) => setFilters({...filters, category: e.target.value})}
-            >
-              <MenuItem value="">All</MenuItem>
-              <MenuItem value="maintenance">Maintenance</MenuItem>
-              <MenuItem value="food">Food</MenuItem>
-              <MenuItem value="noise">Noise</MenuItem>
-              <MenuItem value="technical">Technical</MenuItem>
-              <MenuItem value="security">Security</MenuItem>
-            </Select>
-          </FormControl>
-          <FormControl size="small">
-            <InputLabel>Priority</InputLabel>
-            <Select
-              value={filters.priority}
-              label="Priority"
-              onChange={(e) => setFilters({...filters, priority: e.target.value})}
-            >
-              <MenuItem value="">All</MenuItem>
-              <MenuItem value="low">Low</MenuItem>
-              <MenuItem value="medium">Medium</MenuItem>
-              <MenuItem value="high">High</MenuItem>
-            </Select>
-          </FormControl>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => setFilters({ search: '', status: '', category: '', priority: '', dateRange: 'all' })}
-          >
-            Clear
-          </Button>
-        </Box>
-      </CardContent>
-    </Card>
-  );
+
 
   return (
     <Box>
-      {statsCards}
-      {filtersCard}
+      {/* Show stats only on desktop */}
+      <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+        {statsCards}
+      </Box>
+      
+
+      
+
       <ListPage
         title="Complaints"
-        data={filteredComplaints}
+        data={[]}
+        customDataLoader={async () => {
+          const user = JSON.parse(localStorage.getItem('user') || '{}');
+          const { getAll } = await import('../../services/fileDataService');
+          const allComplaints = await getAll('complaints');
+          return allComplaints.filter((c: any) => c.hostelId === user.hostelId);
+        }}
+        enableMobileFilters={true}
+        searchFields={['title', 'tenantName', 'room']}
+        filterOptions={filterOptions}
+        sortOptions={sortOptions}
+        filterFields={filterFields}
+        sortFields={sortFields}
+        entityKey="complaints"
         columns={columns}
         fields={complaintFields}
         entityName="Complaint"
-        entityKey="complaints"
         rowHeight={70}
-        mobileCardConfig={{
-          titleField: 'title',
-          fields: [
-            { key: 'category', label: 'Category', value: 'category' },
-            { key: 'priority', label: 'Priority', value: 'priority' },
-            { key: 'status', label: 'Status', value: 'status' },
-            { key: 'tenantId', label: 'Tenant', value: 'tenantId' },
-            { key: 'createdAt', label: 'Created', value: 'createdAt', render: (value: string) => new Date(value).toLocaleDateString() }
-          ]
-        }}
+        renderMobileCard={(item, onEdit, onDelete) => (
+          <Card key={item.id} sx={{ mb: 2 }}>
+            <CardContent>
+              <Box display="flex" justifyContent="space-between" alignItems="start" mb={1}>
+                <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600 }}>
+                  {item.title}
+                </Typography>
+                <IconButton
+                  size="small"
+                  onClick={() => handleComplaintEdit(item)}
+                  title="View Details"
+                >
+                  <Visibility fontSize="small" />
+                </IconButton>
+              </Box>
+              <Box display="flex" gap={1} mb={2} flexWrap="wrap">
+                <Chip 
+                  label={item.category} 
+                  size="small" 
+                  color={getCategoryColor(item.category) as any}
+                />
+                <Chip 
+                  label={item.priority} 
+                  size="small" 
+                  color={getPriorityColor(item.priority) as any}
+                />
+                <Chip 
+                  label={item.status.replace('-', ' ')} 
+                  size="small" 
+                  color={getStatusColor(item.status) as any}
+                />
+              </Box>
+              <Typography variant="body2" color="text.secondary" mb={1}>
+                Tenant: {item.tenantName || 'N/A'} • Room: {item.room || 'N/A'}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Created: {new Date(item.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </Typography>
+            </CardContent>
+          </Card>
+        )}
+        onItemClick={handleComplaintEdit}
         customSubmitLogic={customSubmitLogic}
+
+
         hideAdd={true}
         hideDelete={true}
         hideEdit={true}
@@ -462,6 +481,8 @@ const Complaints: React.FC = () => {
           openToComments={openToComments}
         />
       )}
+      
+
 
     </Box>
   );

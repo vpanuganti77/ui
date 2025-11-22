@@ -96,12 +96,13 @@ const ComplaintDialog: React.FC<ComplaintDialogProps> = ({
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const userData = localStorage.getItem('user');
     let tenantId = '';
+    let user = null;
     if (userData) {
       try {
-        const user = JSON.parse(userData);
+        user = JSON.parse(userData);
         if (user.role === 'tenant' && currentTenant) {
           tenantId = currentTenant.id;
         }
@@ -117,6 +118,30 @@ const ComplaintDialog: React.FC<ComplaintDialogProps> = ({
     };
 
     onSubmit(submitData);
+    
+    // Send notification for new complaint
+    if (!editingItem && user) {
+      try {
+        const config = await fetch('/config.json').then(r => r.json()).catch(() => ({ API_BASE_URL: 'http://192.168.0.138:5000/api' }));
+        const apiBaseUrl = config.API_BASE_URL || 'http://192.168.0.138:5000/api';
+        
+        await fetch(`${apiBaseUrl}/notifications/complaint-created`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            complaintTitle: formData.title,
+            complaintCategory: formData.category,
+            priority: formData.priority,
+            tenantName: formData.tenantName,
+            room: formData.room,
+            hostelId: user.hostelId
+          })
+        });
+      } catch (notificationError) {
+        console.warn('Failed to send new complaint notification:', notificationError);
+      }
+    }
+    
     triggerNotificationRefresh();
     onClose();
   };

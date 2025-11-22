@@ -293,7 +293,7 @@ const HostelManagement: React.FC = () => {
 
   const columns: GridColDef[] = [
     {
-      field: 'name',
+      field: 'displayName',
       headerName: 'Hostel Name',
       flex: 1,
       minWidth: 180,
@@ -301,7 +301,7 @@ const HostelManagement: React.FC = () => {
         <Box display="flex" alignItems="center" gap={1}>
           <Business color="primary" fontSize="small" />
           <Typography variant="body2" sx={{ fontWeight: 600 }}>
-            {params.value}
+            {params.value || params.row.name}
           </Typography>
         </Box>
       )
@@ -432,6 +432,42 @@ const HostelManagement: React.FC = () => {
         key={refreshKey}
         title="Hostel Management"
         data={hostelsWithAdmins}
+        enableMobileFilters={true}
+        searchFields={['name', 'adminName', 'address']}
+        filterOptions={[
+          {
+            key: 'status',
+            label: 'Status',
+            options: [
+              { value: 'active', label: '🟢 Active' },
+              { value: 'inactive', label: '🔴 Inactive' },
+              { value: 'pending', label: '🟡 Pending' }
+            ]
+          },
+          {
+            key: 'planType',
+            label: 'Plan',
+            options: [
+              { value: 'free_trial', label: '🆓 Trial' },
+              { value: 'basic', label: 'Basic' },
+              { value: 'standard', label: 'Standard' },
+              { value: 'premium', label: 'Premium' }
+            ]
+          }
+        ]}
+        sortOptions={[
+          { key: 'name', label: '🏢 Name A-Z', order: 'asc' },
+          { key: 'createdAt', label: '📅 Newest First', order: 'desc' },
+          { key: 'createdAt', label: '📅 Oldest First', order: 'asc' }
+        ]}
+        filterFields={{
+          status: (item) => item.status,
+          planType: (item) => item.planType
+        }}
+        sortFields={{
+          name: (a, b) => a.name.localeCompare(b.name),
+          createdAt: (a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
+        }}
         columns={columns}
         fields={hostelFields}
         entityName="Hostel"
@@ -456,7 +492,7 @@ const HostelManagement: React.FC = () => {
           });
         }}
         mobileCardConfig={{
-          titleField: 'name',
+          titleField: 'displayName',
           fields: [
             { key: 'adminName', label: 'Owner', value: 'adminName' },
             { key: 'planType', label: 'Plan', value: (item: any) => getPlanLabel(item.planType) },

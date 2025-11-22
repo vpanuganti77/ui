@@ -66,6 +66,7 @@ const FormField: React.FC<FormFieldProps> = ({
 
   switch (config.type) {
     case 'select':
+      const hasOptions = config.options && config.options.length > 0;
       return (
         <FormControl sx={fieldStyle} error={!!error}>
           <InputLabel>{config.label}</InputLabel>
@@ -73,16 +74,28 @@ const FormField: React.FC<FormFieldProps> = ({
             value={value || ''}
             label={config.label}
             onChange={(e) => handleChange(e.target.value)}
+            disabled={!hasOptions}
           >
-            {config.options?.map((option) => (
-              <MenuItem key={option.value} value={option.value}>
-                {option.label}
+            {hasOptions ? (
+              config.options?.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))
+            ) : (
+              <MenuItem disabled value="">
+                {config.name === 'roomId' ? 'No available rooms found. Please create rooms first.' : 'No options available'}
               </MenuItem>
-            ))}
+            )}
           </Select>
           {error && (
             <Typography variant="caption" color="error" sx={{ ml: 2, mt: 0.5 }}>
               {error}
+            </Typography>
+          )}
+          {!hasOptions && config.name === 'roomId' && (
+            <Typography variant="caption" color="warning.main" sx={{ ml: 2, mt: 0.5 }}>
+              Create rooms in the Rooms section before adding tenants.
             </Typography>
           )}
         </FormControl>

@@ -5,7 +5,8 @@ export const tenantService = {
   // Complaints
   async getComplaints(): Promise<Complaint[]> {
     const response = await api.get('/tenant/complaints');
-    return response.data.complaints;
+    const data = await response.json();
+    return data.complaints;
   },
 
   async createComplaint(complaintData: {
@@ -15,7 +16,8 @@ export const tenantService = {
     priority?: string;
   }): Promise<Complaint> {
     const response = await api.post('/tenant/complaints', complaintData);
-    return response.data.complaint;
+    const data = await response.json();
+    return data.complaint;
   },
 
   // Payments
@@ -29,6 +31,7 @@ export const tenantService = {
     };
   }> {
     const response = await api.get('/tenant/payments');
-    return response.data;
+    const data = await response.json();
+    return data;
   }
 };

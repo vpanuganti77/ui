@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate Icons</title>
+</head>
+<body>
+    <canvas id="canvas192" width="192" height="192"></canvas>
+    <canvas id="canvas512" width="512" height="512"></canvas>
+    <br>
+    <a id="download192" download="icon-192.png">Download 192x192</a>
+    <br>
+    <a id="download512" download="icon-512.png">Download 512x512</a>
+    <br>
+    <a id="downloadMaskable" download="icon-192-maskable.png">Download 192x192 Maskable</a>
+
+    <script>
+        function createIcon(canvas, size, text) {
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#1976d2';
+            ctx.fillRect(0, 0, size, size);
+            ctx.fillStyle = 'white';
+            ctx.font = `${size/4}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.fillText(text, size/2, size/2 + size/8);
+        }
+
+        createIcon(document.getElementById('canvas192'), 192, 'PG');
+        createIcon(document.getElementById('canvas512'), 512, 'PG');
+        
+        // Maskable version with padding
+        const maskableCanvas = document.createElement('canvas');
+        maskableCanvas.width = 192;
+        maskableCanvas.height = 192;
+        const maskableCtx = maskableCanvas.getContext('2d');
+        maskableCtx.fillStyle = '#1976d2';
+        maskableCtx.fillRect(20, 20, 152, 152);
+        maskableCtx.fillStyle = 'white';
+        maskableCtx.font = '40px Arial';
+        maskableCtx.textAlign = 'center';
+        maskableCtx.fillText('PG', 96, 110);
+
+        document.getElementById('download192').href = document.getElementById('canvas192').toDataURL();
+        document.getElementById('download512').href = document.getElementById('canvas512').toDataURL();
+        document.getElementById('downloadMaskable').href = maskableCanvas.toDataURL();
+    </script>
+</body>
+</html>

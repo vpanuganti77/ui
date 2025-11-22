@@ -1,1 +1,11 @@
+# Static files should be served directly
+/favicon.svg   /favicon.svg   200
+/icon-192.png  /icon-192.png  200
+/icon-512.png  /icon-512.png  200
+/logo192.png   /logo192.png   200
+/logo512.png   /logo512.png   200
+/manifest.json /manifest.json 200
+/sw.js         /sw.js         200
+
+# All other routes go to index.html for SPA routing
 /*    /index.html   200

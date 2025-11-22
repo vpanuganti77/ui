@@ -94,7 +94,8 @@ const Dashboard: React.FC = () => {
           contactEmail: hostelContactEmail,
           originalContactEmail: request.email,
           domain: hostelDomain, // Add domain field for validation
-          allowedDomains: [hostelDomain] // Add allowed domains array
+          allowedDomains: [hostelDomain], // Add allowed domains array
+          status: 'active' // Set status to active
         };
         
         hostel = await update('hostels', existingHostel.id, updatedHostelData);
@@ -168,12 +169,14 @@ const Dashboard: React.FC = () => {
       }
       
       // Update request status
-      await update('hostelRequests', requestId, {
+      const updatedRequest = {
         ...request,
         status: 'approved',
         processedAt: new Date().toISOString(),
+        approvedAt: new Date().toISOString(),
         hostelId: hostel.id || hostelId
-      });
+      };
+      await update('hostelRequests', requestId, updatedRequest);
       
       // Create notification for the hostel admin
       const notification = {
@@ -377,16 +380,27 @@ const Dashboard: React.FC = () => {
                 }}
               >
                 <Box>
-                  <Typography variant="subtitle1">{hostel.name}</Typography>
+                  <Typography variant="subtitle1">{hostel.displayName || hostel.name}</Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {hostel.location} | Capacity: {hostel.capacity}
+                    Owner: {hostel.contactPerson || 'N/A'} | Address: {hostel.address || 'N/A'}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Plan: {hostel.planType || 'Free Trial'} | Created: {new Date(hostel.createdAt).toLocaleDateString()}
                   </Typography>
                 </Box>
-                <Chip
-                  label={hostel.status || 'Active'}
-                  color="success"
-                  size="small"
-                />
+                <Box display="flex" gap={1} alignItems="center">
+                  <Chip
+                    label={hostel.status === 'active' ? 'Active' : hostel.status || 'Active'}
+                    color={hostel.status === 'active' ? 'success' : hostel.status === 'inactive' ? 'error' : 'default'}
+                    size="small"
+                  />
+                  <Chip
+                    label={hostel.planType === 'free_trial' ? 'Trial' : hostel.planType || 'Trial'}
+                    color={hostel.planType === 'free_trial' ? 'info' : 'primary'}
+                    size="small"
+                    variant="outlined"
+                  />
+                </Box>
               </Box>
             ))
           )}

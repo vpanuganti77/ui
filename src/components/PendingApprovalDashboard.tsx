@@ -37,9 +37,9 @@ const PendingApprovalDashboard: React.FC = () => {
   };
 
   const setupSteps = [
-    { label: 'Account Created', completed: true },
     { label: 'Setup Request Submitted', completed: true },
-    { label: 'Under Review', completed: false, current: true },
+    { label: 'Account Created', completed: true },
+    { label: 'Under Admin Review', completed: false, current: true },
     { label: 'Approval & Activation', completed: false },
   ];
 
@@ -49,10 +49,10 @@ const PendingApprovalDashboard: React.FC = () => {
         <Box sx={{ textAlign: 'center', mb: { xs: 3, sm: 4 } }}>
           <HourglassEmpty sx={{ fontSize: { xs: 60, sm: 80 }, color: 'warning.main', mb: { xs: 1.5, sm: 2 } }} />
           <Typography variant={isMobile ? "h5" : "h4"} gutterBottom color="text.primary" sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
-            {isMobile ? 'Pending Approval' : 'Setup Pending Approval'}
+            {isMobile ? 'Approval Pending' : 'Hostel Setup - Approval Pending'}
           </Typography>
           <Typography variant={isMobile ? "body1" : "h6"} color="text.secondary" sx={{ mb: 2, fontSize: { xs: '0.875rem', sm: '1.25rem' } }}>
-            Welcome {user?.name}! Your hostel setup is being reviewed.
+            Welcome {user?.name}! Track your hostel setup approval status below.
           </Typography>
         </Box>
 
@@ -102,11 +102,11 @@ const PendingApprovalDashboard: React.FC = () => {
             <Email color="primary" sx={{ mt: 0.5, fontSize: { xs: 20, sm: 24 } }} />
             <Box sx={{ textAlign: { xs: 'center', sm: 'left' } }}>
               <Typography variant={isMobile ? "subtitle2" : "body1"} sx={{ fontWeight: 600, mb: 1 }}>
-                What happens next?
+                Approval Status Tracking
               </Typography>
               <Typography variant={isMobile ? "caption" : "body2"} color="text.secondary" sx={{ mb: 2, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-                Our team is reviewing your hostel setup request for <strong>{user?.hostelName}</strong>. 
-                This typically takes 24-48 hours.
+                Your setup request for <strong>{user?.hostelName}</strong> is under review. 
+                You can track the approval progress here. Typically takes 24-48 hours.
               </Typography>
               <Typography variant={isMobile ? "caption" : "body2"} color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                 • Account verification<br />

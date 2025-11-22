@@ -77,8 +77,10 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
         try {
           const user = JSON.parse(userData);
           const hostelName = user.hostelName || '';
-          const hostelDomain = hostelName.toLowerCase().replace(/[^a-z0-9]/g, '') + '.com';
-          const username = formData.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+          // Clean hostel name and create a proper domain
+          const cleanHostelName = hostelName.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 10); // Limit to 10 chars
+          const hostelDomain = cleanHostelName + '.com';
+          const username = formData.name.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 8); // Limit username
           setGeneratedEmail(`${username}@${hostelDomain}`);
         } catch (error) {
           console.error('Error generating email:', error);

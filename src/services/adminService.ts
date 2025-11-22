@@ -15,12 +15,14 @@ export const adminService = {
   // Dashboard
   async getDashboardStats(): Promise<DashboardStats> {
     const response = await api.get('/admin/dashboard/stats');
-    return response.data.stats;
+    const data = await response.json();
+    return data.stats;
   },
 
   async getMonthlyRevenue(year?: number): Promise<any[]> {
     const response = await api.get(`/admin/dashboard/revenue${year ? `?year=${year}` : ''}`);
-    return response.data.monthlyRevenue;
+    const data = await response.json();
+    return data.monthlyRevenue;
   },
 
   // Tenants
@@ -30,8 +32,9 @@ export const adminService = {
     page?: number;
     limit?: number;
   }): Promise<PaginatedResponse<Tenant>> {
-    const response = await api.get('/admin/tenants', { params });
-    return response.data;
+    const response = await api.get('/admin/tenants');
+    const data = await response.json();
+    return data;
   },
 
   async createTenant(tenantData: {
@@ -45,12 +48,14 @@ export const adminService = {
     joiningDate: string;
   }): Promise<Tenant> {
     const response = await api.post('/admin/tenants', tenantData);
-    return response.data.tenant;
+    const data = await response.json();
+    return data.tenant;
   },
 
   async updateTenant(id: string, tenantData: Partial<Tenant>): Promise<Tenant> {
     const response = await api.put(`/admin/tenants/${id}`, tenantData);
-    return response.data.tenant;
+    const data = await response.json();
+    return data.tenant;
   },
 
   async deleteTenant(id: string): Promise<void> {
@@ -64,8 +69,9 @@ export const adminService = {
     page?: number;
     limit?: number;
   }): Promise<PaginatedResponse<Room>> {
-    const response = await api.get('/admin/rooms', { params });
-    return response.data;
+    const response = await api.get('/admin/rooms');
+    const data = await response.json();
+    return data;
   },
 
   async createRoom(roomData: {
@@ -77,12 +83,14 @@ export const adminService = {
     amenities?: string[];
   }): Promise<Room> {
     const response = await api.post('/admin/rooms', roomData);
-    return response.data.room;
+    const data = await response.json();
+    return data.room;
   },
 
   async updateRoom(id: string, roomData: Partial<Room>): Promise<Room> {
     const response = await api.put(`/admin/rooms/${id}`, roomData);
-    return response.data.room;
+    const data = await response.json();
+    return data.room;
   },
 
   async deleteRoom(id: string): Promise<void> {
@@ -91,7 +99,8 @@ export const adminService = {
 
   async getRoomStats(): Promise<any[]> {
     const response = await api.get('/admin/rooms/stats');
-    return response.data.stats;
+    const data = await response.json();
+    return data.stats;
   },
 
   // Payments
@@ -103,8 +112,9 @@ export const adminService = {
     page?: number;
     limit?: number;
   }): Promise<PaginatedResponse<Payment>> {
-    const response = await api.get('/admin/payments', { params });
-    return response.data;
+    const response = await api.get('/admin/payments');
+    const data = await response.json();
+    return data;
   },
 
   async createPayment(paymentData: {
@@ -118,7 +128,8 @@ export const adminService = {
     notes?: string;
   }): Promise<Payment> {
     const response = await api.post('/admin/payments', paymentData);
-    return response.data.payment;
+    const data = await response.json();
+    return data.payment;
   },
 
   async generateMonthlyBills(month: string): Promise<void> {
@@ -127,7 +138,8 @@ export const adminService = {
 
   async getPaymentStats(year?: number): Promise<any[]> {
     const response = await api.get(`/admin/payments/stats${year ? `?year=${year}` : ''}`);
-    return response.data.stats;
+    const data = await response.json();
+    return data.stats;
   },
 
   // Complaints
@@ -138,8 +150,9 @@ export const adminService = {
     page?: number;
     limit?: number;
   }): Promise<PaginatedResponse<Complaint>> {
-    const response = await api.get('/admin/complaints', { params });
-    return response.data;
+    const response = await api.get('/admin/complaints');
+    const data = await response.json();
+    return data;
   },
 
   async updateComplaint(id: string, complaintData: {
@@ -149,18 +162,21 @@ export const adminService = {
     priority?: string;
   }): Promise<Complaint> {
     const response = await api.put(`/admin/complaints/${id}`, complaintData);
-    return response.data.complaint;
+    const data = await response.json();
+    return data.complaint;
   },
 
   async getComplaintStats(): Promise<any> {
     const response = await api.get('/admin/complaints/stats');
-    return response.data;
+    const data = await response.json();
+    return data;
   },
 
   // User Management
   async getAllUsers(): Promise<any> {
     const response = await api.get('/admin/users');
-    return response;
+    const data = await response.json();
+    return data;
   },
 
   async createUser(userData: {
@@ -171,12 +187,14 @@ export const adminService = {
     role: string;
   }): Promise<any> {
     const response = await api.post('/admin/users', userData);
-    return response.data;
+    const data = await response.json();
+    return data;
   },
 
   async resetUserPassword(userId: string): Promise<any> {
-    const response = await api.post(`/admin/users/${userId}/reset-password`);
-    return response.data;
+    const response = await api.post(`/admin/users/${userId}/reset-password`, {});
+    const data = await response.json();
+    return data;
   },
 
   async updateUser(userId: string, userData: {
@@ -187,42 +205,50 @@ export const adminService = {
     role: string;
   }): Promise<any> {
     const response = await api.put(`/admin/users/${userId}`, userData);
-    return response.data;
+    const data = await response.json();
+    return data;
   },
 
   async deleteUser(userId: string): Promise<any> {
     const response = await api.delete(`/admin/users/${userId}`);
-    return response.data;
+    const data = await response.json();
+    return data;
   },
 
   async updateUserStatus(userId: string, status: string): Promise<any> {
     const response = await api.put(`/admin/users/${userId}/status`, { status });
-    return response.data;
+    const data = await response.json();
+    return data;
   },
 
   // Expense management
   async getAllExpenses(): Promise<any> {
     const response = await api.get('/admin/expenses');
-    return response.data;
+    const data = await response.json();
+    return data;
   },
 
   async createExpense(expenseData: any): Promise<any> {
     const response = await api.post('/admin/expenses', expenseData);
-    return response.data;
+    const data = await response.json();
+    return data;
   },
 
   async updateExpense(expenseId: string, expenseData: any): Promise<any> {
     const response = await api.put(`/admin/expenses/${expenseId}`, expenseData);
-    return response.data;
+    const data = await response.json();
+    return data;
   },
 
   async deleteExpense(expenseId: string): Promise<any> {
     const response = await api.delete(`/admin/expenses/${expenseId}`);
-    return response.data;
+    const data = await response.json();
+    return data;
   },
 
   async getExpenseStats(): Promise<any> {
     const response = await api.get('/admin/expenses/stats');
-    return response.data;
+    const data = await response.json();
+    return data;
   }
 };

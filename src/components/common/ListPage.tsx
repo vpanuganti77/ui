@@ -22,8 +22,10 @@ import { Add, Edit, Delete } from '@mui/icons-material';
 import StyledDataGrid from './StyledDataGrid';
 import DynamicDialog from './DynamicDialog';
 import MobileCard from './MobileCard';
+import MobileFilterSort from './MobileFilterSort';
 import { FieldConfig } from './FormField';
 import { useListManager } from '../../hooks/useListManager';
+import { useMobileFilterSort } from '../../hooks/useMobileFilterSort';
 
 interface CardField {
   key: string;
@@ -31,6 +33,18 @@ interface CardField {
   value: any;
   render?: (value: any, item?: any) => React.ReactNode;
   condition?: (item: any) => boolean;
+}
+
+interface FilterOption {
+  key: string;
+  label: string;
+  options: { value: string; label: string }[];
+}
+
+interface SortOption {
+  key: string;
+  label: string;
+  order: 'asc' | 'desc';
 }
 
 interface ListPageProps<T> {
@@ -65,6 +79,13 @@ interface ListPageProps<T> {
     onSubmit: (data: any) => void;
     editingItem?: T | null;
   }>;
+  // Mobile filter/sort props
+  enableMobileFilters?: boolean;
+  searchFields?: (keyof T)[];
+  filterOptions?: FilterOption[];
+  sortOptions?: SortOption[];
+  filterFields?: Record<string, (item: T) => string>;
+  sortFields?: Record<string, (a: T, b: T) => number>;
 }
 
 const ListPage = <T extends Record<string, any>>({
@@ -90,7 +111,14 @@ const ListPage = <T extends Record<string, any>>({
   onAfterCreate,
   onUpdate,
   customDataLoader,
-  CustomDialog
+  CustomDialog,
+  // Mobile filter/sort props
+  enableMobileFilters = false,
+  searchFields = [],
+  filterOptions = [],
+  sortOptions = [],
+  filterFields = {},
+  sortFields = {}
 }: ListPageProps<T>) => {
   const navigate = useNavigate();
   const theme = useTheme();
@@ -118,13 +146,27 @@ const ListPage = <T extends Record<string, any>>({
     entityKey,
     idField
   });
+
+  // Mobile filter/sort functionality
+  const mobileFilterSort = useMobileFilterSort({
+    data: data,
+    searchFields: searchFields,
+    filterFields: filterFields,
+    sortFields: sortFields
+  });
+
+  // Use filtered data when mobile filters are enabled
+  const displayData = enableMobileFilters && isMobile ? mobileFilterSort.filteredAndSortedData : data;
   
-  // Use custom data loader if provided
+  // Use custom data loader if provided, or sync with initialData
   React.useEffect(() => {
     if (customDataLoader) {
       customDataLoader().then(setData).catch(console.error);
+    } else {
+      // Sync with initialData when it changes (for filtered/sorted data)
+      setData(initialData);
     }
-  }, [customDataLoader]);
+  }, [customDataLoader, initialData]);
 
   const handleSubmit = async (formData: any) => {
     // Get current user's hostel for scoped validation
@@ -268,7 +310,24 @@ const ListPage = <T extends Record<string, any>>({
 
       {isMobile ? (
         <Box>
-          {data.length === 0 ? (
+          {/* Mobile Filter/Sort Component */}
+          {enableMobileFilters && (
+            <MobileFilterSort
+              searchValue={mobileFilterSort.searchValue}
+              onSearchChange={mobileFilterSort.handleSearchChange}
+              filters={mobileFilterSort.filters}
+              onFiltersChange={mobileFilterSort.handleFiltersChange}
+              filterOptions={filterOptions}
+              sortBy={mobileFilterSort.sortBy}
+              sortOrder={mobileFilterSort.sortOrder}
+              onSortChange={mobileFilterSort.handleSortChange}
+              sortOptions={sortOptions}
+              onApplyFilters={mobileFilterSort.handleApplyFilters}
+              onClearFilters={mobileFilterSort.handleClearFilters}
+            />
+          )}
+          
+          {displayData.length === 0 ? (
             <Paper 
               elevation={1} 
               sx={{ 
@@ -304,9 +363,9 @@ const ListPage = <T extends Record<string, any>>({
             </Paper>
           ) : (
             renderMobileCard ? (
-              data.map(item => renderMobileCard(item, handleEdit, handleDelete))
+              displayData.map(item => renderMobileCard(item, handleEdit, handleDelete))
             ) : mobileCardConfig ? (
-              data.map(item => (
+              displayData.map(item => (
                 <MobileCard
                   key={item[idField]}
                   item={item}
@@ -327,17 +386,17 @@ const ListPage = <T extends Record<string, any>>({
         </Box>
       ) : (
         <>
-          {console.log('ListPage passing data to StyledDataGrid:', data, 'idField:', idField)}
           <StyledDataGrid 
-            rows={data} 
+            rows={displayData} 
             columns={columnsWithActions}
-            getRowId={(row) => {
-              console.log('getRowId called with row:', row, 'idField:', idField, 'result:', row[idField]);
-              return row[idField] || row.id || row._id || Math.random().toString();
-            }}
+            getRowId={(row) => row[idField] || row.id || row._id || Math.random().toString()}
             rowHeight={rowHeight}
             disableRowSelectionOnClick
             checkboxSelection={false}
+            disableColumnFilter={false}
+            disableColumnSorting={false}
+            filterMode="client"
+            sortingMode="client"
             slots={{
               noRowsOverlay: () => (
                 <Stack height="100%" alignItems="center" justifyContent="center" spacing={2}>
@@ -412,7 +471,7 @@ const ListPage = <T extends Record<string, any>>({
         </Alert>
       </Snackbar>
       
-      {isMobile && !hideAdd && !shouldHideAddButton() && data.length > 0 && (
+      {isMobile && !hideAdd && !shouldHideAddButton() && displayData.length > 0 && (
         <Fab
           color="primary"
           sx={{ position: 'fixed', bottom: 24, right: 24, zIndex: 1000 }}

@@ -53,16 +53,23 @@ const TenantDialog: React.FC<TenantDialogProps> = ({
       const initializeForm = async () => {
         const initialData: Record<string, any> = {};
         
-        for (const field of tenantFields) {
-          if (field.loadOptions && field.name === 'roomId') {
-            try {
-              const options = await field.loadOptions(editingItem);
-              field.options = options;
-            } catch (error) {
-              console.error('Failed to load options for', field.name, error);
+        // Load room options first
+        const roomField = tenantFields.find(f => f.name === 'roomId');
+        if (roomField && roomField.loadOptions) {
+          try {
+            const options = await roomField.loadOptions(editingItem);
+            roomField.options = options;
+            if (options.length === 0) {
+              console.warn('No available rooms found for tenant assignment');
             }
+          } catch (error) {
+            console.error('Failed to load room options:', error);
+            roomField.options = [];
           }
-          
+        }
+        
+        // Initialize form data
+        for (const field of tenantFields) {
           // Map room field to roomId for form compatibility
           if (field.name === 'roomId') {
             initialData[field.name] = editingItem?.room || editingItem?.roomId || '';
@@ -210,7 +217,16 @@ const TenantDialog: React.FC<TenantDialogProps> = ({
       const value = formData[field.name];
       
       if (field.required && (!value || (typeof value === 'string' && !value.trim()))) {
-        newErrors[field.name] = `${field.label} is required`;
+        if (field.name === 'roomId') {
+          const roomField = tenantFields.find(f => f.name === 'roomId');
+          if (!roomField?.options || roomField.options.length === 0) {
+            newErrors[field.name] = 'No available rooms found. Please create rooms first in the Rooms section.';
+          } else {
+            newErrors[field.name] = `${field.label} is required`;
+          }
+        } else {
+          newErrors[field.name] = `${field.label} is required`;
+        }
         return;
       }
 
@@ -247,9 +263,14 @@ const TenantDialog: React.FC<TenantDialogProps> = ({
     // If on first tab, validate basic fields and move to next tab
     if (activeTab === 0) {
       if (!validateBasicFields()) {
+        const roomField = tenantFields.find(f => f.name === 'roomId');
+        const hasNoRooms = !roomField?.options || roomField.options.length === 0;
+        
         setSnackbar({
           open: true,
-          message: 'Please fix the validation errors',
+          message: hasNoRooms 
+            ? 'No available rooms found. Please create rooms first in the Rooms section.' 
+            : 'Please fix the validation errors',
           severity: 'error'
         });
         return;
@@ -286,8 +307,35 @@ const TenantDialog: React.FC<TenantDialogProps> = ({
 
   return (
     <>
-      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ borderBottom: '1px solid #e0e0e0' }}>
+      <Dialog 
+        open={open} 
+        onClose={handleClose} 
+        maxWidth="sm" 
+        fullWidth
+        fullScreen={window.innerWidth < 600}
+        sx={{
+          '& .MuiDialog-paper': {
+            margin: { xs: 0, sm: 2 },
+            width: { xs: '100%', sm: '100%' },
+            height: { xs: '100%', sm: 'auto' },
+            maxHeight: { xs: '100%', sm: '90vh' },
+            borderRadius: { xs: 0, sm: 2 },
+            display: 'flex',
+            flexDirection: 'column'
+          },
+          '& .MuiDialogContent-root': {
+            flex: 1,
+            overflow: 'auto',
+            px: { xs: 2, sm: 3 },
+            py: { xs: 1, sm: 2 }
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          borderBottom: '1px solid #e0e0e0',
+          px: { xs: 2, sm: 3 },
+          py: { xs: 1.5, sm: 2 }
+        }}>
           <Box display="flex" alignItems="center" justifyContent="space-between">
             <Typography variant="h6">
               {editingItem ? 'Edit Tenant' : 'Add Tenant'}
@@ -298,7 +346,7 @@ const TenantDialog: React.FC<TenantDialogProps> = ({
           </Box>
         </DialogTitle>
         
-        <Box sx={{ px: 3, pt: 1 }}>
+        <Box sx={{ px: { xs: 2, sm: 3 }, pt: 1 }}>
           <Tabs 
             value={activeTab} 
             onChange={(_, newValue) => setActiveTab(newValue)} 
@@ -320,7 +368,11 @@ const TenantDialog: React.FC<TenantDialogProps> = ({
         <form onSubmit={handleSubmit}>
           <DialogContent sx={{ pt: 2 }}>
             {activeTab === 0 && (
-              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+              <Box sx={{ 
+                display: 'grid', 
+                gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, 
+                gap: { xs: 1.5, sm: 2 } 
+              }}>
                 {basicFields.map((field) => (
                   <FormField
                     key={field.name}
@@ -350,8 +402,12 @@ const TenantDialog: React.FC<TenantDialogProps> = ({
                   />
                 </Box>
                 
-                {/* Photo Frames - Side by Side */}
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3 }}>
+                {/* Photo Frames - Responsive Layout */}
+                <Box sx={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, 
+                  gap: { xs: 2, sm: 3 } 
+                }}>
                   {/* Aadhar Front Frame */}
                   <Box>
                     <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
@@ -360,7 +416,7 @@ const TenantDialog: React.FC<TenantDialogProps> = ({
                     <Box 
                       sx={{
                         width: '100%',
-                        height: '180px',
+                        height: { xs: '160px', sm: '180px' },
                         border: '2px dashed #ccc',
                         borderRadius: 2,
                         display: 'flex',
@@ -405,7 +461,7 @@ const TenantDialog: React.FC<TenantDialogProps> = ({
                     <Box 
                       sx={{
                         width: '100%',
-                        height: '180px',
+                        height: { xs: '160px', sm: '180px' },
                         border: '2px dashed #ccc',
                         borderRadius: 2,
                         display: 'flex',
@@ -446,20 +502,60 @@ const TenantDialog: React.FC<TenantDialogProps> = ({
             )}
           </DialogContent>
           
-          <DialogActions sx={{ borderTop: '1px solid #e0e0e0', pt: 2 }}>
-            <Button onClick={handleClose}>Cancel</Button>
-            {activeTab === 0 && (
-              <Button type="submit" variant="contained">
-                Next
-              </Button>
-            )}
-            {activeTab === 1 && (
-              <>
-                <Button onClick={() => setActiveTab(0)}>Back</Button>
-                <Button type="submit" variant="contained">
-                  {editingItem ? 'Update Tenant' : 'Add Tenant'}
+          <DialogActions sx={{ 
+            borderTop: '1px solid #e0e0e0', 
+            pt: 2,
+            px: { xs: 2, sm: 3 },
+            pb: { xs: 2, sm: 2 },
+            flexDirection: 'row',
+            gap: { xs: 1, sm: 0 },
+            position: { xs: 'sticky', sm: 'static' },
+            bottom: { xs: 0, sm: 'auto' },
+            bgcolor: 'background.paper',
+            zIndex: 1
+          }}>
+            {activeTab === 0 ? (
+              <Box sx={{ display: 'flex', gap: 1, width: { xs: '100%', sm: 'auto' } }}>
+                <Button 
+                  onClick={handleClose}
+                  sx={{ flex: { xs: 1, sm: 'none' } }}
+                >
+                  Cancel
                 </Button>
-              </>
+                <Button 
+                  type="submit" 
+                  variant="contained"
+                  sx={{ flex: { xs: 1, sm: 'none' } }}
+                >
+                  Next
+                </Button>
+              </Box>
+            ) : (
+              <Box sx={{ 
+                display: 'flex', 
+                gap: 1, 
+                width: { xs: '100%', sm: 'auto' }
+              }}>
+                <Button 
+                  onClick={handleClose}
+                  sx={{ flex: { xs: 1, sm: 'none' } }}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={() => setActiveTab(0)}
+                  sx={{ flex: { xs: 1, sm: 'none' } }}
+                >
+                  Back
+                </Button>
+                <Button 
+                  type="submit" 
+                  variant="contained"
+                  sx={{ flex: { xs: 1, sm: 'none' } }}
+                >
+                  {editingItem ? 'Update' : 'Add'}
+                </Button>
+              </Box>
             )}
           </DialogActions>
         </form>

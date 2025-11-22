@@ -155,14 +155,26 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         // Connect to WebSocket for real-time notifications when app is open
         socketService.connect(user);
         
-        // Subscribe to push notifications for when app is closed
-        NotificationService.initializeMobile(user);
+        // Initialize FCM for Android or web notifications
+        const { Capacitor } = require('@capacitor/core');
+        if (Capacitor.isNativePlatform()) {
+          // Use FCM for Android (industry standard)
+          import('../services/fcmNotificationService').then(({ FCMNotificationService }) => {
+            FCMNotificationService.initialize();
+          });
+        } else {
+          // Use web notifications for browser
+          NotificationService.initializeMobile(user);
+        }
         
         socketService.onNotification((notification) => {
           console.log('NotificationContext: Received notification:', notification);
           
+          // Create unique ID to prevent duplicates
+          const uniqueId = `${notification.type}-${notification.title}-${notification.message}-${Date.now()}`;
+          
           const newNotification: Notification = {
-            id: `${notification.type}-${Date.now()}`,
+            id: uniqueId,
             title: notification.title,
             message: notification.message,
             type: notification.type as 'complaint' | 'complaint_update' | 'payment' | 'hostelRequest' | 'hostel_request' | 'general' | 'test' | 'hostel_approved' | 'hostel_status_change',
@@ -173,7 +185,11 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
             hostelId: user.hostelId
           };
           
+          // Android notifications are handled by FCM automatically
+          // No manual notification needed - FCM handles background/foreground
+          
           console.log('NotificationContext: Created notification object:', newNotification);
+          console.log('NotificationContext: Notification type check:', notification.type, '=== hostel_approved?', notification.type === 'hostel_approved');
           
           setNotifications(prev => {
             const updated = [newNotification, ...prev.slice(0, 49)]; // Keep last 50 notifications
@@ -190,16 +206,52 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           
           setHasNewNotifications(true);
           
-          // Show browser notification for immediate feedback
-          if (Notification.permission === 'granted') {
-            new Notification(notification.title, {
-              body: notification.message,
-              icon: '/favicon.ico'
-            });
+          // Don't show browser notification here - NotificationService handles this
+          // to prevent duplicates
+          
+          // Handle hostel approval - auto-login to get updated user data with hostelId
+          console.log('NotificationContext: Checking if hostel_approved:', notification.type);
+          if (notification.type === 'hostel_approved') {
+            console.log('NotificationContext: Hostel approved, performing auto-login');
+            (async () => {
+              try {
+                const response = await fetch('/api/auth/login', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    email: user.email,
+                    password: user.password
+                  })
+                });
+                
+                if (response.ok) {
+                  const loginData = await response.json();
+                  localStorage.setItem('user', JSON.stringify(loginData.user));
+                  console.log('Auto-login successful with hostelId:', loginData.user.hostelId);
+                  
+                  // Reload page to refresh with new session
+                  setTimeout(() => {
+                    window.location.reload();
+                  }, 1000);
+                } else {
+                  console.error('Auto-login failed after hostel approval');
+                  // Fallback: just refresh the page
+                  setTimeout(() => {
+                    window.location.reload();
+                  }, 1000);
+                }
+              } catch (error) {
+                console.error('Auto-login error:', error);
+                // Fallback: just refresh the page
+                setTimeout(() => {
+                  window.location.reload();
+                }, 1000);
+              }
+            })();
           }
           
           // Immediately refresh UI for hostel status changes
-          if (notification.type === 'hostel_status_change' || notification.type === 'hostel_approved') {
+          if (notification.type === 'hostel_status_change') {
             console.log('NotificationContext: Triggering dashboard refresh for hostel status change');
             window.dispatchEvent(new CustomEvent('dashboardRefresh'));
             window.dispatchEvent(new CustomEvent('refreshData'));
@@ -211,9 +263,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           
           console.log('NotificationContext: Notification processing complete');
           
-          // Don't show browser notification here - backend handles push notifications
-          // Browser notifications via WebSocket are for when app is open
-          // Push notifications are for when app is closed
+          // Notifications are handled by NotificationService to prevent duplicates
         });
       } catch (error) {
         console.error('Error connecting to socket:', error);
@@ -239,10 +289,13 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   );
 };
 
-export const useNotifications = () => {
+export const useNotificationsContext = () => {
   const context = useContext(NotificationContext);
   if (context === undefined) {
-    throw new Error('useNotifications must be used within a NotificationProvider');
+    throw new Error('useNotificationsContext must be used within a NotificationProvider');
   }
   return context;
 };
+
+// Keep the old export for backward compatibility
+export const useNotifications = useNotificationsContext;

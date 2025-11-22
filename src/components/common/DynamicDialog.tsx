@@ -154,11 +154,25 @@ const DynamicDialog: React.FC<DynamicDialogProps> = ({
         onClose={handleClose} 
         maxWidth={maxWidth} 
         fullWidth
-        PaperProps={{
-          sx: { maxHeight: '90vh', display: 'flex', flexDirection: 'column' }
+        fullScreen={window.innerWidth < 600}
+        sx={{
+          '& .MuiDialog-paper': {
+            margin: { xs: 0, sm: 2 },
+            width: { xs: '100%', sm: '100%' },
+            height: { xs: '100%', sm: 'auto' },
+            maxHeight: { xs: '100%', sm: '90vh' },
+            borderRadius: { xs: 0, sm: 2 },
+            display: 'flex',
+            flexDirection: 'column'
+          }
         }}
       >
-        <DialogTitle sx={{ borderBottom: '1px solid #e0e0e0', py: 2, flexShrink: 0 }}>
+        <DialogTitle sx={{ 
+          borderBottom: '1px solid #e0e0e0', 
+          px: { xs: 2, sm: 3 },
+          py: { xs: 1.5, sm: 2 },
+          flexShrink: 0 
+        }}>
           <Box display="flex" alignItems="center" justifyContent="space-between">
             <Typography variant="h6" sx={{ fontSize: '1.1rem' }}>{title}</Typography>
             <IconButton onClick={handleClose} size="small">
@@ -167,8 +181,22 @@ const DynamicDialog: React.FC<DynamicDialogProps> = ({
           </Box>
         </DialogTitle>
         <form onSubmit={handleSubmit}>
-          <DialogContent sx={{ flex: 1, overflow: 'auto', py: 2 }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          <DialogContent sx={{ 
+            flex: 1, 
+            overflow: 'auto', 
+            px: { xs: 2, sm: 3 },
+            py: { xs: 1, sm: 2 },
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: { xs: 'calc(100vh - 120px)', sm: 'auto' }
+          }}>
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: 1.5,
+              flex: { xs: '1 1 auto', sm: 'none' },
+              justifyContent: { xs: 'flex-start', sm: 'flex-start' }
+            }}>
               {groupedFields.map((row, rowIndex) => (
                 <Box 
                   key={rowIndex} 
@@ -193,10 +221,23 @@ const DynamicDialog: React.FC<DynamicDialogProps> = ({
               ))}
             </Box>
           </DialogContent>
-          <DialogActions sx={{ borderTop: '1px solid #e0e0e0', pt: 1.5, pb: 1.5, flexShrink: 0 }}>
+          <DialogActions sx={{ 
+            borderTop: '1px solid #e0e0e0', 
+            px: { xs: 2, sm: 3 },
+            py: { xs: 2, sm: 1.5 },
+            flexShrink: 0,
+            gap: 1,
+            position: { xs: 'sticky', sm: 'static' },
+            bottom: { xs: 0, sm: 'auto' },
+            bgcolor: 'background.paper',
+            zIndex: 1,
+            '& .MuiButton-root': {
+              flex: { xs: 1, sm: 'none' }
+            }
+          }}>
             <Button onClick={handleClose}>{cancelLabel}</Button>
             <Button type="submit" variant="contained">
-              {editingItem ? `Update ${submitLabel}` : `Add ${submitLabel}`}
+              {editingItem ? 'Update' : 'Add'}
             </Button>
           </DialogActions>
         </form>

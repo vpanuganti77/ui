@@ -202,12 +202,38 @@ const RoomDetails: React.FC = () => {
   }
 
   return (
-    <Box sx={{ p: 1, maxWidth: '100%', mx: 'auto', height: '100vh', overflow: 'hidden' }}>
+    <Box sx={{ p: { xs: 1, sm: 2 }, maxWidth: '100%', mx: 'auto' }}>
+      {/* Mobile Header */}
+      <Box sx={{ display: { xs: 'flex', md: 'none' }, alignItems: 'center', gap: 1, mb: 2 }}>
+        <IconButton onClick={() => navigate('/admin/rooms')} size="small">
+          <ArrowBack />
+        </IconButton>
+        <Typography variant="h5" sx={{ fontWeight: 600, flex: 1 }}>
+          Room {room.roomNumber}
+        </Typography>
+        <IconButton onClick={() => setEditOpen(true)} size="small" color="primary">
+          <Edit />
+        </IconButton>
+      </Box>
+
+      {/* Desktop Header */}
+      <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 2, mb: 3 }}>
+        <IconButton onClick={() => navigate('/admin/rooms')}>
+          <ArrowBack />
+        </IconButton>
+        <Typography variant="h4" sx={{ fontWeight: 600, flex: 1 }}>
+          Room {room.roomNumber} Details
+        </Typography>
+        <Button variant="contained" startIcon={<Edit />} onClick={() => setEditOpen(true)}>
+          Edit Room
+        </Button>
+      </Box>
+
       {/* Content */}
-      <Box display="flex" gap={1} flexWrap="wrap" height="100vh">
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: { xs: 2, md: 3 } }}>
         {/* Main Content */}
-        <Box flex="1" minWidth="600px" sx={{ overflow: 'auto' }}>
-          <Stack spacing={1}>
+        <Box sx={{ flex: 1 }}>
+          <Stack spacing={2}>
             {/* Room Information */}
             <Accordion defaultExpanded elevation={2} sx={{ '&:before': { display: 'none' } }}>
               <AccordionSummary expandIcon={<ExpandMore />}>
@@ -219,7 +245,7 @@ const RoomDetails: React.FC = () => {
                 </Box>
               </AccordionSummary>
               <AccordionDetails>
-                <Box display="grid" gridTemplateColumns="1fr 1fr 1fr" gap={2}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' }, gap: 2 }}>
                   <InfoField label="Room Number" value={room.roomNumber} />
                   <InfoField label="Room Type" value={room.type} />
                   <InfoField label="Status" value={room.status} />
@@ -247,7 +273,7 @@ const RoomDetails: React.FC = () => {
                   </Box>
                 </AccordionSummary>
                 <AccordionDetails>
-                  <Box display="grid" gridTemplateColumns="1fr 1fr" gap={2}>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                     <InfoField label="Tenant Name" value={room.tenant} />
                     <InfoField label="Tenant ID" value={room.tenantId} />
                   </Box>
@@ -255,12 +281,61 @@ const RoomDetails: React.FC = () => {
               </Accordion>
             )}
 
+            {/* Mobile Action Buttons */}
+            <Box sx={{ display: { xs: 'block', md: 'none' }, mt: 2 }}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, mb: 2 }}>
+                <Button 
+                  variant="contained" 
+                  startIcon={<History />} 
+                  onClick={() => setHistoryOpen(true)}
+                  size="small"
+                  sx={{ bgcolor: 'primary.main' }}
+                >
+                  History
+                </Button>
+                <Button 
+                  variant="contained" 
+                  startIcon={<ReportProblem />} 
+                  onClick={() => setComplaintsOpen(true)}
+                  size="small"
+                  sx={{ bgcolor: 'warning.main' }}
+                >
+                  Complaints
+                </Button>
+              </Box>
+            </Box>
 
+            {/* Audit Information - Mobile */}
+            <Accordion sx={{ display: { xs: 'block', md: 'none' } }}>
+              <AccordionSummary expandIcon={<ExpandMore />}>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Audit Trail
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5, fontWeight: 500 }}>
+                      Last Modified By
+                    </Typography>
+                    <Typography variant="body1">{room.lastModifiedBy}</Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5, fontWeight: 500 }}>
+                      Last Modified Date
+                    </Typography>
+                    <Typography variant="body1">
+                      {new Date(room.lastModifiedDate).toLocaleString()}
+                    </Typography>
+                  </Box>
+                </Box>
+              </AccordionDetails>
+            </Accordion>
           </Stack>
         </Box>
 
-        {/* Sidebar */}
-        <Box width="250px" sx={{ overflow: 'auto' }}>
+        {/* Desktop Sidebar */}
+        <Box sx={{ display: { xs: 'none', md: 'block' }, width: '280px' }}>
           <Card elevation={2}>
             <CardHeader 
               title="Quick Actions"
@@ -268,49 +343,31 @@ const RoomDetails: React.FC = () => {
               sx={{ pb: 1 }}
             />
             <CardContent sx={{ pt: 0 }}>
-              <Stack spacing={1}>
+              <Stack spacing={2}>
                 <Button 
                   fullWidth 
                   variant="contained" 
                   startIcon={<History />} 
                   onClick={() => setHistoryOpen(true)}
-                  sx={{ bgcolor: 'primary.main', '&:hover': { bgcolor: 'primary.dark' }, whiteSpace: 'nowrap' }}
+                  sx={{ bgcolor: 'primary.main' }}
                 >
-                  History
+                  View History
                 </Button>
                 <Button 
                   fullWidth 
                   variant="contained" 
                   startIcon={<ReportProblem />} 
                   onClick={() => setComplaintsOpen(true)}
-                  sx={{ bgcolor: 'warning.main', '&:hover': { bgcolor: 'warning.dark' }, whiteSpace: 'nowrap' }}
+                  sx={{ bgcolor: 'warning.main' }}
                 >
-                  Complaints
-                </Button>
-                <Button 
-                  fullWidth 
-                  variant="contained" 
-                  startIcon={<Edit />} 
-                  onClick={() => setEditOpen(true)}
-                  sx={{ bgcolor: 'success.main', '&:hover': { bgcolor: 'success.dark' }, whiteSpace: 'nowrap' }}
-                >
-                  Edit Room
-                </Button>
-                <Button 
-                  fullWidth 
-                  variant="outlined" 
-                  startIcon={<ArrowBack />} 
-                  onClick={() => navigate('/admin/rooms')}
-                  sx={{ borderColor: 'grey.400', color: 'grey.700', '&:hover': { borderColor: 'grey.600', bgcolor: 'grey.50' }, whiteSpace: 'nowrap' }}
-                >
-                  Back
+                  View Complaints
                 </Button>
               </Stack>
             </CardContent>
           </Card>
 
-          {/* Audit Information */}
-          <Card elevation={2} sx={{ mt: 1 }}>
+          {/* Audit Information - Desktop */}
+          <Card elevation={2} sx={{ mt: 2 }}>
             <CardHeader 
               title="Audit Trail"
               titleTypographyProps={{ variant: 'h6', fontWeight: 600 }}
@@ -349,7 +406,13 @@ const RoomDetails: React.FC = () => {
       />
 
       {/* Room History Dialog */}
-      <Dialog open={historyOpen} onClose={() => setHistoryOpen(false)} maxWidth="md" fullWidth>
+      <Dialog 
+        open={historyOpen} 
+        onClose={() => setHistoryOpen(false)} 
+        maxWidth="md" 
+        fullWidth
+        fullScreen={window.innerWidth < 600}
+      >
         <DialogTitle>
           <Box display="flex" alignItems="center" justifyContent="space-between">
             <Typography variant="h6">Room History - {room.number}</Typography>
@@ -439,7 +502,13 @@ const RoomDetails: React.FC = () => {
       </Dialog>
 
       {/* Complaints History Dialog */}
-      <Dialog open={complaintsOpen} onClose={() => setComplaintsOpen(false)} maxWidth="md" fullWidth>
+      <Dialog 
+        open={complaintsOpen} 
+        onClose={() => setComplaintsOpen(false)} 
+        maxWidth="md" 
+        fullWidth
+        fullScreen={window.innerWidth < 600}
+      >
         <DialogTitle>
           <Box display="flex" alignItems="center" justifyContent="space-between">
             <Typography variant="h6">Complaints History - Room {room.number}</Typography>

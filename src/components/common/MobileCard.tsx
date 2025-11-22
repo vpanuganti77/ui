@@ -8,7 +8,7 @@ import {
   IconButton,
   Chip,
 } from '@mui/material';
-import { Edit, Delete } from '@mui/icons-material';
+import { Edit, Delete, Visibility } from '@mui/icons-material';
 
 interface CardField {
   key: string;
@@ -73,6 +73,7 @@ const MobileCard: React.FC<MobileCardProps> = ({
             {item[titleField]}
           </Typography>
           <Box display="flex" gap={0.5}>
+
             {!hideEdit && (
               <IconButton 
                 size="small" 
@@ -81,6 +82,7 @@ const MobileCard: React.FC<MobileCardProps> = ({
                   bgcolor: 'primary.50',
                   '&:hover': { bgcolor: 'primary.100' }
                 }}
+                title="Edit"
               >
                 <Edit fontSize="small" color="primary" />
               </IconButton>
@@ -93,6 +95,7 @@ const MobileCard: React.FC<MobileCardProps> = ({
                   bgcolor: 'error.50',
                   '&:hover': { bgcolor: 'error.100' }
                 }}
+                title="Delete"
               >
                 <Delete fontSize="small" color="error" />
               </IconButton>
