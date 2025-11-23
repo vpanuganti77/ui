@@ -13,7 +13,7 @@ export class FCMNotificationService {
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       const config = await fetch('/config.json').then(r => r.json()).catch(() => ({ 
-        API_BASE_URL: 'http://192.168.0.138:5000/api' 
+        API_BASE_URL: 'https://hostelmanagementbackend-production.up.railway.app/api' 
       }));
       
       await fetch(`${config.API_BASE_URL}/fcm-token`, {

@@ -20,7 +20,7 @@ const SimpleNetworkTest: React.FC = () => {
       
       // Test 2: Railway API with simple GET
       try {
-        const apiResponse = await fetch('http://192.168.0.138:5000/api', {
+        const apiResponse = await fetch('https://hostelmanagementbackend-production.up.railway.app/api', {
           method: 'GET',
           mode: 'cors'
         });
@@ -31,7 +31,7 @@ const SimpleNetworkTest: React.FC = () => {
       
       // Test 3: Try login endpoint
       try {
-        const loginResponse = await fetch('http://192.168.0.138:5000/api/auth/login', {
+        const loginResponse = await fetch('https://hostelmanagementbackend-production.up.railway.app/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: 'test', password: 'test' })
@@ -54,7 +54,7 @@ const SimpleNetworkTest: React.FC = () => {
     
     return new Promise((resolve) => {
       const xhr = new XMLHttpRequest();
-      xhr.open('GET', 'http://192.168.0.138:5000/api', true);
+      xhr.open('GET', 'https://hostelmanagementbackend-production.up.railway.app/api', true);
       xhr.timeout = 10000;
       
       xhr.onload = () => {

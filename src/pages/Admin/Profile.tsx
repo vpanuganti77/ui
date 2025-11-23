@@ -97,7 +97,7 @@ const Profile: React.FC = () => {
     
     try {
       // Validate current password first
-      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://192.168.0.138:5000/api'}/auth/validate-password`, {
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'https://hostelmanagementbackend-production.up.railway.app/api'}/auth/validate-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -112,7 +112,7 @@ const Profile: React.FC = () => {
       }
       
       // Update password
-      const updateResponse = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://192.168.0.138:5000/api'}/auth/change-password`, {
+      const updateResponse = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'https://hostelmanagementbackend-production.up.railway.app/api'}/auth/change-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

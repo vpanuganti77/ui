@@ -105,7 +105,7 @@ const AdminComplaintDialog: React.FC<AdminComplaintDialogProps> = ({
   const handleAddComment = async (comment: string) => {
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://192.168.0.138:5000/api'}/complaints/${editingItem.id}/comments`, {
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'https://hostelmanagementbackend-production.up.railway.app/api'}/complaints/${editingItem.id}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

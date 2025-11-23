@@ -9,8 +9,8 @@ const NotificationDebugger: React.FC = () => {
   const testComplaintNotification = async () => {
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const config = await fetch('/config.json').then(r => r.json()).catch(() => ({ API_BASE_URL: 'http://192.168.0.138:5000/api' }));
-      const apiBaseUrl = config.API_BASE_URL || 'http://192.168.0.138:5000/api';
+      const config = await fetch('/config.json').then(r => r.json()).catch(() => ({ API_BASE_URL: 'https://hostelmanagementbackend-production.up.railway.app/api' }));
+      const apiBaseUrl = config.API_BASE_URL || 'https://hostelmanagementbackend-production.up.railway.app/api';
       
       setStatus('Sending test complaint notification...');
       
@@ -40,8 +40,8 @@ const NotificationDebugger: React.FC = () => {
   const testStatusUpdateNotification = async () => {
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const config = await fetch('/config.json').then(r => r.json()).catch(() => ({ API_BASE_URL: 'http://192.168.0.138:5000/api' }));
-      const apiBaseUrl = config.API_BASE_URL || 'http://192.168.0.138:5000/api';
+      const config = await fetch('/config.json').then(r => r.json()).catch(() => ({ API_BASE_URL: 'https://hostelmanagementbackend-production.up.railway.app/api' }));
+      const apiBaseUrl = config.API_BASE_URL || 'https://hostelmanagementbackend-production.up.railway.app/api';
       
       setStatus('Sending test status update notification...');
       

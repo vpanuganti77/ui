@@ -38,6 +38,7 @@ interface MobileFilterSortProps {
   searchValue: string;
   onSearchChange: (value: string) => void;
   filters: Record<string, string>;
+  appliedFilters: Record<string, string>;
   onFiltersChange: (filters: Record<string, string>) => void;
   filterOptions: FilterOption[];
   sortBy: string;
@@ -52,6 +53,7 @@ const MobileFilterSort: React.FC<MobileFilterSortProps> = ({
   searchValue,
   onSearchChange,
   filters,
+  appliedFilters,
   onFiltersChange,
   filterOptions,
   sortBy,
@@ -78,13 +80,43 @@ const MobileFilterSort: React.FC<MobileFilterSortProps> = ({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Count active filters
-  const activeFiltersCount = Object.values(filters).filter(value => value).length;
+  // Count active filters (only applied ones)
+  const activeFiltersCount = Object.values(appliedFilters).filter(value => value).length;
+  const hasActiveSort = sortBy && sortBy !== '';
+  const hasActiveFilters = activeFiltersCount > 0;
 
   if (!isMobile) return null;
 
   return (
     <>
+      {/* Active Filters/Sort Indicator */}
+      {(hasActiveFilters || hasActiveSort) && (
+        <Box sx={{ 
+          mb: 1, 
+          p: 1, 
+          bgcolor: 'primary.50', 
+          borderRadius: 1,
+          border: '1px solid',
+          borderColor: 'primary.200'
+        }}>
+          <Typography variant="caption" color="primary.main" sx={{ fontWeight: 600 }}>
+            {hasActiveFilters && `${activeFiltersCount} filter(s) applied`}
+            {hasActiveFilters && hasActiveSort && ' • '}
+            {hasActiveSort && 'Sorted'}
+          </Typography>
+          <Button 
+            size="small" 
+            onClick={() => {
+              onClearFilters();
+              onSortChange('', 'asc');
+            }}
+            sx={{ ml: 1, minWidth: 'auto', p: 0.5, fontSize: '0.7rem' }}
+          >
+            Clear All
+          </Button>
+        </Box>
+      )}
+
       {/* Mobile filter/sort bar */}
       <Box sx={{ 
         display: 'flex',
@@ -114,22 +146,34 @@ const MobileFilterSort: React.FC<MobileFilterSortProps> = ({
           }}
         />
         {filterOptions.length > 0 && (
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<FilterList />}
-            onClick={() => setFilterDrawerOpen(true)}
-            sx={{ minWidth: 'auto', px: 1 }}
-          >
-            Filter
-          </Button>
+          <Badge badgeContent={activeFiltersCount} color="primary">
+            <Button
+              variant={hasActiveFilters ? "contained" : "outlined"}
+              size="small"
+              startIcon={<FilterList />}
+              onClick={() => setFilterDrawerOpen(true)}
+              sx={{ 
+                minWidth: 'auto', 
+                px: 1,
+                bgcolor: hasActiveFilters ? 'primary.main' : 'transparent',
+                color: hasActiveFilters ? 'white' : 'inherit'
+              }}
+            >
+              Filter
+            </Button>
+          </Badge>
         )}
         <Button
-          variant="outlined"
+          variant={hasActiveSort ? "contained" : "outlined"}
           size="small"
           startIcon={<Sort />}
           onClick={() => setSortDrawerOpen(true)}
-          sx={{ minWidth: 'auto', px: 1 }}
+          sx={{ 
+            minWidth: 'auto', 
+            px: 1,
+            bgcolor: hasActiveSort ? 'secondary.main' : 'transparent',
+            color: hasActiveSort ? 'white' : 'inherit'
+          }}
         >
           Sort
         </Button>
@@ -251,8 +295,11 @@ const MobileFilterSort: React.FC<MobileFilterSortProps> = ({
               size="small"
               onClick={() => setFilterDrawerOpen(true)}
               sx={{ 
-                bgcolor: 'primary.50',
-                '&:hover': { bgcolor: 'primary.100' }
+                bgcolor: hasActiveFilters ? 'primary.main' : 'primary.50',
+                color: hasActiveFilters ? 'white' : 'primary.main',
+                '&:hover': { 
+                  bgcolor: hasActiveFilters ? 'primary.dark' : 'primary.100'
+                }
               }}
             >
               <Tune fontSize="small" />
@@ -263,8 +310,11 @@ const MobileFilterSort: React.FC<MobileFilterSortProps> = ({
             size="small"
             onClick={() => setSortDrawerOpen(true)}
             sx={{ 
-              bgcolor: 'secondary.50',
-              '&:hover': { bgcolor: 'secondary.100' }
+              bgcolor: hasActiveSort ? 'secondary.main' : 'secondary.50',
+              color: hasActiveSort ? 'white' : 'secondary.main',
+              '&:hover': { 
+                bgcolor: hasActiveSort ? 'secondary.dark' : 'secondary.100'
+              }
             }}
           >
             <Sort fontSize="small" />

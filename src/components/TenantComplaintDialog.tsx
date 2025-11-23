@@ -64,7 +64,7 @@ const TenantComplaintDialog: React.FC<TenantComplaintDialogProps> = ({
   const handleAddComment = async (comment: string) => {
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://192.168.0.138:5000/api'}/complaints/${complaint.id}/comments`, {
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'https://hostelmanagementbackend-production.up.railway.app/api'}/complaints/${complaint.id}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -85,8 +85,8 @@ const TenantComplaintDialog: React.FC<TenantComplaintDialogProps> = ({
       
       // Send notification for new comment
       try {
-        const config = await fetch('/config.json').then(r => r.json()).catch(() => ({ API_BASE_URL: 'http://192.168.0.138:5000/api' }));
-        const apiBaseUrl = config.API_BASE_URL || 'http://192.168.0.138:5000/api';
+        const config = await fetch('/config.json').then(r => r.json()).catch(() => ({ API_BASE_URL: 'https://hostelmanagementbackend-production.up.railway.app/api' }));
+        const apiBaseUrl = config.API_BASE_URL || 'https://hostelmanagementbackend-production.up.railway.app/api';
         
         await fetch(`${apiBaseUrl}/notifications/complaint-comment`, {
           method: 'POST',
@@ -119,7 +119,7 @@ const TenantComplaintDialog: React.FC<TenantComplaintDialogProps> = ({
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       
       // First add the reopen reason as a system comment
-      await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://192.168.0.138:5000/api'}/complaints/${complaint.id}/comments`, {
+      await fetch(`${process.env.REACT_APP_API_BASE_URL || 'https://hostelmanagementbackend-production.up.railway.app/api'}/complaints/${complaint.id}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -143,8 +143,8 @@ const TenantComplaintDialog: React.FC<TenantComplaintDialogProps> = ({
       
       // Send notification for complaint reopen
       try {
-        const config = await fetch('/config.json').then(r => r.json()).catch(() => ({ API_BASE_URL: 'http://192.168.0.138:5000/api' }));
-        const apiBaseUrl = config.API_BASE_URL || 'http://192.168.0.138:5000/api';
+        const config = await fetch('/config.json').then(r => r.json()).catch(() => ({ API_BASE_URL: 'https://hostelmanagementbackend-production.up.railway.app/api' }));
+        const apiBaseUrl = config.API_BASE_URL || 'https://hostelmanagementbackend-production.up.railway.app/api';
         
         await fetch(`${apiBaseUrl}/notifications/complaint-update`, {
           method: 'POST',

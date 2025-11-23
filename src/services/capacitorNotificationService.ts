@@ -96,9 +96,9 @@ export class CapacitorNotificationService {
   private static async sendTokenToServer(token: string): Promise<void> {
     try {
       const config = await fetch('/config.json').then(r => r.json()).catch(() => ({ 
-        API_BASE_URL: 'http://192.168.0.138:5000/api' 
+        API_BASE_URL: 'https://hostelmanagementbackend-production.up.railway.app/api' 
       }));
-      const apiBaseUrl = config.API_BASE_URL || 'http://192.168.0.138:5000/api';
+      const apiBaseUrl = config.API_BASE_URL || 'https://hostelmanagementbackend-production.up.railway.app/api';
 
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       

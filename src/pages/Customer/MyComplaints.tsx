@@ -172,8 +172,8 @@ const MyComplaints: React.FC = () => {
       });
       
       // Submit complaint with attachments
-      const config = await fetch('/config.json').then(r => r.json()).catch(() => ({ API_BASE_URL: 'http://192.168.0.138:5000/api' }));
-      const apiBaseUrl = config.API_BASE_URL || 'http://192.168.0.138:5000/api';
+      const config = await fetch('/config.json').then(r => r.json()).catch(() => ({ API_BASE_URL: 'https://hostelmanagementbackend-production.up.railway.app/api' }));
+      const apiBaseUrl = config.API_BASE_URL || 'https://hostelmanagementbackend-production.up.railway.app/api';
       
       const response = await fetch(`${apiBaseUrl}/complaints`, {
         method: 'POST',

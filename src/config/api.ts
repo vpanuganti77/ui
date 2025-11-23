@@ -9,7 +9,7 @@ const loadConfig = async () => {
     } catch (error) {
       console.warn('Failed to load config.json, using defaults');
       config = {
-        API_BASE_URL: 'http://192.168.0.138:5000/api',
+        API_BASE_URL: 'https://hostelmanagementbackend-production.up.railway.app/api',
         WS_URL: 'wss://api-production-79b8.up.railway.app',
         FRONTEND_URL: 'https://pgflow.netlify.app'
       };
@@ -23,7 +23,7 @@ const getConfig = () => {
   if (!config) {
     // Fallback defaults if config not loaded yet
     return {
-      API_BASE_URL: 'http://192.168.0.138:5000/api',
+      API_BASE_URL: 'https://hostelmanagementbackend-production.up.railway.app/api',
       WS_URL: 'wss://api-production-79b8.up.railway.app',
       FRONTEND_URL: 'https://pgflow.netlify.app'
     };

@@ -60,6 +60,27 @@ const Rooms: React.FC = () => {
     }
   };
 
+  const customDeleteValidation = async (item: any) => {
+    try {
+      const { getAll } = await import('../../services/fileDataService');
+      const tenants = await getAll('tenants');
+      
+      // Check if any tenant is associated with this room
+      const associatedTenants = tenants.filter((tenant: any) => 
+        tenant.room === item.roomNumber || tenant.roomId === item.roomNumber
+      );
+      
+      if (associatedTenants.length > 0) {
+        return `Cannot delete room ${item.roomNumber}. It has ${associatedTenants.length} tenant(s) associated with it. Please move or remove tenants first.`;
+      }
+      
+      return null; // Allow deletion
+    } catch (error) {
+      console.error('Error validating room deletion:', error);
+      return 'Error checking room associations. Please try again.';
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'available': return 'success';
@@ -207,6 +228,7 @@ const Rooms: React.FC = () => {
         ]
       }}
       customSubmitLogic={customSubmitLogic}
+      customDeleteValidation={customDeleteValidation}
     />
     </>
   );

@@ -80,7 +80,7 @@ export class CleanNotificationService {
       
       console.log('📤 Sending FCM token payload:', payload);
       
-      const response = await fetch('http://192.168.0.138:5000/api/notifications/fcm-token', {
+      const response = await fetch('https://hostelmanagementbackend-production.up.railway.app/api/notifications/fcm-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

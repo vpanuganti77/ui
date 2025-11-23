@@ -122,8 +122,8 @@ const ComplaintDialog: React.FC<ComplaintDialogProps> = ({
     // Send notification for new complaint
     if (!editingItem && user) {
       try {
-        const config = await fetch('/config.json').then(r => r.json()).catch(() => ({ API_BASE_URL: 'http://192.168.0.138:5000/api' }));
-        const apiBaseUrl = config.API_BASE_URL || 'http://192.168.0.138:5000/api';
+        const config = await fetch('/config.json').then(r => r.json()).catch(() => ({ API_BASE_URL: 'https://hostelmanagementbackend-production.up.railway.app/api' }));
+        const apiBaseUrl = config.API_BASE_URL || 'https://hostelmanagementbackend-production.up.railway.app/api';
         
         await fetch(`${apiBaseUrl}/notifications/complaint-created`, {
           method: 'POST',

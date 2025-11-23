@@ -311,6 +311,43 @@ const UserManagement: React.FC = () => {
         entityName="User"
         entityKey="users"
         idField="id"
+        enableMobileFilters={true}
+        searchFields={['name', 'email', 'phone']}
+        filterOptions={[
+          {
+            key: 'role',
+            label: 'Role',
+            options: [
+              { value: 'admin', label: '👑 Admin' },
+              { value: 'receptionist', label: '🏨 Receptionist' },
+              { value: 'tenant', label: '👤 Tenant' }
+            ]
+          },
+          {
+            key: 'status',
+            label: 'Status',
+            options: [
+              { value: 'active', label: '🟢 Active' },
+              { value: 'inactive', label: '🔴 Inactive' },
+              { value: 'locked', label: '🔒 Locked' }
+            ]
+          }
+        ]}
+        sortOptions={[
+          { key: 'name', label: '👤 Name A-Z', order: 'asc' as const },
+          { key: 'name', label: '👤 Name Z-A', order: 'desc' as const },
+          { key: 'role', label: '👑 Role', order: 'asc' as const },
+          { key: 'createdAt', label: '📅 Newest First', order: 'desc' as const }
+        ]}
+        filterFields={{
+          role: (item) => item.role,
+          status: (item) => item.isLocked ? 'locked' : (item.status || 'active')
+        }}
+        sortFields={{
+          name: (a, b) => a.name.localeCompare(b.name),
+          role: (a, b) => a.role.localeCompare(b.role),
+          createdAt: (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+        }}
         renderMobileCard={(item, onEdit, onDelete) => (
           <Card 
             key={item.id} 

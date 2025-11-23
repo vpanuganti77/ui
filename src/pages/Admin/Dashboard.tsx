@@ -396,67 +396,21 @@ const Dashboard: React.FC = () => {
     <Box>
       <TrialStatus />
       
-      <Box display="flex" flexDirection={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} mb={3} gap={2}>
+      {/* Clean Professional Header */}
+      <Box sx={{ 
+        mb: 3,
+        p: { xs: 2, sm: 3 },
+        bgcolor: 'background.paper',
+        borderRadius: 2,
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+      }}>
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
-            Dashboard Overview
+          <Typography variant="h5" sx={{ fontWeight: 600, mb: 0.5 }}>
+            Dashboard
           </Typography>
-          <Box display="flex" gap={1} mt={1} flexWrap="wrap">
-            <Chip 
-              label={hostelInfo?.planType === 'free_trial' ? 'Free Trial' : (hostelInfo?.planType || 'Basic').toUpperCase()}
-              color={hostelInfo?.planType === 'free_trial' ? 'info' : 'primary'}
-              size="small"
-            />
-            {hostelInfo?.trialExpiryDate && (() => {
-              const expiryDate = new Date(hostelInfo.trialExpiryDate);
-              if (isNaN(expiryDate.getTime())) return null;
-              
-              const today = new Date();
-              const daysLeft = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-              
-              return (
-                <>
-                  <Chip 
-                    label={`${daysLeft > 0 ? daysLeft : 0} days left`}
-                    color={daysLeft <= 0 ? 'error' : daysLeft < 5 ? 'error' : daysLeft <= 10 ? 'warning' : 'success'} 
-                    size="small"
-                  />
-                  <Chip 
-                    label={`Expires: ${expiryDate.toLocaleDateString()}`}
-                    color={daysLeft <= 0 ? 'error' : daysLeft < 5 ? 'error' : daysLeft <= 10 ? 'warning' : 'success'} 
-                    size="small"
-                    variant="outlined"
-                  />
-                </>
-              );
-            })()}
-            <Chip 
-              label={`Status: ${hostelInfo?.status || userStatus || 'active'}`}
-              color={(hostelInfo?.status || userStatus || 'active') === 'active' ? 'success' : 'error'}
-              size="small"
-              variant="outlined"
-            />
-          </Box>
-        </Box>
-        <Box display="flex" gap={1} flexWrap="wrap">
-          <Button 
-            variant="outlined" 
-            size="small" 
-            startIcon={<Email />}
-            onClick={() => setNoticeDialogOpen(true)}
-          >
-            Send Notice
-          </Button>
-          <Button 
-            variant="outlined" 
-            size="small" 
-            color="warning"
-            startIcon={<AttachMoney />}
-            onClick={handleBulkPaymentReminder}
-            disabled={!stats?.totalDues || stats.totalDues <= 0}
-          >
-            Remind Dues
-          </Button>
+          <Typography variant="body2" color="text.secondary">
+            {hostelInfo?.name || 'Hostel Management'}
+          </Typography>
         </Box>
       </Box>
 
@@ -498,8 +452,75 @@ const Dashboard: React.FC = () => {
         </Box>
       )}
 
-      {/* Quick View Cards */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 2, mb: 4 }}>
+      {/* Mobile Activity Cards */}
+      <Box sx={{ display: { xs: 'block', md: 'none' }, mb: 3 }}>
+        <Box display="flex" gap={2} flexWrap="wrap">
+          {/* New Joinings Card */}
+          {newJoinings.length > 0 && (
+            <Card 
+              elevation={2} 
+              sx={{ 
+                flex: '1 1 150px', 
+                borderLeft: '4px solid', 
+                borderLeftColor: 'success.main',
+                cursor: 'pointer',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
+                }
+              }}
+              onClick={() => handleAlertClick('joinings')}
+            >
+              <CardContent sx={{ py: 1.5 }}>
+                <Box display="flex" alignItems="center" justifyContent="space-between">
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <PersonAdd color="success" fontSize="small" />
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      New Joinings
+                    </Typography>
+                  </Box>
+                  <Chip label={newJoinings.length} color="success" size="small" />
+                </Box>
+              </CardContent>
+            </Card>
+          )}
+          
+          {/* Upcoming Vacancies Card */}
+          {upcomingVacancies.length > 0 && (
+            <Card 
+              elevation={2} 
+              sx={{ 
+                flex: '1 1 150px', 
+                borderLeft: '4px solid', 
+                borderLeftColor: 'warning.main',
+                cursor: 'pointer',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
+                }
+              }}
+              onClick={() => handleAlertClick('vacancies')}
+            >
+              <CardContent sx={{ py: 1.5 }}>
+                <Box display="flex" alignItems="center" justifyContent="space-between">
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <ExitToApp color="warning" fontSize="small" />
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      Upcoming Vacancies
+                    </Typography>
+                  </Box>
+                  <Chip label={upcomingVacancies.length} color="warning" size="small" />
+                </Box>
+              </CardContent>
+            </Card>
+          )}
+        </Box>
+      </Box>
+
+      {/* Quick View Cards - Hide on mobile to reduce clutter */}
+      <Box sx={{ display: { xs: 'none', md: 'grid' }, gridTemplateColumns: 'repeat(3, 1fr)', gap: 2, mb: 4 }}>
         {/* New Joinings */}
         <Card elevation={2} sx={{ height: 240 }}>
           <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -584,171 +605,171 @@ const Dashboard: React.FC = () => {
         </Card>
       </Box>
 
-      {/* Bottom Detailed Stats */}
-      <Box sx={{ mb: 4, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, gap: 2 }}>
+      {/* Stats Cards - Optimized for mobile */}
+      <Box sx={{ mb: 4, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, gap: { xs: 1.5, sm: 2 } }}>
         <Card elevation={2} sx={{ transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-2px)' } }}>
-          <CardContent>
+          <CardContent sx={{ py: { xs: 1.5, sm: 2 } }}>
             <Box display="flex" alignItems="center" justifyContent="space-between">
               <Box>
-                <Typography color="textSecondary" gutterBottom sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                <Typography color="textSecondary" gutterBottom sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, fontWeight: 500 }}>
                   Total Rooms
                 </Typography>
-                <Typography variant="h4" component="div" sx={{ fontWeight: 700, mb: 0.5 }}>
+                <Typography variant="h4" component="div" sx={{ fontWeight: 700, mb: 0.5, fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
                   {stats?.totalRooms || 0}
                 </Typography>
-                <Box display="flex" alignItems="center" gap={0.5}>
+                <Box display={{ xs: 'none', sm: 'flex' }} alignItems="center" gap={0.5}>
                   <TrendingUp fontSize="small" color="success" />
                   <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
                     +5.2% from last month
                   </Typography>
                 </Box>
               </Box>
-              <Box sx={{ color: '#1976d2', bgcolor: '#1976d220', p: 1.5, borderRadius: 2 }}>
-                <Hotel />
+              <Box sx={{ color: '#1976d2', bgcolor: '#1976d220', p: { xs: 1, sm: 1.5 }, borderRadius: 2 }}>
+                <Hotel sx={{ fontSize: { xs: 20, sm: 24 } }} />
               </Box>
             </Box>
           </CardContent>
         </Card>
         
         <Card elevation={2} sx={{ transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-2px)' } }}>
-          <CardContent>
+          <CardContent sx={{ py: { xs: 1.5, sm: 2 } }}>
             <Box display="flex" alignItems="center" justifyContent="space-between">
               <Box>
-                <Typography color="textSecondary" gutterBottom sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                <Typography color="textSecondary" gutterBottom sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, fontWeight: 500 }}>
                   Occupied Rooms
                 </Typography>
-                <Typography variant="h4" component="div" sx={{ fontWeight: 700, mb: 0.5 }}>
+                <Typography variant="h4" component="div" sx={{ fontWeight: 700, mb: 0.5, fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
                   {stats?.occupiedRooms || 0}
                 </Typography>
-                <Box display="flex" alignItems="center" gap={0.5}>
+                <Box display={{ xs: 'none', sm: 'flex' }} alignItems="center" gap={0.5}>
                   <TrendingUp fontSize="small" color="success" />
                   <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
                     +5.2% from last month
                   </Typography>
                 </Box>
               </Box>
-              <Box sx={{ color: '#388e3c', bgcolor: '#388e3c20', p: 1.5, borderRadius: 2 }}>
-                <Hotel />
+              <Box sx={{ color: '#388e3c', bgcolor: '#388e3c20', p: { xs: 1, sm: 1.5 }, borderRadius: 2 }}>
+                <Hotel sx={{ fontSize: { xs: 20, sm: 24 } }} />
               </Box>
             </Box>
           </CardContent>
         </Card>
         
         <Card elevation={2} sx={{ transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-2px)' } }}>
-          <CardContent>
+          <CardContent sx={{ py: { xs: 1.5, sm: 2 } }}>
             <Box display="flex" alignItems="center" justifyContent="space-between">
               <Box>
-                <Typography color="textSecondary" gutterBottom sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                <Typography color="textSecondary" gutterBottom sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, fontWeight: 500 }}>
                   Total Tenants
                 </Typography>
-                <Typography variant="h4" component="div" sx={{ fontWeight: 700, mb: 0.5 }}>
+                <Typography variant="h4" component="div" sx={{ fontWeight: 700, mb: 0.5, fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
                   {stats?.totalTenants || 0}
                 </Typography>
-                <Box display="flex" alignItems="center" gap={0.5}>
+                <Box display={{ xs: 'none', sm: 'flex' }} alignItems="center" gap={0.5}>
                   <TrendingUp fontSize="small" color="success" />
                   <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
                     +5.2% from last month
                   </Typography>
                 </Box>
               </Box>
-              <Box sx={{ color: '#f57c00', bgcolor: '#f57c0020', p: 1.5, borderRadius: 2 }}>
-                <People />
+              <Box sx={{ color: '#f57c00', bgcolor: '#f57c0020', p: { xs: 1, sm: 1.5 }, borderRadius: 2 }}>
+                <People sx={{ fontSize: { xs: 20, sm: 24 } }} />
               </Box>
             </Box>
           </CardContent>
         </Card>
 
         <Card elevation={2} sx={{ transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-2px)' } }}>
-          <CardContent>
+          <CardContent sx={{ py: { xs: 1.5, sm: 2 } }}>
             <Box display="flex" alignItems="center" justifyContent="space-between">
               <Box>
-                <Typography color="textSecondary" gutterBottom sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                <Typography color="textSecondary" gutterBottom sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, fontWeight: 500 }}>
                   Monthly Income
                 </Typography>
-                <Typography variant="h4" component="div" sx={{ fontWeight: 700, mb: 0.5 }}>
+                <Typography variant="h4" component="div" sx={{ fontWeight: 700, mb: 0.5, fontSize: { xs: '1.25rem', sm: '2.125rem' } }}>
                   ₹{(stats?.totalIncome || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                 </Typography>
-                <Box display="flex" alignItems="center" gap={0.5}>
+                <Box display={{ xs: 'none', sm: 'flex' }} alignItems="center" gap={0.5}>
                   <TrendingUp fontSize="small" color="success" />
                   <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
                     +5.2% from last month
                   </Typography>
                 </Box>
               </Box>
-              <Box sx={{ color: '#388e3c', bgcolor: '#388e3c20', p: 1.5, borderRadius: 2 }}>
-                <AttachMoney />
+              <Box sx={{ color: '#388e3c', bgcolor: '#388e3c20', p: { xs: 1, sm: 1.5 }, borderRadius: 2 }}>
+                <AttachMoney sx={{ fontSize: { xs: 20, sm: 24 } }} />
               </Box>
             </Box>
           </CardContent>
         </Card>
         
         <Card elevation={2} sx={{ transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-2px)' } }}>
-          <CardContent>
+          <CardContent sx={{ py: { xs: 1.5, sm: 2 } }}>
             <Box display="flex" alignItems="center" justifyContent="space-between">
               <Box>
-                <Typography color="textSecondary" gutterBottom sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                <Typography color="textSecondary" gutterBottom sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, fontWeight: 500 }}>
                   Pending Dues
                 </Typography>
-                <Typography variant="h4" component="div" sx={{ fontWeight: 700, mb: 0.5 }}>
+                <Typography variant="h4" component="div" sx={{ fontWeight: 700, mb: 0.5, fontSize: { xs: '1.25rem', sm: '2.125rem' } }}>
                   ₹{(stats?.totalDues || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                 </Typography>
-                <Box display="flex" alignItems="center" gap={0.5}>
+                <Box display={{ xs: 'none', sm: 'flex' }} alignItems="center" gap={0.5}>
                   <TrendingUp fontSize="small" color="success" />
                   <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
                     +5.2% from last month
                   </Typography>
                 </Box>
               </Box>
-              <Box sx={{ color: '#d32f2f', bgcolor: '#d32f2f20', p: 1.5, borderRadius: 2 }}>
-                <AttachMoney />
+              <Box sx={{ color: '#d32f2f', bgcolor: '#d32f2f20', p: { xs: 1, sm: 1.5 }, borderRadius: 2 }}>
+                <AttachMoney sx={{ fontSize: { xs: 20, sm: 24 } }} />
               </Box>
             </Box>
           </CardContent>
         </Card>
 
         <Card elevation={2} sx={{ transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-2px)' } }}>
-          <CardContent>
+          <CardContent sx={{ py: { xs: 1.5, sm: 2 } }}>
             <Box display="flex" alignItems="center" justifyContent="space-between">
               <Box>
-                <Typography color="textSecondary" gutterBottom sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                <Typography color="textSecondary" gutterBottom sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, fontWeight: 500 }}>
                   Occupancy Rate
                 </Typography>
-                <Typography variant="h4" component="div" sx={{ fontWeight: 700, mb: 0.5 }}>
+                <Typography variant="h4" component="div" sx={{ fontWeight: 700, mb: 0.5, fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
                   {stats?.occupancyRate || 0}%
                 </Typography>
-                <Box display="flex" alignItems="center" gap={0.5}>
+                <Box display={{ xs: 'none', sm: 'flex' }} alignItems="center" gap={0.5}>
                   <TrendingUp fontSize="small" color="success" />
                   <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
                     +5.2% from last month
                   </Typography>
                 </Box>
               </Box>
-              <Box sx={{ color: '#9c27b0', bgcolor: '#9c27b020', p: 1.5, borderRadius: 2 }}>
-                <TrendingUp />
+              <Box sx={{ color: '#9c27b0', bgcolor: '#9c27b020', p: { xs: 1, sm: 1.5 }, borderRadius: 2 }}>
+                <TrendingUp sx={{ fontSize: { xs: 20, sm: 24 } }} />
               </Box>
             </Box>
           </CardContent>
         </Card>
 
         <Card elevation={2} sx={{ transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-2px)' } }}>
-          <CardContent>
+          <CardContent sx={{ py: { xs: 1.5, sm: 2 } }}>
             <Box display="flex" alignItems="center" justifyContent="space-between">
               <Box>
-                <Typography color="textSecondary" gutterBottom sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                <Typography color="textSecondary" gutterBottom sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, fontWeight: 500 }}>
                   Monthly Expenses
                 </Typography>
-                <Typography variant="h4" component="div" sx={{ fontWeight: 700, mb: 0.5 }}>
+                <Typography variant="h4" component="div" sx={{ fontWeight: 700, mb: 0.5, fontSize: { xs: '1.25rem', sm: '2.125rem' } }}>
                   ₹{(stats?.totalExpenses || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                 </Typography>
-                <Box display="flex" alignItems="center" gap={0.5}>
+                <Box display={{ xs: 'none', sm: 'flex' }} alignItems="center" gap={0.5}>
                   <TrendingDown fontSize="small" color="error" />
                   <Typography variant="caption" color="error.main" sx={{ fontWeight: 600 }}>
                     Track daily expenses
                   </Typography>
                 </Box>
               </Box>
-              <Box sx={{ color: '#ff9800', bgcolor: '#ff980020', p: 1.5, borderRadius: 2 }}>
-                <AttachMoney />
+              <Box sx={{ color: '#ff9800', bgcolor: '#ff980020', p: { xs: 1, sm: 1.5 }, borderRadius: 2 }}>
+                <AttachMoney sx={{ fontSize: { xs: 20, sm: 24 } }} />
               </Box>
             </Box>
           </CardContent>
@@ -772,6 +793,17 @@ const Dashboard: React.FC = () => {
         anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
         transformOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
+        <MenuItem onClick={() => { setFabMenuAnchor(null); setNoticeDialogOpen(true); }}>
+          <ListItemIcon><Email /></ListItemIcon>
+          <ListItemText>Send Notice</ListItemText>
+        </MenuItem>
+        <MenuItem 
+          onClick={() => { setFabMenuAnchor(null); handleBulkPaymentReminder(); }}
+          disabled={!stats?.totalDues || stats.totalDues <= 0}
+        >
+          <ListItemIcon><AttachMoney /></ListItemIcon>
+          <ListItemText>Remind Dues</ListItemText>
+        </MenuItem>
         <MenuItem onClick={() => { setFabMenuAnchor(null); setTenantDialogOpen(true); }}>
           <ListItemIcon><PersonAdd /></ListItemIcon>
           <ListItemText>Add New Tenant</ListItemText>
@@ -779,14 +811,6 @@ const Dashboard: React.FC = () => {
         <MenuItem onClick={() => { setFabMenuAnchor(null); navigate('/admin/payments'); }}>
           <ListItemIcon><Receipt /></ListItemIcon>
           <ListItemText>Generate Bills</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={() => { setFabMenuAnchor(null); navigate('/admin/reports'); }}>
-          <ListItemIcon><Assignment /></ListItemIcon>
-          <ListItemText>View Reports</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={() => { setFabMenuAnchor(null); navigate('/admin/complaints'); }}>
-          <ListItemIcon><CalendarToday /></ListItemIcon>
-          <ListItemText>Schedule Maintenance</ListItemText>
         </MenuItem>
       </Menu>
 
@@ -798,6 +822,8 @@ const Dashboard: React.FC = () => {
               {selectedAlert === 'overdue' && 'Rent Overdue Tenants'}
               {selectedAlert === 'maintenance' && 'Pending Maintenance Requests'}
               {selectedAlert === 'applications' && 'New Applications'}
+              {selectedAlert === 'joinings' && 'New Joinings This Week'}
+              {selectedAlert === 'vacancies' && 'Upcoming Vacancies'}
             </Typography>
             <IconButton onClick={() => setAlertDialogOpen(false)} size="small">
               <Close />
@@ -806,7 +832,27 @@ const Dashboard: React.FC = () => {
         </DialogTitle>
         <DialogContent>
           <List>
-            {selectedAlert && alertDetails[selectedAlert as keyof typeof alertDetails]?.map((item: any, index: number) => (
+            {selectedAlert === 'joinings' ? newJoinings.map((item: any, index: number) => (
+              <ListItem key={index} divider={index < newJoinings.length - 1}>
+                <ListItemIcon>
+                  <PersonAdd color="success" />
+                </ListItemIcon>
+                <ListItemText
+                  primary={`${item.name} - Room ${item.roomNumber || item.room || 'N/A'}`}
+                  secondary={`Joined: ${new Date(item.createdAt || item.joiningDate).toLocaleDateString()} | Phone: ${item.phone || 'N/A'}`}
+                />
+              </ListItem>
+            )) : selectedAlert === 'vacancies' ? upcomingVacancies.map((item: any, index: number) => (
+              <ListItem key={index} divider={index < upcomingVacancies.length - 1}>
+                <ListItemIcon>
+                  <ExitToApp color="warning" />
+                </ListItemIcon>
+                <ListItemText
+                  primary={`${item.name} - Room ${item.room}`}
+                  secondary={`Vacating: ${new Date(item.vacateDate).toLocaleDateString()} | Notice: ${item.noticeGiven ? 'Given' : 'Pending'}`}
+                />
+              </ListItem>
+            )) : selectedAlert && alertDetails[selectedAlert as keyof typeof alertDetails]?.map((item: any, index: number) => (
               <ListItem key={index} divider={index < alertDetails[selectedAlert as keyof typeof alertDetails].length - 1}>
                 <ListItemIcon>
                   {selectedAlert === 'overdue' && <AttachMoney color="error" />}

@@ -12,11 +12,11 @@ export const getApiConfig = (): ApiConfig => {
     // For Android, try different approaches
     return {
       // Primary API (Railway)
-      PRIMARY_API: 'http://192.168.0.138:5000/api',
+      PRIMARY_API: 'https://hostelmanagementbackend-production.up.railway.app/api',
       
       // Fallback APIs (if Railway doesn't work)
       FALLBACK_APIS: [
-        'http://192.168.0.138:5000/api'
+        'https://hostelmanagementbackend-production.up.railway.app/api'
       ],
       
       // Request configuration for Android
@@ -34,8 +34,8 @@ export const getApiConfig = (): ApiConfig => {
   
   // Web configuration
   return {
-    PRIMARY_API: 'http://192.168.0.138:5000/api',
-    FALLBACK_APIS: ['http://192.168.0.138:5000/api'],
+    PRIMARY_API: 'https://hostelmanagementbackend-production.up.railway.app/api',
+    FALLBACK_APIS: ['https://hostelmanagementbackend-production.up.railway.app/api'],
     REQUEST_CONFIG: {
       headers: {
         'Content-Type': 'application/json',

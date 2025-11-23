@@ -1,6 +1,6 @@
 {
-  "API_BASE_URL": "http://192.168.0.138:5000/api",
+  "API_BASE_URL": "https://hostelmanagementbackend-production.up.railway.app/api",
   "TEST_API": "https://jsonplaceholder.typicode.com",
-  "WS_URL": "ws://192.168.0.138:5000", 
-  "FRONTEND_URL": "http://192.168.0.138:3000/"
+  "WS_URL": "wss://hostelmanagementbackend-production.up.railway.app", 
+  "FRONTEND_URL": "https://pgflow.netlify.app/"
 }

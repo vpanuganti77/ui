@@ -64,6 +64,7 @@ interface ListPageProps<T> {
   };
   customSubmitLogic?: (formData: any, editingItem: T | null) => T;
   additionalValidation?: (formData: any) => string | null | Promise<string | null>;
+  customDeleteValidation?: (item: T) => string | null | Promise<string | null>;
   additionalActions?: React.ReactNode;
   hideDelete?: boolean;
   hideEdit?: boolean;
@@ -102,6 +103,7 @@ const ListPage = <T extends Record<string, any>>({
   mobileCardConfig,
   customSubmitLogic,
   additionalValidation,
+  customDeleteValidation,
   additionalActions,
   hideDelete = false,
   hideEdit = false,
@@ -134,8 +136,8 @@ const ListPage = <T extends Record<string, any>>({
     showSnackbar,
     handleAdd,
     handleEdit,
-    handleDelete,
-    confirmDelete,
+    handleDelete: baseHandleDelete,
+    confirmDelete: baseConfirmDelete,
     handleSubmit: baseHandleSubmit,
     closeDialog,
     closeDeleteDialog,
@@ -146,6 +148,31 @@ const ListPage = <T extends Record<string, any>>({
     entityKey,
     idField
   });
+
+  const [warningDialog, setWarningDialog] = React.useState({ open: false, message: '' });
+
+  const handleDelete = async (id: string) => {
+    if (customDeleteValidation) {
+      const item = data.find(item => item[idField] === id);
+      if (item) {
+        try {
+          const validationError = await customDeleteValidation(item);
+          if (validationError) {
+            setWarningDialog({ open: true, message: validationError });
+            return;
+          }
+        } catch (error) {
+          console.error('Delete validation error:', error);
+          setWarningDialog({ open: true, message: 'Validation failed. Please try again.' });
+          return;
+        }
+      }
+    }
+    baseHandleDelete(id);
+  };
+
+  const confirmDelete = baseConfirmDelete;
+  const closeWarningDialog = () => setWarningDialog({ open: false, message: '' });
 
   // Mobile filter/sort functionality
   const mobileFilterSort = useMobileFilterSort({
@@ -316,6 +343,7 @@ const ListPage = <T extends Record<string, any>>({
               searchValue={mobileFilterSort.searchValue}
               onSearchChange={mobileFilterSort.handleSearchChange}
               filters={mobileFilterSort.filters}
+              appliedFilters={mobileFilterSort.appliedFilters}
               onFiltersChange={mobileFilterSort.handleFiltersChange}
               filterOptions={filterOptions}
               sortBy={mobileFilterSort.sortBy}
@@ -457,6 +485,18 @@ const ListPage = <T extends Record<string, any>>({
         <DialogActions>
           <Button onClick={closeDeleteDialog}>Cancel</Button>
           <Button onClick={confirmDelete} color="error" variant="contained">Delete</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={warningDialog.open} onClose={closeWarningDialog}>
+        <DialogTitle sx={{ color: 'warning.main' }}>Cannot Delete</DialogTitle>
+        <DialogContent>
+          <Typography>
+            {warningDialog.message}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeWarningDialog} variant="contained">OK</Button>
         </DialogActions>
       </Dialog>
 

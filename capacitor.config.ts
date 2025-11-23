@@ -5,10 +5,7 @@ const config: CapacitorConfig = {
   appName: 'PGFlow',
   webDir: 'build',
   server: {
-    androidScheme: 'http',
-    hostname: '192.168.0.138',
-    url: 'http://192.168.0.138:3000',
-    cleartext: true
+    url: 'https://pgflow.netlify.app'
   },
   android: {
     allowMixedContent: true,
