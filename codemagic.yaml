@@ -8,9 +8,9 @@ workflows:
     environment:
       ios_signing:
         distribution_type: development
-        bundle_identifier: com.pgflow.app
+        bundle_identifier: pgflow.com
       vars:
-        BUNDLE_ID: "com.pgflow.app"
+        BUNDLE_ID: "pgflow.com"
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
       node: v18.17.0
