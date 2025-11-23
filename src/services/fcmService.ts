@@ -11,13 +11,21 @@ const firebaseConfig = {
   appId: process.env.REACT_APP_FIREBASE_APP_ID
 };
 
-// Only initialize Firebase web SDK on web platform
+// Firebase is only used for Android push notifications, not web
 let app: any = null;
 let messaging: any = null;
 
-if (!Capacitor.isNativePlatform()) {
-  app = initializeApp(firebaseConfig);
-  messaging = getMessaging(app);
+// Only initialize on native platforms (Android)
+if (Capacitor.isNativePlatform()) {
+  const isFirebaseConfigured = firebaseConfig.projectId && firebaseConfig.apiKey;
+  if (isFirebaseConfigured) {
+    try {
+      app = initializeApp(firebaseConfig);
+      messaging = getMessaging(app);
+    } catch (error) {
+      console.warn('Firebase initialization failed:', error);
+    }
+  }
 }
 
 export type NotificationType = 'complaint' | 'payment' | 'maintenance' | 'announcement' | 'booking' | 'visitor' | 'emergency';
@@ -32,9 +40,9 @@ export interface NotificationData {
 }
 
 export const requestNotificationPermission = async (): Promise<string | null> => {
-  // Skip Firebase web SDK on native platforms
-  if (Capacitor.isNativePlatform()) {
-    console.log('Native platform detected, skipping Firebase web SDK');
+  // Firebase FCM is only for Android, not web
+  if (!Capacitor.isNativePlatform()) {
+    console.log('Web platform detected, Firebase FCM not needed');
     return null;
   }
 
@@ -78,8 +86,8 @@ const saveTokenToServer = async (token: string) => {
 
 export const onMessageListener = () =>
   new Promise((resolve) => {
-    if (Capacitor.isNativePlatform() || !messaging) {
-      console.log('Native platform or no messaging, skipping web FCM listener');
+    if (!Capacitor.isNativePlatform() || !messaging) {
+      console.log('Web platform or no messaging, Firebase FCM not needed');
       return;
     }
     onMessage(messaging, (payload) => {

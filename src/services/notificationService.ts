@@ -39,6 +39,10 @@ export class NotificationService {
     });
   }
 
+  static testPushNotification(): void {
+    this.showNotification('Test Notification', 'This is a test push notification');
+  }
+
   static showHostelDeactivatedNotification(hostelName: string): void {
     this.showNotification('Hostel Deactivated', `${hostelName} has been deactivated`);
   }
