@@ -9,7 +9,6 @@ workflows:
       ios_signing:
         distribution_type: development
         bundle_identifier: com.pgflow.app
-        automatic_code_signing: true
       vars:
         BUNDLE_ID: "com.pgflow.app"
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
