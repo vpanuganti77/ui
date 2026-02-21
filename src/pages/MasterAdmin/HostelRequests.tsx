@@ -4,7 +4,7 @@ import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
 import { Business, Phone, Email, CheckCircle, Schedule, ThumbUp } from '@mui/icons-material';
 import ListPage from '../../components/common/ListPage';
 
-import { create, update } from '../../services/fileDataService';
+import { create, update } from '../../shared/services/storage/fileDataService';
 import { socketService } from '../../services/socketService';
 import { API_CONFIG } from '../../config/api';
 

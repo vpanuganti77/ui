@@ -19,9 +19,9 @@ import {
   IconButton
 } from '@mui/material';
 import { Edit, Save, Cancel, Person, Email, Phone, Business, Badge, VpnKey, Visibility, VisibilityOff, Hotel, Fingerprint } from '@mui/icons-material';
-import { update } from '../../services/fileDataService';
-import BiometricSetupDialog from '../../components/BiometricSetupDialog';
-import { BiometricService } from '../../services/biometricService';
+import { update } from '../../shared/services/storage/fileDataService';
+import { BiometricSetupDialog } from '../../features/auth/components';
+import { BiometricService } from '../../features/auth/services/biometricService';
 import { useAuth } from '../../context/AuthContext';
 import { FEATURE_FLAGS } from '../../config/features';
 

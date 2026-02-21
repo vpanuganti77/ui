@@ -10,7 +10,7 @@ import {
   Chip,
   Divider
 } from '@mui/material';
-import { getAll } from '../services/fileDataService';
+import { getAll } from '../shared/services/storage/fileDataService';
 
 interface HostelUsageDialogProps {
   open: boolean;

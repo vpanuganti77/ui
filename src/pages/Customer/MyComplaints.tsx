@@ -22,7 +22,7 @@ import {
 import { Add, Comment, Inbox, AttachFile, Delete } from '@mui/icons-material';
 import toast from 'react-hot-toast';
 import { useNotifications } from '../../context/NotificationContext';
-import TenantComplaintDialog from '../../components/TenantComplaintDialog';
+import { TenantComplaintDialog } from '../../features/tenants/components';
 
 const MyComplaints: React.FC = () => {
   const [complaints, setComplaints] = useState<any[]>([]);
@@ -40,7 +40,7 @@ const MyComplaints: React.FC = () => {
       const refreshComplaints = async () => {
         try {
           const user = JSON.parse(localStorage.getItem('user') || '{}');
-          const { getAll } = await import('../../services/fileDataService');
+          const { getAll } = await import('../../shared/services/storage/fileDataService');
           const tenants = await getAll('tenants');
           const tenant = tenants.find((t: any) => 
             t.email === user.email || t.name === user.name ||
@@ -68,7 +68,7 @@ const MyComplaints: React.FC = () => {
     const loadComplaints = async () => {
       try {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
-        const { getAll } = await import('../../services/fileDataService');
+        const { getAll } = await import('../../shared/services/storage/fileDataService');
         
         // Get tenant data
         const tenants = await getAll('tenants');
@@ -135,7 +135,7 @@ const MyComplaints: React.FC = () => {
     setUploading(true);
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const { getAll } = await import('../../services/fileDataService');
+      const { getAll } = await import('../../shared/services/storage/fileDataService');
       
       // Get room information if not available in user object
       let roomNumber = user.room;

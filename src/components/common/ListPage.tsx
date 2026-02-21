@@ -25,7 +25,7 @@ import MobileCard from './MobileCard';
 import MobileFilterSort from './MobileFilterSort';
 import { FieldConfig } from './FormField';
 import { useListManager } from '../../hooks/useListManager';
-import { useMobileFilterSort } from '../../hooks/useMobileFilterSort';
+import { useMobileFilterSort } from '../../shared/hooks/ui/useMobileFilterSort';
 
 interface CardField {
   key: string;
@@ -227,7 +227,7 @@ const ListPage = <T extends Record<string, any>>({
         if (existing) {
           const scope = ['users', 'hostels'].includes(entityKey) ? '' : ' in this hostel';
           showSnackbar(`${field.charAt(0).toUpperCase() + field.slice(1)} already exists${scope}`, 'error');
-          return;
+          return; // Don't proceed with submission
         }
       }
     }
@@ -238,12 +238,12 @@ const ListPage = <T extends Record<string, any>>({
         const validationError = await additionalValidation(formData);
         if (validationError) {
           showSnackbar(validationError, 'error');
-          return;
+          return; // Don't proceed with submission
         }
       } catch (error) {
         console.error('Validation error:', error);
         showSnackbar('Validation failed. Please try again.', 'error');
-        return;
+        return; // Don't proceed with submission
       }
     }
 
@@ -252,7 +252,8 @@ const ListPage = <T extends Record<string, any>>({
       onUpdate(editingItem[idField], formData, editingItem);
     }
 
-    baseHandleSubmit(formData, customSubmitLogic, onAfterCreate);
+    // Only proceed with submission if all validations pass
+    await baseHandleSubmit(formData, customSubmitLogic, onAfterCreate);
   };
 
   const shouldHideAddButton = () => {

@@ -12,7 +12,7 @@ import {
   Divider
 } from '@mui/material';
 import { Settings } from '@mui/icons-material';
-import { getAll, create, update } from '../services/fileDataService';
+import { getAll, create, update } from '../shared/services/storage/fileDataService';
 
 interface HostelSettingsDialogProps {
   open: boolean;

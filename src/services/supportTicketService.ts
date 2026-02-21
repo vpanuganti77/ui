@@ -1,5 +1,5 @@
 import { API_CONFIG } from '../config/api';
-import { NotificationService } from './notificationService';
+import { NotificationService } from '../features/notifications/services/notificationService';
 import { CapacitorHttpService } from './capacitorHttpService';
 import { Capacitor } from '@capacitor/core';
 

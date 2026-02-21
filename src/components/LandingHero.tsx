@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Typography, Button, Container, Card, CardContent, Chip } from '@mui/material';
 import { Business, Security, Analytics, Phone, CheckCircle } from '@mui/icons-material';
-import ContactUsDialog from './ContactUsDialog';
-import DemoDialog from './DemoDialog';
+import { ContactUsDialog, DemoDialog } from '../shared/ui/dialogs';
 
 const LandingHero: React.FC = () => {
   const [contactOpen, setContactOpen] = useState(false);

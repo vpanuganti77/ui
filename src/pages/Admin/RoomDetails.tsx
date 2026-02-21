@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getById, getAll, update } from '../../services/fileDataService';
+import { getById, getAll, update } from '../../shared/services/storage/fileDataService';
 import DynamicDialog from '../../components/common/DynamicDialog';
 import { roomFields } from '../../components/common/FormConfigs';
 import {

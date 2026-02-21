@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import PendingApprovalDashboard from './PendingApprovalDashboard';
 import { API_CONFIG } from '../config/api';
-import { authService } from '../services/authService';
+import { authService } from '../features/auth/services/authService';
 
 interface PendingApprovalWrapperProps {
   children: React.ReactNode;

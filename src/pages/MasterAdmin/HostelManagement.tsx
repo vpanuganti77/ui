@@ -7,7 +7,7 @@ import { hostelFields } from '../../components/common/FormConfigs';
 import UserCredentialsDialog from '../../components/UserCredentialsDialog';
 import HostelUsageDialog from '../../components/HostelUsageDialog';
 import OwnerDetailsDialog from '../../components/OwnerDetailsDialog';
-import { getAll, create, update } from '../../services/fileDataService';
+import { getAll, create, update } from '../../shared/services/storage/fileDataService';
 import { getHostelsWithOwners, findAdminUserForHostel } from '../../services/hostelUserService';
 
 

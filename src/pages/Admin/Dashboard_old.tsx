@@ -54,11 +54,11 @@ import {
 import { adminService } from '../../services/adminService';
 import { DashboardStats } from '../../types';
 import { useNavigate } from 'react-router-dom';
-import { create, getAll } from '../../services/fileDataService';
-import TenantDialog from '../../components/tenant/TenantDialog';
+import { create, getAll } from '../../shared/services/storage/fileDataService';
+import { TenantForm } from '../../modules/Tenant';
 import { tenantFields } from '../../components/common/FormConfigs';
 
-import TrialStatus from '../../components/TrialStatus';
+import { TrialStatus } from '../../features/dashboard/components';
 import PendingApprovalDashboard from '../../components/PendingApprovalDashboard';
 
 const Dashboard: React.FC = () => {
@@ -736,7 +736,7 @@ const Dashboard: React.FC = () => {
       </Dialog>
 
       {/* Add Tenant Dialog */}
-      <TenantDialog
+      <TenantForm
         open={tenantDialogOpen}
         onClose={() => setTenantDialogOpen(false)}
         onSubmit={async (formData: any) => {

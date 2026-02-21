@@ -5,7 +5,7 @@ import professionalTheme from './theme/professionalTheme';
 import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
-import { NotificationService } from './services/notificationService';
+import { NotificationService } from './features/notifications/services/notificationService';
 import { CapacitorNotificationService } from './services/capacitorNotificationService';
 import { Capacitor } from '@capacitor/core';
 
@@ -13,9 +13,9 @@ import { Capacitor } from '@capacitor/core';
 import { socketService } from './services/socketService';
 import ProtectedRoute from './components/ProtectedRoute';
 import { useSessionTimeout } from './hooks/useSessionTimeout';
-import Layout from './components/Layout';
-import FirstLoginDialog from './components/FirstLoginDialog';
-import QuickAuthSetupPrompt from './components/QuickAuthSetupPrompt';
+import { Layout } from './shared/ui/layout';
+import { FirstLoginDialog } from './shared/ui/dialogs';
+import { QuickAuthSetupPrompt } from './features/auth/components';
 import Login from './pages/Auth/Login';
 
 import Dashboard from './pages/Admin/Dashboard';

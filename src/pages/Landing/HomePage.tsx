@@ -14,11 +14,10 @@ import {
   Menu,
   MenuItem
 } from '@mui/material';
-import ContactUsDialog from '../../components/ContactUsDialog';
+import { ContactUsDialog } from '../../shared/ui/dialogs';
 import LandingHero from '../../components/LandingHero';
-import StatsCounter from '../../components/StatsCounter';
+import { StatsCounter, DashboardCard } from '../../features/dashboard/components';
 import TestimonialsSection from '../../components/TestimonialsSection';
-import DashboardCard from '../../components/DashboardCard';
 import {
   Business,
   People,

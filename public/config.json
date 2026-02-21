@@ -1,6 +1,6 @@
 {
-  "API_BASE_URL": "https://hostelmanagementbackend-production.up.railway.app/api",
+  "API_BASE_URL": "https://pgflow.up.railway.app/api",
   "TEST_API": "https://jsonplaceholder.typicode.com",
-  "WS_URL": "wss://hostelmanagementbackend-production.up.railway.app", 
+  "WS_URL": "wss://pgflow.up.railway.app", 
   "FRONTEND_URL": "https://pgflow.netlify.app/"
 }

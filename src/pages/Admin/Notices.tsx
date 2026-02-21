@@ -18,7 +18,7 @@ import {
 } from '@mui/material';
 import { Add, Send, Announcement } from '@mui/icons-material';
 import { useListManager } from '../../hooks/useListManager';
-import { create, getAll } from '../../services/fileDataService';
+import { create, getAll } from '../../shared/services/storage/fileDataService';
 import StyledDataGrid from '../../components/common/StyledDataGrid';
 import { statusRenderer } from '../../components/common/MobileCardConfigs';
 

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { socketService } from '../services/socketService';
-import { NotificationService } from '../services/notificationService';
+import { NotificationService } from '../features/notifications/services/notificationService';
 
 interface Notification {
   id: string;
@@ -61,7 +61,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       if (userData) {
         const user = JSON.parse(userData);
         try {
-          const { getAll } = await import('../services/fileDataService');
+          const { getAll } = await import('../shared/services/storage/fileDataService');
           const allNotifications = await getAll('notifications');
           
           // Filter notifications for current user

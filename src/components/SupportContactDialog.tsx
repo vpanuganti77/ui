@@ -12,7 +12,7 @@ import {
 import { ContactSupport } from '@mui/icons-material';
 import DynamicDialog from './common/DynamicDialog';
 import { supportTicketFields } from './common/FormConfigs';
-import { create } from '../services/fileDataService';
+import { create } from '../shared/services/storage/fileDataService';
 import toast from 'react-hot-toast';
 
 interface SupportContactDialogProps {

@@ -14,7 +14,7 @@ import {
   MenuItem,
 } from '@mui/material';
 import { adminService } from '../../services/adminService';
-import { getAll, create } from '../../services/fileDataService';
+import { getAll, create } from '../../shared/services/storage/fileDataService';
 
 const CreateTenant: React.FC = () => {
   const [formData, setFormData] = useState({

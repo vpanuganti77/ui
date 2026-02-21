@@ -1,4 +1,4 @@
-import { getAll } from './fileDataService';
+import { getAll } from '../shared/services/storage/fileDataService';
 
 export interface HostelWithOwner {
   id: string;

@@ -2,7 +2,7 @@ import React from 'react';
 import { Button, Box, Typography, Stack } from '@mui/material';
 import { API_CONFIG } from '../config/api';
 import { socketService } from '../services/socketService';
-import { NotificationService } from '../services/notificationService';
+import { NotificationService } from '../features/notifications/services/notificationService';
 import { CapacitorNotificationService } from '../services/capacitorNotificationService';
 import { Capacitor } from '@capacitor/core';
 

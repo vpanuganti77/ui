@@ -19,7 +19,7 @@ import {
   IconButton
 } from '@mui/material';
 import { Edit, Save, Cancel, Person, Email, Phone, Business, Badge, VpnKey, Visibility, VisibilityOff, AdminPanelSettings } from '@mui/icons-material';
-import { update } from '../../services/fileDataService';
+import { update } from '../../shared/services/storage/fileDataService';
 
 const Profile: React.FC = () => {
   const [user, setUser] = useState<any>(null);

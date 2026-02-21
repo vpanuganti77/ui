@@ -18,10 +18,10 @@ import {
 } from '@mui/material';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import ContactUsDialog from '../../components/ContactUsDialog';
-import QuickAuthDialog from '../../components/QuickAuthDialog';
+import { ContactUsDialog } from '../../shared/ui/dialogs';
+import { QuickAuthDialog } from '../../features/auth/components';
 import { ArrowBack, Visibility, VisibilityOff, Fingerprint } from '@mui/icons-material';
-import { BiometricService } from '../../services/biometricService';
+import { BiometricService } from '../../features/auth/services/biometricService';
 import { FEATURE_FLAGS } from '../../config/features';
 
 

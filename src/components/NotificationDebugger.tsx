@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, Box, Typography, Stack, Alert } from '@mui/material';
 import { socketService } from '../services/socketService';
-import { NotificationService } from '../services/notificationService';
+import { NotificationService } from '../features/notifications/services/notificationService';
 
 const NotificationDebugger: React.FC = () => {
   const [status, setStatus] = React.useState<string>('');

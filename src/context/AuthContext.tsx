@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { User } from '../types';
-import { authService } from '../services/authService';
-import { BiometricService } from '../services/biometricService';
+import { authService } from '../features/auth/services/authService';
+import { BiometricService } from '../features/auth/services/biometricService';
 import { HostelStatusService } from '../services/hostelStatusService';
-import { NotificationService } from '../services/notificationService';
+import { NotificationService } from '../features/notifications/services/notificationService';
 
 interface AuthState {
   user: User | null;

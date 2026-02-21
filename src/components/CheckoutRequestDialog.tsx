@@ -12,7 +12,7 @@ import {
   Divider
 } from '@mui/material';
 import { Warning, ExitToApp } from '@mui/icons-material';
-import { create } from '../services/fileDataService';
+import { create } from '../shared/services/storage/fileDataService';
 
 interface CheckoutRequestDialogProps {
   open: boolean;

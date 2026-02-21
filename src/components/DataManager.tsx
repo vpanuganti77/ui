@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, Box } from '@mui/material';
 import { Download, Upload } from '@mui/icons-material';
-import { exportData, importData } from '../services/fileDataService';
+import { exportData, importData } from '../shared/services/storage/fileDataService';
 
 interface DataManagerProps {
   onDataChange?: () => void;

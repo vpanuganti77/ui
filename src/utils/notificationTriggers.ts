@@ -1,4 +1,4 @@
-import { NotificationService } from '../services/notificationService';
+import { NotificationService } from '../features/notifications/services/notificationService';
 
 export const triggerNotifications = {
   // Complaint notifications

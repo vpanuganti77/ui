@@ -1,6 +1,6 @@
-import api from './api';
+import api from '../shared/services/api/api';
 import { DashboardStats, Tenant, Room, Payment, Complaint, PaginatedResponse } from '../types';
-import { getAll as fileGetAll } from './fileDataService';
+import { getAll as fileGetAll } from '../shared/services/storage/fileDataService';
 
 export const adminService = {
   // Generic data fetching

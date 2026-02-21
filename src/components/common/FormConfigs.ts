@@ -82,7 +82,7 @@ export const tenantFields: FieldConfig[] = [
     options: [], // Will be populated by loadOptions
     loadOptions: async (editingItem?: any) => {
       try {
-        const { getAll } = await import('../../services/fileDataService');
+        const { getAll } = await import('../../shared/services/storage/fileDataService');
         const rooms = await getAll('rooms');
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         
@@ -274,6 +274,13 @@ export const userFields: FieldConfig[] = [
     type: 'text',
     required: true,
     validation: validations.minLength(2),
+  },
+  {
+    name: 'email',
+    label: 'Email',
+    type: 'email',
+    required: true,
+    validation: validations.email,
   },
   {
     name: 'phone',

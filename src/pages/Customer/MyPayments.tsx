@@ -21,7 +21,7 @@ const MyPayments: React.FC = () => {
     const loadPaymentData = async () => {
       try {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
-        const { getAll } = await import('../../services/fileDataService');
+        const { getAll } = await import('../../shared/services/storage/fileDataService');
         
         // Get tenant data
         const tenants = await getAll('tenants');

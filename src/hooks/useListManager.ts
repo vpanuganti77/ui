@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getAll, create, update, remove } from '../services/fileDataService';
+import { getAll, create, update, remove } from '../shared/services/storage/fileDataService';
 
 interface UseListManagerProps<T> {
   initialData?: T[];
@@ -141,6 +141,8 @@ export const useListManager = <T extends Record<string, any>>({
         if (result) {
           setData(data.map(item => item[idField] === editingItem[idField] ? result : item));
           showSnackbar(`${entityName} updated successfully`);
+          setOpen(false);
+          setEditingItem(null);
         }
       } else {
         const newItemData = customLogic ? customLogic(formData, null) : formData;
@@ -150,12 +152,12 @@ export const useListManager = <T extends Record<string, any>>({
         if (onAfterCreate) {
           onAfterCreate(newItem);
         }
+        setOpen(false);
+        setEditingItem(null);
       }
-      
-      setOpen(false);
-      setEditingItem(null);
     } catch (error) {
       showSnackbar(`Failed to save ${entityName.toLowerCase()}`, 'error');
+      // Don't close dialog on error - keep it open so user can fix issues
     }
   };
 

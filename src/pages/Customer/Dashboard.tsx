@@ -61,7 +61,7 @@ const TenantDashboard: React.FC = () => {
       const refreshData = async () => {
         try {
           const user = JSON.parse(localStorage.getItem('user') || '{}');
-          const { getAll } = await import('../../services/fileDataService');
+          const { getAll } = await import('../../shared/services/storage/fileDataService');
           const tenants = await getAll('tenants');
           const tenant = tenants.find((t: any) => 
             t.email === user.email || t.name === user.name ||
@@ -112,7 +112,7 @@ const TenantDashboard: React.FC = () => {
     const loadTenantData = async () => {
       try {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
-        const { getAll } = await import('../../services/fileDataService');
+        const { getAll } = await import('../../shared/services/storage/fileDataService');
         
         // Get tenant data based on user email
         const tenants = await getAll('tenants');
@@ -191,7 +191,7 @@ const TenantDashboard: React.FC = () => {
   const handleComplaintSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const { create } = await import('../../services/fileDataService');
+      const { create } = await import('../../shared/services/storage/fileDataService');
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       
       await create('complaints', {

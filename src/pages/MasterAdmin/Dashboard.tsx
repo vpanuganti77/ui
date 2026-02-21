@@ -10,7 +10,7 @@ import {
   Alert
 } from '@mui/material';
 import { Business, Person, RequestPage, CheckCircle } from '@mui/icons-material';
-import { getAll, update, create } from '../../services/fileDataService';
+import { getAll, update, create } from '../../shared/services/storage/fileDataService';
 import { socketService } from '../../services/socketService';
 
 

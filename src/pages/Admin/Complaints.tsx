@@ -15,7 +15,7 @@ import { Download, Refresh, Warning, ReportProblem, Schedule, CheckCircle, Prior
 import toast from 'react-hot-toast';
 import ListPage from '../../components/common/ListPage';
 import { complaintFields } from '../../components/common/FormConfigs';
-import AdminComplaintDialog from '../../components/AdminComplaintDialog';
+import { AdminComplaintDialog } from '../../features/complaints/components';
 import { getComplaintFilters } from '../../utils/mobileFilterHelpers';
 
 
@@ -34,7 +34,7 @@ const Complaints: React.FC = () => {
     const loadComplaints = async () => {
       try {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
-        const { getAll } = await import('../../services/fileDataService');
+        const { getAll } = await import('../../shared/services/storage/fileDataService');
         const allComplaints = await getAll('complaints');
         const hostelComplaints = allComplaints.filter((c: any) => c.hostelId === user.hostelId);
         setComplaints(hostelComplaints);
@@ -70,7 +70,7 @@ const Complaints: React.FC = () => {
   const refreshComplaints = async () => {
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const { getAll } = await import('../../services/fileDataService');
+      const { getAll } = await import('../../shared/services/storage/fileDataService');
       const allComplaints = await getAll('complaints');
       const hostelComplaints = allComplaints.filter((c: any) => c.hostelId === user.hostelId);
       setComplaints(hostelComplaints);
@@ -89,7 +89,7 @@ const Complaints: React.FC = () => {
     
     if (editingItem && formData) {
       try {
-        const { update, create } = await import('../../services/fileDataService');
+        const { update, create } = await import('../../shared/services/storage/fileDataService');
         const { CompleteNotificationService } = await import('../../services/completeNotificationService');
         
         // Handle new complaint creation
@@ -400,7 +400,7 @@ const Complaints: React.FC = () => {
         data={[]}
         customDataLoader={async () => {
           const user = JSON.parse(localStorage.getItem('user') || '{}');
-          const { getAll } = await import('../../services/fileDataService');
+          const { getAll } = await import('../../shared/services/storage/fileDataService');
           const allComplaints = await getAll('complaints');
           return allComplaints.filter((c: any) => c.hostelId === user.hostelId);
         }}

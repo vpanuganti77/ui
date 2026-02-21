@@ -19,7 +19,7 @@ import {
   DialogContentText
 } from '@mui/material';
 import { Download, Upload, Storage, Business, DeleteSweep } from '@mui/icons-material';
-import { getAll, exportData, importData, clearAllData } from '../../services/fileDataService';
+import { getAll, exportData, importData, clearAllData } from '../../shared/services/storage/fileDataService';
 
 const DataManagement: React.FC = () => {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' | 'info' | 'warning' });
