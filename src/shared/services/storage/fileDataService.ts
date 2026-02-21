@@ -2,8 +2,6 @@ import { API_CONFIG } from '../../../config/api';
 import { CapacitorHttpService } from '../../../services/capacitorHttpService';
 import { Capacitor } from '@capacitor/core';
 
-const API_BASE_URL = API_CONFIG.BASE_URL;
-
 interface DataStructure {
   hostels: any[];
   tenants: any[];
@@ -23,7 +21,7 @@ interface DataStructure {
 
 // API helper function
 const apiCall = async (endpoint: string, options?: RequestInit) => {
-  const url = `${API_BASE_URL}${endpoint}`;
+  const url = `${API_CONFIG.BASE_URL}${endpoint}`;
   const headers = {
     'Content-Type': 'application/json',
     ...options?.headers,
@@ -147,12 +145,12 @@ export const create = async (entityType: keyof DataStructure, item: any): Promis
       if (Capacitor.isNativePlatform()) {
         // For file uploads on Android, we need to handle differently
         // For now, fallback to regular fetch for file uploads
-        response = await fetch(`${API_BASE_URL}/${entityType}`, {
+        response = await fetch(`${API_CONFIG.BASE_URL}/${entityType}`, {
           method: 'POST',
           body: formData,
         });
       } else {
-        response = await fetch(`${API_BASE_URL}/${entityType}`, {
+        response = await fetch(`${API_CONFIG.BASE_URL}/${entityType}`, {
           method: 'POST',
           body: formData,
         });

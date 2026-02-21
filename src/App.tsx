@@ -8,7 +8,7 @@ import { NotificationProvider } from './context/NotificationContext';
 import { NotificationService } from './features/notifications/services/notificationService';
 import { CapacitorNotificationService } from './services/capacitorNotificationService';
 import { Capacitor } from '@capacitor/core';
-
+import { API_CONFIG } from './config/api';
 
 import { socketService } from './services/socketService';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -86,6 +86,37 @@ class ErrorBoundary extends Component<{children: ReactNode}, ErrorBoundaryState>
 }
 
 function App() {
+  const [configLoaded, setConfigLoaded] = useState(false);
+  const [configError, setConfigError] = useState<string | null>(null);
+
+  useEffect(() => {
+    API_CONFIG.loadConfig()
+      .then(() => {
+        setConfigLoaded(true);
+      })
+      .catch((error) => {
+        setConfigError(error.message);
+      });
+  }, []);
+
+  if (configError) {
+    return (
+      <div style={{ padding: '20px', textAlign: 'center' }}>
+        <h2>Configuration Error</h2>
+        <p>Failed to load application configuration: {configError}</p>
+        <button onClick={() => window.location.reload()}>Retry</button>
+      </div>
+    );
+  }
+
+  if (!configLoaded) {
+    return (
+      <div style={{ padding: '20px', textAlign: 'center' }}>
+        <h2>Loading Configuration...</h2>
+        <p>Please wait while we load the application settings.</p>
+      </div>
+    );
+  }
 
   return (
     <ErrorBoundary>

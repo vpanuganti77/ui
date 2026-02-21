@@ -1,42 +1,46 @@
 // Centralized API configuration loaded from config.json
 let config: any = null;
 
-const loadConfig = async () => {
-  if (!config) {
-    try {
-      const response = await fetch('/config.json');
-      config = await response.json();
-    } catch (error) {
-      console.warn('Failed to load config.json, using defaults');
-      config = {
-        API_BASE_URL: 'https://hostelmanagementbackend-production.up.railway.app/api',
-        WS_URL: 'wss://api-production-79b8.up.railway.app',
-        FRONTEND_URL: 'https://pgflow.netlify.app'
-      };
+// Load config synchronously at startup - this will block until config is loaded
+const loadConfigSync = async () => {
+  try {
+    const response = await fetch('/config.json');
+    if (!response.ok) {
+      throw new Error(`Failed to load config.json: ${response.status}`);
     }
+    config = await response.json();
+    console.log('Config loaded from config.json:', config);
+  } catch (error) {
+    console.error('Failed to load config.json:', error);
+    throw error;
   }
-  return config;
 };
-
-// Initialize config synchronously for immediate use
-const getConfig = () => {
-  if (!config) {
-    // Fallback defaults if config not loaded yet
-    return {
-      API_BASE_URL: 'https://hostelmanagementbackend-production.up.railway.app/api',
-      WS_URL: 'wss://api-production-79b8.up.railway.app',
-      FRONTEND_URL: 'https://pgflow.netlify.app'
-    };
-  }
-  return config;
-};
-
-// Load config on module import
-loadConfig();
 
 export const API_CONFIG = {
-  get BASE_URL() { return getConfig().API_BASE_URL; },
-  get WS_URL() { return getConfig().WS_URL; },
-  get FRONTEND_URL() { return getConfig().FRONTEND_URL; },
-  loadConfig
+  get BASE_URL() { 
+    if (!config) {
+      throw new Error('Config not loaded yet. Make sure to await loadConfig() first.');
+    }
+    return config.API_BASE_URL; 
+  },
+  
+  get WS_URL() { 
+    if (!config) {
+      throw new Error('Config not loaded yet. Make sure to await loadConfig() first.');
+    }
+    return config.WS_URL; 
+  },
+  
+  get FRONTEND_URL() { 
+    if (!config) {
+      throw new Error('Config not loaded yet. Make sure to await loadConfig() first.');
+    }
+    return config.FRONTEND_URL; 
+  },
+
+  // Check if config is loaded
+  isLoaded: () => !!config,
+  
+  // Load config manually
+  loadConfig: loadConfigSync
 };

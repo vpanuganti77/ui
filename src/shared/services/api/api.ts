@@ -2,8 +2,6 @@ import { CapacitorHttpService } from '../../../services/capacitorHttpService';
 import { Capacitor } from '@capacitor/core';
 import { API_CONFIG } from '../../../config/api';
 
-const API_BASE_URL = API_CONFIG.BASE_URL;
-
 class ApiService {
   private getHeaders() {
     const headers: any = {
@@ -19,7 +17,7 @@ class ApiService {
   }
 
   async get(endpoint: string) {
-    const url = `${API_BASE_URL}${endpoint}`;
+    const url = `${API_CONFIG.BASE_URL}${endpoint}`;
     const headers = this.getHeaders();
     
     if (Capacitor.isNativePlatform()) {
@@ -30,7 +28,7 @@ class ApiService {
   }
 
   async post(endpoint: string, data: any) {
-    const url = `${API_BASE_URL}${endpoint}`;
+    const url = `${API_CONFIG.BASE_URL}${endpoint}`;
     const headers = this.getHeaders();
     
     if (Capacitor.isNativePlatform()) {
@@ -45,7 +43,7 @@ class ApiService {
   }
 
   async put(endpoint: string, data: any) {
-    const url = `${API_BASE_URL}${endpoint}`;
+    const url = `${API_CONFIG.BASE_URL}${endpoint}`;
     const headers = this.getHeaders();
     
     if (Capacitor.isNativePlatform()) {
@@ -64,7 +62,7 @@ class ApiService {
   }
 
   async delete(endpoint: string) {
-    const url = `${API_BASE_URL}${endpoint}`;
+    const url = `${API_CONFIG.BASE_URL}${endpoint}`;
     const headers = this.getHeaders();
     
     if (Capacitor.isNativePlatform()) {
