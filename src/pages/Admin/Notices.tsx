@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box,
   Card,
@@ -32,6 +32,7 @@ const Notices: React.FC = () => {
     message: '',
     priority: 'normal' as 'low' | 'normal' | 'high'
   });
+  const [errors, setErrors] = useState({ title: '', message: '' });
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
 
   const { data: notices, setData } = useListManager({
@@ -40,8 +41,18 @@ const Notices: React.FC = () => {
   });
 
   const handleSubmit = async () => {
-    if (!formData.title.trim() || !formData.message.trim()) {
-      setSnackbar({ open: true, message: 'Please fill all required fields', severity: 'error' });
+    const newErrors = { title: '', message: '' };
+    
+    if (!formData.title.trim()) {
+      newErrors.title = 'Notice title is required';
+    }
+    if (!formData.message.trim()) {
+      newErrors.message = 'Message is required';
+    }
+    
+    setErrors(newErrors);
+    
+    if (newErrors.title || newErrors.message) {
       return;
     }
 
@@ -57,6 +68,7 @@ const Notices: React.FC = () => {
 
       setOpen(false);
       setFormData({ title: '', message: '', priority: 'normal' });
+      setErrors({ title: '', message: '' });
       // Reload data by updating state
       const updatedNotices = await getAll('notices');
       setData(updatedNotices);
@@ -75,7 +87,7 @@ const Notices: React.FC = () => {
     }
   };
 
-  const columns = [
+  const columns = useMemo(() => [
     { field: 'title', headerName: 'Title', flex: 1, minWidth: 200 },
     { field: 'message', headerName: 'Message', flex: 2, minWidth: 300 },
     {
@@ -97,9 +109,9 @@ const Notices: React.FC = () => {
       width: 120,
       renderCell: (params: any) => new Date(params.value).toLocaleDateString()
     }
-  ];
+  ], []);
 
-  const mobileCardConfig = {
+  const mobileCardConfig = useMemo(() => ({
     titleField: 'title',
     fields: [
       { key: 'message', label: 'Message', value: 'message' },
@@ -107,7 +119,7 @@ const Notices: React.FC = () => {
       { key: 'createdBy', label: 'Created By', value: 'createdBy' },
       { key: 'createdAt', label: 'Date', value: 'createdAt', render: (value: string) => new Date(value).toLocaleDateString() }
     ]
-  };
+  }), []);
 
 
 
@@ -122,7 +134,7 @@ const Notices: React.FC = () => {
         gap: 2
       }}>
         <Typography variant={isMobile ? 'h5' : 'h4'} sx={{ fontWeight: 600 }}>
-          Send Notices
+          Notices
         </Typography>
         <Button
           variant="contained"
@@ -144,7 +156,7 @@ const Notices: React.FC = () => {
             rows={notices || []}
             columns={columns}
             mobileCardConfig={mobileCardConfig}
-            height={isMobile ? 400 : 450}
+            height={isMobile ? 300 : 400}
           />
         </CardContent>
       </Card>
@@ -159,13 +171,23 @@ const Notices: React.FC = () => {
             <TextField
               label="Notice Title"
               value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, title: e.target.value });
+                if (errors.title) setErrors({ ...errors, title: '' });
+              }}
+              error={!!errors.title}
+              helperText={errors.title}
               fullWidth
             />
             <TextField
               label="Message"
               value={formData.message}
-              onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, message: e.target.value });
+                if (errors.message) setErrors({ ...errors, message: '' });
+              }}
+              error={!!errors.message}
+              helperText={errors.message}
               multiline
               rows={4}
               fullWidth

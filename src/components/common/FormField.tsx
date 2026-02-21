@@ -16,8 +16,11 @@ import {
   Typography,
   Chip,
   OutlinedInput,
+  Tooltip,
+  IconButton,
 } from '@mui/material';
-import { CameraAlt } from '@mui/icons-material';
+import { CameraAlt, Info } from '@mui/icons-material';
+import AvailabilityIndicator from './AvailabilityIndicator';
 
 export interface FieldConfig {
   name: string;
@@ -34,7 +37,11 @@ export interface FieldConfig {
   flex?: string;
   width?: string;
   disabled?: boolean;
+  getDisabled?: (editingItem?: any) => boolean;
   validation?: (value: any) => string;
+  uniquenessCheck?: (value: string, editingItem?: any) => Promise<{ isUnique: boolean; message: string }>;
+  min?: string;
+  max?: string;
 }
 
 interface FormFieldProps {
@@ -43,6 +50,8 @@ interface FormFieldProps {
   onChange: (name: string, value: any) => void;
   error?: string;
   onClearError?: (name: string) => void;
+  editingItem?: any;
+  onAvailabilityChange?: (fieldName: string, isAvailable: boolean) => void;
 }
 
 const FormField: React.FC<FormFieldProps> = ({
@@ -51,7 +60,19 @@ const FormField: React.FC<FormFieldProps> = ({
   onChange,
   error,
   onClearError,
+  editingItem,
+  onAvailabilityChange,
 }) => {
+  const [isAvailable, setIsAvailable] = React.useState(true);
+
+  const shouldShowAvailability = ['name', 'email', 'phone'].includes(config.name);
+
+  const handleAvailabilityChange = React.useCallback((available: boolean) => {
+    setIsAvailable(available);
+    if (onAvailabilityChange) {
+      onAvailabilityChange(config.name, available);
+    }
+  }, [config.name, onAvailabilityChange]);
   const handleChange = (newValue: any) => {
     onChange(config.name, newValue);
     if (error && onClearError) {
@@ -60,51 +81,63 @@ const FormField: React.FC<FormFieldProps> = ({
   };
 
   const fieldStyle = {
-    flex: config.flex || '1 1 200px',
-    width: config.width,
+    width: '100%',
   };
 
   switch (config.type) {
     case 'select':
       const hasOptions = config.options && config.options.length > 0;
       return (
-        <FormControl sx={fieldStyle} error={!!error}>
-          <InputLabel>{config.label}</InputLabel>
-          <Select
-            value={value || ''}
-            label={config.label}
-            onChange={(e) => handleChange(e.target.value)}
-            disabled={!hasOptions}
-          >
-            {hasOptions ? (
-              config.options?.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
+        <Box sx={{ position: 'relative' }}>
+          <FormControl sx={fieldStyle} error={!!error} size="small">
+            <InputLabel>{config.label}</InputLabel>
+            <Select
+              value={value || ''}
+              label={config.label}
+              onChange={(e) => handleChange(e.target.value)}
+              disabled={!hasOptions}
+            >
+              {hasOptions ? (
+                config.options?.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))
+              ) : (
+                <MenuItem disabled value="">
+                  {config.name === 'roomId' ? 'No available rooms found' : 'No options available'}
                 </MenuItem>
-              ))
-            ) : (
-              <MenuItem disabled value="">
-                {config.name === 'roomId' ? 'No available rooms found. Please create rooms first.' : 'No options available'}
-              </MenuItem>
+              )}
+            </Select>
+            {error && (
+              <Typography variant="caption" color="error" sx={{ ml: 2, mt: 0.5 }}>
+                {error}
+              </Typography>
             )}
-          </Select>
-          {error && (
-            <Typography variant="caption" color="error" sx={{ ml: 2, mt: 0.5 }}>
-              {error}
-            </Typography>
+          </FormControl>
+          {config.name === 'roomId' && !hasOptions && (
+            <Tooltip title="Create rooms in the Rooms section before adding tenants" arrow placement="top">
+              <IconButton 
+                size="small" 
+                sx={{ 
+                  position: 'absolute', 
+                  right: 32, 
+                  top: 8, 
+                  zIndex: 1,
+                  p: 0.5
+                }}
+              >
+                <Info sx={{ fontSize: 16, color: 'info.main' }} />
+              </IconButton>
+            </Tooltip>
           )}
-          {!hasOptions && config.name === 'roomId' && (
-            <Typography variant="caption" color="warning.main" sx={{ ml: 2, mt: 0.5 }}>
-              Create rooms in the Rooms section before adding tenants.
-            </Typography>
-          )}
-        </FormControl>
+        </Box>
       );
 
     case 'multiselect':
       const selectedValues = Array.isArray(value) ? value : [];
       return (
-        <FormControl sx={fieldStyle} error={!!error}>
+        <FormControl sx={fieldStyle} error={!!error} size="small">
           <InputLabel>{config.label}</InputLabel>
           <Select
             multiple
@@ -207,6 +240,7 @@ const FormField: React.FC<FormFieldProps> = ({
           placeholder={config.placeholder}
           error={!!error}
           helperText={error}
+          size="small"
         />
       );
 
@@ -311,6 +345,8 @@ const FormField: React.FC<FormFieldProps> = ({
       );
 
     default:
+      const showRequiredError = error && (!value || value.trim().length === 0);
+      
       return (
         <TextField
           sx={fieldStyle}
@@ -319,14 +355,29 @@ const FormField: React.FC<FormFieldProps> = ({
           value={value || ''}
           onChange={(e) => handleChange(e.target.value)}
           placeholder={config.placeholder}
-          error={!!error}
-          helperText={error}
-          disabled={config.disabled}
+          error={!!error || (shouldShowAvailability && !isAvailable)}
+          helperText={showRequiredError ? error : undefined}
+          disabled={config.disabled || config.getDisabled?.(editingItem)}
+          size="small"
           InputLabelProps={
             config.type === 'date' || config.type === 'month'
               ? { shrink: true }
               : undefined
           }
+          inputProps={{
+            ...(config.type === 'date' && config.min && { min: config.min }),
+            ...(config.type === 'date' && config.max && { max: config.max })
+          }}
+          InputProps={{
+            endAdornment: shouldShowAvailability ? (
+              <AvailabilityIndicator
+                value={value || ''}
+                type={config.name as 'name' | 'email' | 'phone'}
+                excludeId={editingItem?.id}
+                onAvailabilityChange={handleAvailabilityChange}
+              />
+            ) : undefined
+          }}
         />
       );
   }

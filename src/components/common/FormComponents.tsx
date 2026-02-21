@@ -28,6 +28,8 @@ interface ReusableTextFieldProps {
   placeholder?: string;
   validation?: ValidationState;
   gridColumn?: string;
+  min?: string;
+  max?: string;
 }
 
 export const ReusableTextField: React.FC<ReusableTextFieldProps> = ({
@@ -41,7 +43,9 @@ export const ReusableTextField: React.FC<ReusableTextFieldProps> = ({
   type = 'text',
   placeholder = '',
   validation,
-  gridColumn
+  gridColumn,
+  min,
+  max
 }) => {
   return (
     <TextField
@@ -54,8 +58,13 @@ export const ReusableTextField: React.FC<ReusableTextFieldProps> = ({
       error={error}
       helperText={helperText}
       type={type}
-      placeholder={placeholder}
+      placeholder={type === 'date' ? '' : placeholder}
       sx={{ gridColumn }}
+      InputLabelProps={type === 'date' ? { shrink: true } : undefined}
+      inputProps={{
+        ...(type === 'date' && min && { min }),
+        ...(type === 'date' && max && { max })
+      }}
       InputProps={{
         endAdornment: validation?.status && (
           <InputAdornment position="end">

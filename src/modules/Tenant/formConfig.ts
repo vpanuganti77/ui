@@ -71,8 +71,16 @@ export const tenantFormFields: FormFieldConfig[] = [
   {
     name: 'joiningDate',
     label: 'Joining Date',
-    type: 'text',
+    type: 'date',
     required: true,
+    min: new Date().toISOString().split('T')[0],
+    validation: (value: string) => {
+      const today = new Date().toISOString().split('T')[0];
+      if (value && value < today) {
+        return 'Joining date cannot be in the past';
+      }
+      return null;
+    },
     gridColumn: '1 / -1'
   },
   {

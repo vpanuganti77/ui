@@ -32,7 +32,7 @@ export const expenseFormFields: FormFieldConfig[] = [
   {
     name: 'date',
     label: 'Date',
-    type: 'text',
+    type: 'date',
     required: true
   },
   {

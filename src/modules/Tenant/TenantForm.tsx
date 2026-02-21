@@ -4,6 +4,7 @@ import { CameraAlt } from '@mui/icons-material';
 import MultiStepForm from '../../components/common/MultiStepForm';
 import { tenantFields } from '../../components/common/FormConfigs';
 import FormField from '../../components/common/FormField';
+import { useAvailabilityStatus } from '../../hooks/useAvailabilityStatus';
 
 interface TenantFormProps {
   open: boolean;
@@ -13,9 +14,69 @@ interface TenantFormProps {
 }
 
 const TenantForm: React.FC<TenantFormProps> = ({ open, onClose, onSubmit, editingItem }) => {
-  const handleSubmit = (formData: any) => {
+  const { availabilityStatus, updateAvailability, resetAvailability, isAllAvailable } = useAvailabilityStatus();
+  const compressImage = (dataUrl: string, quality: number = 0.6): Promise<string> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        const maxWidth = 800;
+        const maxHeight = 600;
+        let { width, height } = img;
+        
+        if (width > height) {
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = (width * maxHeight) / height;
+            height = maxHeight;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve(compressedDataUrl.split(',')[1]); // Return only base64 part
+      };
+      
+      img.src = dataUrl;
+    });
+  };
+
+  const handleSubmit = async (formData: any) => {
+    // Check availability for required fields before submission
+    const requiredFields = ['name', 'email', 'phone'];
+    if (!isAllAvailable(requiredFields)) {
+      console.error('Some fields are not available');
+      return;
+    }
+
     const userData = localStorage.getItem('user');
     let submissionData = { ...formData };
+    
+    // Compress and convert images to binary format on submit
+    if (submissionData.aadharFront && submissionData.aadharFront.startsWith('data:')) {
+      try {
+        submissionData.aadharFront = await compressImage(submissionData.aadharFront);
+      } catch (error) {
+        console.error('Error compressing aadharFront:', error);
+      }
+    }
+    
+    if (submissionData.aadharBack && submissionData.aadharBack.startsWith('data:')) {
+      try {
+        submissionData.aadharBack = await compressImage(submissionData.aadharBack);
+      } catch (error) {
+        console.error('Error compressing aadharBack:', error);
+      }
+    }
     
     if (userData) {
       try {
@@ -28,6 +89,7 @@ const TenantForm: React.FC<TenantFormProps> = ({ open, onClose, onSubmit, editin
     }
     
     onSubmit(submissionData);
+    resetAvailability();
   };
 
   const handleAadharPhoto = (type: 'front' | 'back', formData: any, handleFieldChange: any) => {
@@ -62,6 +124,7 @@ const TenantForm: React.FC<TenantFormProps> = ({ open, onClose, onSubmit, editin
           onChange={handleFieldChange}
           error={errors['aadharNumber']}
           onClearError={handleClearError}
+          editingItem={editingItem}
         />
       </Box>
       
@@ -92,7 +155,7 @@ const TenantForm: React.FC<TenantFormProps> = ({ open, onClose, onSubmit, editin
               >
                 {formData[fieldName] ? (
                   <img 
-                    src={formData[fieldName]} 
+                    src={formData[fieldName].startsWith('data:') ? formData[fieldName] : `data:image/jpeg;base64,${formData[fieldName]}`} 
                     alt={`Aadhar ${type}`} 
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
@@ -120,7 +183,32 @@ const TenantForm: React.FC<TenantFormProps> = ({ open, onClose, onSubmit, editin
   const steps = [
     {
       label: window.innerWidth < 600 ? 'Basic Details' : 'Step 1: Basic Details',
-      fields: ['name', 'email', 'phone', 'gender', 'roomId', 'rent', 'deposit', 'joiningDate']
+      fields: ['name', 'email', 'phone', 'gender', 'roomId', 'rent', 'deposit', 'joiningDate'],
+      customRender: (formData: any, errors: any, handleFieldChange: any, handleClearError: any, updateAvailability?: (fieldName: string, isAvailable: boolean) => void) => (
+        <Box sx={{ 
+          display: 'grid', 
+          gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, 
+          gap: { xs: 1.5, sm: 2 } 
+        }}>
+          {['name', 'email', 'phone', 'gender', 'roomId', 'rent', 'deposit', 'joiningDate'].map(fieldName => {
+            const field = tenantFields.find(f => f.name === fieldName);
+            if (!field) return null;
+            
+            return (
+              <FormField
+                key={fieldName}
+                config={field}
+                value={formData[fieldName]}
+                onChange={handleFieldChange}
+                error={errors[fieldName]}
+                onClearError={handleClearError}
+                editingItem={editingItem}
+                onAvailabilityChange={updateAvailability}
+              />
+            );
+          })}
+        </Box>
+      )
     },
     {
       label: window.innerWidth < 600 ? 'Documents' : 'Step 2: Aadhar Documents',
@@ -132,7 +220,10 @@ const TenantForm: React.FC<TenantFormProps> = ({ open, onClose, onSubmit, editin
   return (
     <MultiStepForm
       open={open}
-      onClose={onClose}
+      onClose={() => {
+        resetAvailability();
+        onClose();
+      }}
       onSubmit={handleSubmit}
       editingItem={editingItem}
       title="Tenant"

@@ -128,8 +128,7 @@ function App() {
           {/* <SessionTimeoutWrapper /> */}
           <FirstLoginWrapper />
           <Router>
-            <StatusValidator>
-              <Routes>
+            <Routes>
                 {/* Public Routes */}
                 <Route path="/login" element={<Login />} />
 
@@ -229,7 +228,6 @@ function App() {
                 <Route path="/home" element={<AuthRedirect />} />
                 <Route path="*" element={<Navigate to="/login" replace />} />
               </Routes>
-            </StatusValidator>
           </Router>
         </NotificationProvider>
       </AuthProvider>

@@ -24,62 +24,22 @@ export const useListManager = <T extends Record<string, any>>({
   useEffect(() => {
     let mounted = true;
     
-    // Only load from service if no initialData provided
+    // Only load from service if no initialData provided AND no custom data loader will be used
+    // This prevents duplicate API calls when both empty initialData and customDataLoader are provided
     if (initialData.length === 0) {
-      const loadData = async () => {
-        try {
-          console.log(`Loading data for ${entityKey}...`);
-          const storedData = await getAll(entityKey as any);
-          console.log(`Loaded ${storedData?.length || 0} items for ${entityKey}:`, storedData);
-          if (mounted) {
-            setData(Array.isArray(storedData) ? storedData : []);
-          }
-        } catch (error) {
-          console.error('Failed to load data:', error);
-          if (mounted) {
-            setData([]);
-          }
-        }
-      };
-      
-      loadData();
+      // Don't load here if a custom loader will handle it - let ListPage handle the loading
+      // This is determined by checking if we're in a ListPage context (which will have customDataLoader)
+      return;
     }
-    
-    // Listen for data refresh events
-    const handleRefreshData = () => {
-      if (mounted && initialData.length === 0) {
-        const loadData = async () => {
-          try {
-            const storedData = await getAll(entityKey as any);
-            if (mounted) {
-              setData(Array.isArray(storedData) ? storedData : []);
-            }
-          } catch (error) {
-            console.error('Failed to load data:', error);
-          }
-        };
-        loadData();
-      }
-    };
-    
-    const handleDashboardRefresh = () => {
-      if (mounted && initialData.length === 0) {
-        handleRefreshData();
-      }
-    };
-    
-    window.addEventListener('refreshData', handleRefreshData);
-    window.addEventListener('dashboardRefresh', handleDashboardRefresh);
     
     return () => { 
       mounted = false;
-      window.removeEventListener('refreshData', handleRefreshData);
-      window.removeEventListener('dashboardRefresh', handleDashboardRefresh);
     };
   }, [entityKey, initialData.length]);
   const [open, setOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteItem, setDeleteItem] = useState<T | null>(null);
   const [editingItem, setEditingItem] = useState<T | null>(null);
   const [snackbar, setSnackbar] = useState({ 
     open: false, 
@@ -105,7 +65,9 @@ export const useListManager = <T extends Record<string, any>>({
   };
 
   const handleDelete = (id: string | number) => {
+    const item = data.find(item => item[idField] === id);
     setDeleteId(id.toString());
+    setDeleteItem(item || null);
     setDeleteOpen(true);
   };
 
@@ -131,6 +93,7 @@ export const useListManager = <T extends Record<string, any>>({
     }
     setDeleteOpen(false);
     setDeleteId(null);
+    setDeleteItem(null);
   };
 
   const handleSubmit = async (formData: any, customLogic?: (formData: any, editingItem: T | null) => T, onAfterCreate?: (newItem: T) => void) => {
@@ -169,6 +132,7 @@ export const useListManager = <T extends Record<string, any>>({
   const closeDeleteDialog = () => {
     setDeleteOpen(false);
     setDeleteId(null);
+    setDeleteItem(null);
   };
 
   const closeSnackbar = () => {
@@ -180,6 +144,7 @@ export const useListManager = <T extends Record<string, any>>({
     setData,
     open,
     deleteOpen,
+    deleteItem,
     editingItem,
     snackbar,
     showSnackbar,

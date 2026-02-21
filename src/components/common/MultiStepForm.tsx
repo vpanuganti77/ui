@@ -14,11 +14,12 @@ import {
 import { Close, CameraAlt } from '@mui/icons-material';
 import FormField from './FormField';
 import { FieldConfig } from './FormField';
+import { useAvailabilityStatus } from '../../hooks/useAvailabilityStatus';
 
 interface StepConfig {
   label: string;
   fields: string[];
-  customRender?: (formData: any, errors: any, handleFieldChange: any, handleClearError: any) => React.ReactNode;
+  customRender?: (formData: any, errors: any, handleFieldChange: any, handleClearError: any, updateAvailability?: (fieldName: string, isAvailable: boolean) => void) => React.ReactNode;
 }
 
 interface MultiStepFormProps {
@@ -43,10 +44,13 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
   const [activeTab, setActiveTab] = useState(0);
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isInitialized, setIsInitialized] = useState(false);
+  const { availabilityStatus, updateAvailability, resetAvailability, isAllAvailable } = useAvailabilityStatus();
 
   useEffect(() => {
     if (open) {
       const initializeForm = async () => {
+        setIsInitialized(false);
         const initialData: Record<string, any> = {};
         
         // Load options for all fields
@@ -67,14 +71,31 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
         setFormData(initialData);
         setErrors({});
         setActiveTab(0);
+        setIsInitialized(true);
       };
       
       initializeForm();
+    } else {
+      setIsInitialized(false);
     }
   }, [open, editingItem, fields]);
 
   const handleFieldChange = (name: string, value: any) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => {
+      const newData = { ...prev, [name]: value };
+      
+      // Auto-populate rent when room is selected
+      if (name === 'roomId') {
+        const roomField = fields.find(f => f.name === 'roomId');
+        const selectedRoom = roomField?.options?.find(opt => opt.value === value);
+        if (selectedRoom?.rent) {
+          newData.rent = selectedRoom.rent;
+        }
+      }
+      
+      return newData;
+    });
+    
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
@@ -99,6 +120,11 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
         return;
       }
 
+      // Skip validation errors for availability fields if they're not available
+      if (['name', 'email', 'phone'].includes(fieldName) && availabilityStatus[fieldName] === false) {
+        return; // Don't add validation error, let availability indicator handle it
+      }
+
       if (field.validation && value) {
         const error = field.validation(value);
         if (error) {
@@ -108,7 +134,7 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
     });
 
     setErrors(prev => ({ ...prev, ...newErrors }));
-    return Object.keys(newErrors).length === 0;
+    return Object.keys(newErrors).length === 0 && isAllAvailable(stepFields.filter(f => ['name', 'email', 'phone'].includes(f)));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -139,6 +165,7 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
     setFormData({});
     setErrors({});
     setActiveTab(0);
+    resetAvailability();
     onClose();
   };
 
@@ -208,30 +235,38 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
 
       <form onSubmit={handleSubmit}>
         <DialogContent sx={{ pt: 2 }}>
-          {steps[activeTab].customRender ? (
-            steps[activeTab].customRender!(formData, errors, handleFieldChange, handleClearError)
-          ) : (
-            <Box sx={{ 
-              display: 'grid', 
-              gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, 
-              gap: { xs: 1.5, sm: 2 } 
-            }}>
-              {steps[activeTab].fields.map(fieldName => {
-                const field = fields.find(f => f.name === fieldName);
-                if (!field) return null;
-                
-                return (
-                  <FormField
-                    key={fieldName}
-                    config={field}
-                    value={formData[fieldName]}
-                    onChange={handleFieldChange}
-                    error={errors[fieldName]}
-                    onClearError={handleClearError}
-                  />
-                );
-              })}
+          {!isInitialized && editingItem ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+              <Typography>Loading...</Typography>
             </Box>
+          ) : (
+            steps[activeTab].customRender ? (
+              steps[activeTab].customRender!(formData, errors, handleFieldChange, handleClearError, updateAvailability)
+            ) : (
+              <Box sx={{ 
+                display: 'grid', 
+                gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, 
+                gap: { xs: 1.5, sm: 2 } 
+              }}>
+                {steps[activeTab].fields.map(fieldName => {
+                  const field = fields.find(f => f.name === fieldName);
+                  if (!field) return null;
+                  
+                  return (
+                    <FormField
+                      key={fieldName}
+                      config={field}
+                      value={formData[fieldName]}
+                      onChange={handleFieldChange}
+                      error={errors[fieldName]}
+                      onClearError={handleClearError}
+                      editingItem={editingItem}
+                      onAvailabilityChange={updateAvailability}
+                    />
+                  );
+                })}
+              </Box>
+            )
           )}
         </DialogContent>
         

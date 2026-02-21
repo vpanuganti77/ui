@@ -9,8 +9,8 @@ const StaffList: React.FC = () => {
   const columns: GridColDef[] = [
     { field: 'name', headerName: 'Name', flex: 1, minWidth: 150 },
     { field: 'phone', headerName: 'Phone', width: 130 },
-    { field: 'role', headerName: 'Role', width: 150 },
-    { field: 'department', headerName: 'Department', width: 150 },
+    { field: 'email', headerName: 'Email', width: 180 },
+    { field: 'role', headerName: 'Role', width: 120 },
     { 
       field: 'salary', 
       headerName: 'Salary', 
@@ -19,19 +19,7 @@ const StaffList: React.FC = () => {
       align: 'right',
       headerAlign: 'right'
     },
-    {
-      field: 'status',
-      headerName: 'Status',
-      width: 120,
-      renderCell: (params) => (
-        <Chip 
-          label={params.value} 
-          color={params.value === 'active' ? 'success' : 'default'} 
-          size="small" 
-          variant="filled"
-        />
-      )
-    }
+    { field: 'joinDate', headerName: 'Join Date', width: 120 }
   ];
 
   return (
@@ -43,7 +31,7 @@ const StaffList: React.FC = () => {
         return await getAll('staff');
       }}
       enableMobileFilters={true}
-      searchFields={['name', 'role', 'phone']}
+      searchFields={['name', 'role', 'phone', 'email']}
       entityKey="staff"
       columns={columns}
       fields={staffFields}
@@ -53,9 +41,9 @@ const StaffList: React.FC = () => {
         fields: [
           { key: 'role', label: 'Role', value: 'role' },
           { key: 'phone', label: 'Phone', value: 'phone' },
-          { key: 'department', label: 'Department', value: 'department' },
+          { key: 'email', label: 'Email', value: 'email' },
           { key: 'salary', label: 'Salary', value: 'salary', render: (value: number) => `₹${value.toLocaleString()}` },
-          { key: 'status', label: 'Status', value: 'status' }
+          { key: 'joinDate', label: 'Join Date', value: 'joinDate' }
         ]
       }}
       CustomDialog={StaffForm}

@@ -4,14 +4,31 @@ import { GridColDef } from '@mui/x-data-grid';
 import ListPage from '../../components/common/ListPage';
 import { roomFields } from '../../components/common/FormConfigs';
 import RoomForm from './RoomForm';
+import { getAll } from '../../shared/services/storage/fileDataService';
 
 const RoomList: React.FC = () => {
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'available': return 'success';
-      case 'occupied': return 'error';
-      case 'maintenance': return 'warning';
-      default: return 'default';
+  const customDeleteValidation = async (room: any): Promise<string | null> => {
+    try {
+      const tenants = await getAll('tenants');
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      
+      const associatedTenants = tenants.filter((tenant: any) => {
+        const isInSameHostel = tenant.hostelId === user.hostelId;
+        const isInThisRoom = tenant.roomId === room.roomNumber || tenant.room === room.roomNumber;
+        const isActive = tenant.status === 'active';
+        
+        return isInSameHostel && isInThisRoom && isActive;
+      });
+      
+      if (associatedTenants.length > 0) {
+        const tenantNames = associatedTenants.map((t: any) => t.name).join(', ');
+        return `Cannot delete room ${room.roomNumber}. It has ${associatedTenants.length} active tenant(s): ${tenantNames}. Please move or remove the tenant(s) first.`;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error validating room deletion:', error);
+      return 'Error checking room associations. Please try again.';
     }
   };
 
@@ -41,17 +58,10 @@ const RoomList: React.FC = () => {
       headerAlign: 'right'
     },
     {
-      field: 'status',
-      headerName: 'Status',
-      width: 120,
-      renderCell: (params) => (
-        <Chip 
-          label={params.value} 
-          color={getStatusColor(params.value) as any}
-          size="small"
-          variant="filled"
-        />
-      )
+      field: 'amenities',
+      headerName: 'Amenities',
+      flex: 2,
+      minWidth: 200
     }
   ];
 
@@ -75,10 +85,11 @@ const RoomList: React.FC = () => {
           { key: 'type', label: 'Type', value: 'type' },
           { key: 'capacity', label: 'Capacity', value: 'capacity' },
           { key: 'rent', label: 'Rent', value: 'rent', render: (value: number) => `₹${Number(value || 0).toLocaleString()}` },
-          { key: 'status', label: 'Status', value: 'status' }
+          { key: 'amenities', label: 'Amenities', value: 'amenities' }
         ]
       }}
       CustomDialog={RoomForm}
+      customDeleteValidation={customDeleteValidation}
     />
   );
 };

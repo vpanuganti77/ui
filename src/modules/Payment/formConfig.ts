@@ -23,8 +23,7 @@ export const paymentFormFields: FormFieldConfig[] = [
       } catch (error) {
         return [];
       }
-    },
-    gridColumn: '1 / -1'
+    }
   },
   {
     name: 'amount',
@@ -49,8 +48,22 @@ export const paymentFormFields: FormFieldConfig[] = [
   {
     name: 'month',
     label: 'Month',
-    type: 'text',
-    required: true
+    type: 'select',
+    required: true,
+    options: (() => {
+      const months = [];
+      const currentDate = new Date();
+      
+      // Add current month and next 11 months
+      for (let i = 0; i < 12; i++) {
+        const date = new Date(currentDate.getFullYear(), currentDate.getMonth() + i, 1);
+        const monthYear = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        const value = date.toISOString().slice(0, 7); // YYYY-MM format
+        months.push({ value, label: monthYear });
+      }
+      
+      return months;
+    })()
   },
   {
     name: 'paymentMethod',
@@ -68,7 +81,12 @@ export const paymentFormFields: FormFieldConfig[] = [
     name: 'transactionId',
     label: 'Transaction ID',
     type: 'text',
-    gridColumn: '1 / -1'
+    validation: (value: string, formData: any) => {
+      if (formData?.paymentMethod && formData.paymentMethod !== 'cash' && (!value || !value.trim())) {
+        return 'Transaction ID is required for non-cash payments';
+      }
+      return null;
+    }
   },
   {
     name: 'notes',

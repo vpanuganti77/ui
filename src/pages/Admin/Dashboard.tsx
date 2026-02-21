@@ -133,6 +133,8 @@ const Dashboard: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
+    
     const fetchDashboardStats = async () => {
       try {
         // Get user from localStorage to get hostelId
@@ -153,6 +155,8 @@ const Dashboard: React.FC = () => {
           adminService.getAll('complaints'),
           adminService.getAll('expenses')
         ]);
+
+        if (!isMounted) return;
 
         // Get hostel info
         let currentHostel = hostels.find((h: any) => h.id === user.hostelId);
@@ -252,57 +256,13 @@ const Dashboard: React.FC = () => {
         console.error('Failed to fetch dashboard stats:', error);
       }
     };
+    
     fetchDashboardStats();
-  }, []);
-
-  useEffect(() => {
-    const loadAlertDetails = async () => {
-      try {
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        const [tenants, payments, complaints] = await Promise.all([
-          getAll('tenants'),
-          getAll('payments'),
-          getAll('complaints')
-        ]);
-
-        // Filter by hostel
-        const hostelTenants = tenants.filter((t: any) => t.hostelId === user.hostelId);
-        const hostelPayments = payments.filter((p: any) => p.hostelId === user.hostelId);
-        const hostelComplaints = complaints.filter((c: any) => c.hostelId === user.hostelId);
-
-        // Get overdue payments
-        const overduePayments = hostelPayments.filter((p: any) => p.status === 'overdue').map((p: any) => {
-          const tenant = hostelTenants.find((t: any) => t.id === p.tenantId);
-          return {
-            name: tenant?.name || 'Unknown',
-            room: tenant?.room || 'N/A',
-            amount: p.amount || 0,
-            daysOverdue: Math.ceil((new Date().getTime() - new Date(p.createdAt).getTime()) / (1000 * 60 * 60 * 24)),
-            phone: tenant?.phone || 'N/A'
-          };
-        });
-
-        // Get maintenance requests
-        const maintenanceRequests = hostelComplaints.filter((c: any) => c.status === 'open').map((c: any) => ({
-          title: c.title,
-          room: c.room,
-          tenant: c.tenantName,
-          priority: c.priority,
-          date: c.createdAt
-        }));
-
-        setAlertDetails({
-          overdue: overduePayments,
-          maintenance: maintenanceRequests,
-          applications: [] // No applications data in current schema
-        });
-      } catch (error) {
-        console.error('Error loading alert details:', error);
-      }
+    
+    return () => {
+      isMounted = false;
     };
-
-    loadAlertDetails();
-  }, []);
+  }, []); // Empty dependency array to run only once
 
   const handleAlertClick = (alertType: string) => {
     setSelectedAlert(alertType);

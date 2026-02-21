@@ -17,27 +17,11 @@ const StatusValidator: React.FC<StatusValidatorProps> = ({ children }) => {
   }>({ open: false, message: '' });
 
   useEffect(() => {
-    if (!user || user.role === 'master_admin') {
-      return;
-    }
-
-    const checkStatus = async () => {
-      const result = await validateUserStatus();
-      if (!result.isValid) {
-        setValidationDialog({
-          open: true,
-          message: result.message || 'Your account access has been restricted.'
-        });
-      }
-    };
-
-    // Check immediately
-    checkStatus();
-
-    // Check every 30 seconds
-    const interval = setInterval(checkStatus, 30000);
-
-    return () => clearInterval(interval);
+    // StatusValidator disabled - status validation handled by other components:
+    // - PendingApprovalWrapper handles pending_approval users
+    // - Layout component handles deactivated hostel restrictions
+    // - Login handles deleted users
+    return;
   }, [user]);
 
   const handleLogout = () => {

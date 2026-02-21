@@ -6,15 +6,6 @@ import { tenantFields } from '../../components/common/FormConfigs';
 import TenantForm from './TenantForm';
 
 const TenantList: React.FC = () => {
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'success';
-      case 'inactive': return 'error';
-      case 'notice': return 'warning';
-      default: return 'default';
-    }
-  };
-
   const columns: GridColDef[] = [
     { field: 'name', headerName: 'Name', flex: 1, minWidth: 150 },
     { field: 'phone', headerName: 'Mobile', width: 120 },
@@ -28,17 +19,10 @@ const TenantList: React.FC = () => {
       headerAlign: 'right'
     },
     {
-      field: 'status',
-      headerName: 'Status',
-      width: 120,
-      renderCell: (params) => (
-        <Chip 
-          label={params.value} 
-          color={getStatusColor(params.value) as any}
-          size="small"
-          variant="filled"
-        />
-      )
+      field: 'joiningDate',
+      headerName: 'Joined',
+      width: 100,
+      renderCell: (params) => params.value ? new Date(params.value).toLocaleDateString() : '-'
     }
   ];
 
@@ -46,10 +30,6 @@ const TenantList: React.FC = () => {
     <ListPage
       title="Tenants"
       data={[]}
-      customDataLoader={async () => {
-        const { getAll } = await import('../../shared/services/storage/fileDataService');
-        return await getAll('tenants');
-      }}
       enableMobileFilters={true}
       searchFields={['name', 'phone', 'roomId']}
       entityKey="tenants"
@@ -62,7 +42,7 @@ const TenantList: React.FC = () => {
           { key: 'phone', label: 'Phone', value: 'phone' },
           { key: 'roomId', label: 'Room', value: 'roomId' },
           { key: 'rent', label: 'Rent', value: 'rent', render: (value: any) => `₹${Number(value || 0).toLocaleString()}` },
-          { key: 'status', label: 'Status', value: 'status' }
+          { key: 'joiningDate', label: 'Joined', value: 'joiningDate', render: (value: string) => value ? new Date(value).toLocaleDateString() : '-' }
         ]
       }}
       CustomDialog={TenantForm}

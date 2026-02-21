@@ -56,6 +56,7 @@ export const tenantFields: FieldConfig[] = [
     type: 'email',
     required: true,
     validation: validations.email,
+    getDisabled: (editingItem?: any) => !!editingItem,
   },
   {
     name: 'phone',
@@ -63,11 +64,13 @@ export const tenantFields: FieldConfig[] = [
     type: 'text',
     required: true,
     validation: validations.phone,
+    getDisabled: (editingItem?: any) => !!editingItem,
   },
   {
     name: 'gender',
     label: 'Gender',
     type: 'select',
+    required: true,
     options: [
       { value: 'male', label: 'Male' },
       { value: 'female', label: 'Female' },
@@ -86,32 +89,25 @@ export const tenantFields: FieldConfig[] = [
         const rooms = await getAll('rooms');
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         
-        console.log('All rooms:', rooms);
-        console.log('Current user:', user);
-        
         const hostelRooms = rooms.filter((room: any) => 
           room.hostelId === user.hostelId || 
           !room.hostelId || 
           room.hostelId === ''
         );
-        console.log('Hostel rooms:', hostelRooms);
         
         const filteredRooms = hostelRooms.filter((room: any) => {
           if (editingItem && room.roomNumber === editingItem.room) {
             return true;
           }
-          return room.status === 'available';
+          return true;
         });
-        
-        console.log('Filtered available rooms:', filteredRooms);
         
         const options = filteredRooms.map((room: any) => ({
           value: room.roomNumber,
-          label: `${room.roomNumber} - ${room.type} (₹${room.rent.toLocaleString()}) - ${room.status === 'available' ? 'Available' : 'Current'}`,
+          label: `${room.roomNumber} - ${room.type || 'Room'} (₹${room.rent?.toLocaleString() || '0'})`,
           rent: room.rent
         }));
         
-        console.log('Room options for dropdown:', options);
         return options;
       } catch (error) {
         console.error('Failed to load rooms:', error);
@@ -139,6 +135,7 @@ export const tenantFields: FieldConfig[] = [
     label: 'Joining Date',
     type: 'date',
     required: true,
+    min: new Date().toISOString().split('T')[0],
   },
   {
     name: 'aadharNumber',
@@ -147,16 +144,19 @@ export const tenantFields: FieldConfig[] = [
     required: true,
     validation: validations.aadhar,
     flex: '1 1 100%',
+    getDisabled: (editingItem?: any) => !!editingItem,
   },
   {
     name: 'aadharFront',
     label: 'Capture Aadhar Front',
     type: 'camera',
+    required: true,
   },
   {
     name: 'aadharBack',
     label: 'Capture Aadhar Back',
     type: 'camera',
+    required: true,
   },
 ];
 
@@ -213,7 +213,6 @@ export const paymentFields: FieldConfig[] = [
     label: 'Tenant ID',
     type: 'text',
     required: true,
-    flex: '1 1 100%',
   },
   {
     name: 'amount',
@@ -511,8 +510,7 @@ export const staffFields: FieldConfig[] = [
     name: 'address',
     label: 'Address',
     type: 'textarea',
-    rows: 2,
-    flex: '1 1 100%',
+    rows: 1,
   },
 ];
 
@@ -568,14 +566,6 @@ export const hostelFields: FieldConfig[] = [
     validation: validations.minLength(2),
   },
   {
-    name: 'address',
-    label: 'Hostel Address',
-    type: 'textarea',
-    required: true,
-    rows: 2,
-    flex: '1 1 100%',
-  },
-  {
     name: 'planType',
     label: 'Plan Type',
     type: 'select',
@@ -589,26 +579,11 @@ export const hostelFields: FieldConfig[] = [
     ],
   },
   {
-    name: 'features',
-    label: 'Enabled Features',
-    type: 'multiselect',
+    name: 'address',
+    label: 'Hostel Address',
+    type: 'textarea',
     required: true,
-    options: [
-      { value: 'tenant_management', label: 'Tenant Management' },
-      { value: 'room_management', label: 'Room Management' },
-      { value: 'payment_tracking', label: 'Payment Tracking' },
-      { value: 'complaint_system', label: 'Complaint System' },
-      { value: 'staff_management', label: 'Staff Management' },
-      { value: 'expense_tracking', label: 'Expense Tracking' },
-      { value: 'reports_analytics', label: 'Reports & Analytics' },
-      { value: 'bulk_operations', label: 'Bulk Operations' },
-      { value: 'sms_notifications', label: 'SMS Notifications' },
-      { value: 'email_notifications', label: 'Email Notifications' },
-      { value: 'mobile_app', label: 'Mobile App Access' },
-      { value: 'api_access', label: 'API Access' },
-      { value: 'custom_branding', label: 'Custom Branding' },
-      { value: 'priority_support', label: 'Priority Support' },
-    ],
+    rows: 2,
     flex: '1 1 100%',
   },
   {
@@ -631,5 +606,27 @@ export const hostelFields: FieldConfig[] = [
     type: 'text',
     required: true,
     validation: validations.phone,
+  },
+  {
+    name: 'features',
+    label: 'Enabled Features',
+    type: 'multiselect',
+    required: true,
+    options: [
+      { value: 'tenant_management', label: 'Tenant Management' },
+      { value: 'room_management', label: 'Room Management' },
+      { value: 'payment_tracking', label: 'Payment Tracking' },
+      { value: 'complaint_system', label: 'Complaint System' },
+      { value: 'staff_management', label: 'Staff Management' },
+      { value: 'expense_tracking', label: 'Expense Tracking' },
+      { value: 'reports_analytics', label: 'Reports & Analytics' },
+      { value: 'bulk_operations', label: 'Bulk Operations' },
+      { value: 'sms_notifications', label: 'SMS Notifications' },
+      { value: 'email_notifications', label: 'Email Notifications' },
+      { value: 'mobile_app', label: 'Mobile App Access' },
+      { value: 'api_access', label: 'API Access' },
+      { value: 'custom_branding', label: 'Custom Branding' },
+      { value: 'priority_support', label: 'Priority Support' },
+    ],
   },
 ];

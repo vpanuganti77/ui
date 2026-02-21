@@ -75,6 +75,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, [isMobile]);
 
   React.useEffect(() => {
+    let isMounted = true;
+    
     const checkStatus = async () => {
       try {
         // Skip status check for master admin and tenants
@@ -88,7 +90,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           const users = await getAll('users');
           const currentUser = users.find((u: any) => u.id === user.id);
           
-          if (currentUser) {
+          if (currentUser && isMounted) {
             console.log('Layout - Current user status:', currentUser.status);
             setUserStatus(currentUser.status || 'active');
           }
@@ -96,7 +98,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         
         // Check if user has hostelDeactivated flag first
         if (user?.hostelDeactivated) {
-          setHostelStatus('deactivated');
+          if (isMounted) setHostelStatus('deactivated');
           return;
         }
         
@@ -104,7 +106,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           const { getAll } = await import('../../../shared/services/storage/fileDataService');
           const hostels = await getAll('hostels');
           const hostel = hostels.find((h: any) => h.id === user.hostelId);
-          if (hostel) {
+          if (hostel && isMounted) {
             setHostelStatus(hostel.status || 'active');
             // Store hostel info in localStorage for dashboard to use
             localStorage.setItem('currentHostel', JSON.stringify(hostel));
@@ -116,7 +118,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     };
     
     checkStatus();
-  }, [user]);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id, user?.role, user?.hostelId]); // Only run when user changes
 
   const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -211,7 +217,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       isGroup: true,
       items: [
         { text: 'Users', icon: <AccountCircle />, path: '/admin/users' },
-        { text: 'Send Notices', icon: <Announcement />, path: '/admin/notices' },
+        { text: 'Notices', icon: <Announcement />, path: '/admin/notices' },
         { text: 'Profile', icon: <Settings />, path: '/admin/profile' },
       ]
     }

@@ -131,6 +131,7 @@ const ListPage = <T extends Record<string, any>>({
     setData,
     open,
     deleteOpen,
+    deleteItem,
     editingItem,
     snackbar,
     showSnackbar,
@@ -185,15 +186,28 @@ const ListPage = <T extends Record<string, any>>({
   // Use filtered data when mobile filters are enabled
   const displayData = enableMobileFilters && isMobile ? mobileFilterSort.filteredAndSortedData : data;
   
-  // Use custom data loader if provided, or sync with initialData
+  // Use custom data loader if provided, or load data when no initialData and no customDataLoader
   React.useEffect(() => {
     if (customDataLoader) {
       customDataLoader().then(setData).catch(console.error);
+    } else if (initialData.length === 0) {
+      // Load data using the entityKey when no customDataLoader and no initialData
+      const loadData = async () => {
+        try {
+          const { getAll } = await import('../../shared/services/storage/fileDataService');
+          const data = await getAll(entityKey as any);
+          setData(Array.isArray(data) ? data : []);
+        } catch (error) {
+          console.error(`Failed to load ${entityKey}:`, error);
+          setData([]);
+        }
+      };
+      loadData();
     } else {
-      // Sync with initialData when it changes (for filtered/sorted data)
+      // Sync with initialData when it has actual content
       setData(initialData);
     }
-  }, [customDataLoader, initialData]);
+  }, [customDataLoader, setData, initialData.length, entityKey]);
 
   const handleSubmit = async (formData: any) => {
     // Get current user's hostel for scoped validation
@@ -472,7 +486,7 @@ const ListPage = <T extends Record<string, any>>({
           fields={fields}
           editingItem={editingItem}
           submitLabel={entityName}
-          maxWidth="sm"
+          maxWidth={entityName === 'Hostel' ? 'md' : entityName === 'Room' ? 'xs' : entityName === 'Staff' ? 'md' : 'sm'}
         />
       )}
 
@@ -480,7 +494,7 @@ const ListPage = <T extends Record<string, any>>({
         <DialogTitle>Confirm Delete</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete this {entityName.toLowerCase()}? This action cannot be undone.
+            Are you sure you want to delete <strong>{deleteItem?.roomNumber || deleteItem?.name || deleteItem?.title || `this ${entityName.toLowerCase()}`}</strong>? This action cannot be undone.
           </Typography>
         </DialogContent>
         <DialogActions>

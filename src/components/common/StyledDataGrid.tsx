@@ -235,7 +235,7 @@ const StyledDataGrid: React.FC<StyledDataGridProps> = ({
                   <Typography variant="body2" color="text.secondary">
                     {enableCrud ? 
                       `Get started by adding your first ${title?.toLowerCase().slice(0, -1) || 'record'}` :
-                      `Payment history will appear here once available`
+                      `${title || 'Records'} will appear here once available`
                     }
                   </Typography>
                   {enableCrud && (

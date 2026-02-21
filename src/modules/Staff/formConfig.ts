@@ -17,8 +17,7 @@ export const staffFormFields: FormFieldConfig[] = [
     name: 'email',
     label: 'Email',
     type: 'email',
-    required: true,
-    gridColumn: '1 / -1'
+    required: true
   },
   {
     name: 'role',
@@ -35,19 +34,6 @@ export const staffFormFields: FormFieldConfig[] = [
     ]
   },
   {
-    name: 'department',
-    label: 'Department',
-    type: 'select',
-    required: true,
-    options: [
-      { value: 'administration', label: 'Administration' },
-      { value: 'security', label: 'Security' },
-      { value: 'housekeeping', label: 'Housekeeping' },
-      { value: 'food', label: 'Food Service' },
-      { value: 'maintenance', label: 'Maintenance' }
-    ]
-  },
-  {
     name: 'salary',
     label: 'Salary',
     type: 'text',
@@ -56,30 +42,19 @@ export const staffFormFields: FormFieldConfig[] = [
   {
     name: 'joinDate',
     label: 'Join Date',
-    type: 'text',
-    required: true
-  },
-  {
-    name: 'status',
-    label: 'Status',
-    type: 'select',
+    type: 'date',
     required: true,
-    options: [
-      { value: 'active', label: 'Active' },
-      { value: 'inactive', label: 'Inactive' }
-    ]
+    min: new Date().toISOString().split('T')[0]
   },
   {
     name: 'address',
     label: 'Address',
     type: 'text',
-    required: true,
-    gridColumn: '1 / -1'
+    required: true
   },
   {
     name: 'emergencyContact',
     label: 'Emergency Contact',
-    type: 'text',
-    gridColumn: '1 / -1'
+    type: 'text'
   }
 ];

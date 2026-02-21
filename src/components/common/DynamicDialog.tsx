@@ -39,6 +39,7 @@ const DynamicDialog: React.FC<DynamicDialogProps> = ({
   cancelLabel = 'Cancel',
 }) => {
   const [formData, setFormData] = useState<Record<string, any>>({});
+  const [initialData, setInitialData] = useState<Record<string, any>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [snackbar, setSnackbar] = useState({ 
     open: false, 
@@ -49,11 +50,12 @@ const DynamicDialog: React.FC<DynamicDialogProps> = ({
   // Initialize form data
   useEffect(() => {
     if (open) {
-      const initialData: Record<string, any> = {};
+      const initialFormData: Record<string, any> = {};
       fields.forEach(field => {
-        initialData[field.name] = editingItem?.[field.name] || '';
+        initialFormData[field.name] = editingItem?.[field.name] || '';
       });
-      setFormData(initialData);
+      setFormData(initialFormData);
+      setInitialData(initialFormData);
       setErrors({});
     }
   }, [open, editingItem, fields]);
@@ -79,6 +81,11 @@ const DynamicDialog: React.FC<DynamicDialogProps> = ({
     setErrors(prev => ({ ...prev, [name]: '' }));
   };
 
+  // Check if form has changes
+  const hasChanges = editingItem ? 
+    Object.keys(formData).some(key => formData[key] !== initialData[key]) : 
+    true;
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
@@ -86,7 +93,7 @@ const DynamicDialog: React.FC<DynamicDialogProps> = ({
       const value = formData[field.name];
       
       // Required field validation
-      if (field.required && (!value || (typeof value === 'string' && !value.trim()))) {
+      if (field.required && (!value || (typeof value === 'string' && !value.trim()) || (field.type === 'camera' && !value))) {
         newErrors[field.name] = `${field.label} is required`;
         return;
       }
@@ -141,29 +148,27 @@ const DynamicDialog: React.FC<DynamicDialogProps> = ({
     onClose();
   };
 
-  // Group fields into rows (2 fields per row by default)
-  const groupedFields = [];
-  for (let i = 0; i < fields.length; i += 2) {
-    groupedFields.push(fields.slice(i, i + 2));
-  }
-
   return (
     <>
       <Dialog 
         open={open} 
         onClose={handleClose} 
-        maxWidth={maxWidth} 
-        fullWidth
+        maxWidth={false}
         fullScreen={window.innerWidth < 600}
         sx={{
           '& .MuiDialog-paper': {
             margin: { xs: 0, sm: 2 },
-            width: { xs: '100%', sm: '100%' },
-            height: { xs: '100%', sm: 'auto' },
-            maxHeight: { xs: '100%', sm: '90vh' },
+            width: { 
+              xs: '100%', 
+              sm: maxWidth === 'xs' ? '280px' : 
+                  maxWidth === 'md' ? '800px' : '600px'
+            },
+            height: { xs: '100%', sm: 'fit-content' },
+            maxHeight: 'none',
             borderRadius: { xs: 0, sm: 2 },
             display: 'flex',
-            flexDirection: 'column'
+            flexDirection: 'column',
+            overflow: { xs: 'hidden', sm: 'visible' }
           }
         }}
       >
@@ -183,7 +188,7 @@ const DynamicDialog: React.FC<DynamicDialogProps> = ({
         <form onSubmit={handleSubmit}>
           <DialogContent sx={{ 
             flex: 1, 
-            overflow: 'auto', 
+            overflow: 'visible', 
             px: { xs: 2, sm: 3 },
             py: { xs: 1, sm: 2 },
             display: 'flex',
@@ -191,32 +196,26 @@ const DynamicDialog: React.FC<DynamicDialogProps> = ({
             minHeight: { xs: 'calc(100vh - 120px)', sm: 'auto' }
           }}>
             <Box sx={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              gap: 1.5,
-              flex: { xs: '1 1 auto', sm: 'none' },
-              justifyContent: { xs: 'flex-start', sm: 'flex-start' }
+              display: maxWidth === 'xs' ? 'flex' : 'grid',
+              flexDirection: maxWidth === 'xs' ? 'column' : undefined,
+              gridTemplateColumns: { xs: '1fr', sm: maxWidth === 'xs' ? '1fr' : '1fr 1fr' },
+              gap: { xs: 1.5, sm: maxWidth === 'xs' ? 1.5 : 2 },
+              alignItems: 'start'
             }}>
-              {groupedFields.map((row, rowIndex) => (
+              {fields.map((field) => (
                 <Box 
-                  key={rowIndex} 
-                  sx={{ 
-                    display: 'flex', 
-                    gap: 1.5, 
-                    flexWrap: 'wrap',
-                    ...(row.length === 1 && { '& > *': { flex: '1 1 100%' } })
+                  key={field.name}
+                  sx={{
+                    gridColumn: field.flex === '1 1 100%' ? { xs: '1', sm: '1 / -1' } : 'auto'
                   }}
                 >
-                  {row.map((field) => (
-                    <FormField
-                      key={field.name}
-                      config={field}
-                      value={formData[field.name]}
-                      onChange={handleFieldChange}
-                      error={errors[field.name]}
-                      onClearError={handleClearError}
-                    />
-                  ))}
+                  <FormField
+                    config={field}
+                    value={formData[field.name]}
+                    onChange={handleFieldChange}
+                    error={errors[field.name]}
+                    onClearError={handleClearError}
+                  />
                 </Box>
               ))}
             </Box>
@@ -236,7 +235,11 @@ const DynamicDialog: React.FC<DynamicDialogProps> = ({
             }
           }}>
             <Button onClick={handleClose}>{cancelLabel}</Button>
-            <Button type="submit" variant="contained">
+            <Button 
+              type="submit" 
+              variant="contained"
+              disabled={!hasChanges}
+            >
               {editingItem ? 'Update' : 'Add'}
             </Button>
           </DialogActions>

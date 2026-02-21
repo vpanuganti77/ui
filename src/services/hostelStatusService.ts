@@ -18,21 +18,27 @@ export class HostelStatusService {
     // Clear any existing interval
     this.stopMonitoring();
 
+    // DISABLED: Periodic status checking to prevent continuous API calls
     // Check status every 10 seconds for faster updates
-    this.checkInterval = setInterval(() => {
-      this.checkHostelStatus(user);
-      this.checkUserStatus(user);
-    }, 10000);
+    // this.checkInterval = setInterval(() => {
+    //   this.checkHostelStatus(user);
+    //   this.checkUserStatus(user);
+    // }, 10000);
 
-    // Initial check
+    // Initial check only (no periodic monitoring)
     this.checkHostelStatus(user);
     this.checkUserStatus(user);
   }
 
   // Force immediate status check
   static async forceStatusCheck(user: any): Promise<void> {
-    await this.checkHostelStatus(user);
-    await this.checkUserStatus(user);
+    // DISABLED: Prevent API calls
+    console.log('HostelStatusService: forceStatusCheck disabled to prevent API calls');
+    return;
+    
+    // Original code commented out:
+    // await this.checkHostelStatus(user);
+    // await this.checkUserStatus(user);
   }
 
   // Stop monitoring
@@ -47,67 +53,77 @@ export class HostelStatusService {
 
   // Check hostel status and notify if changed
   private static async checkHostelStatus(user: any): Promise<void> {
-    try {
-      if (!user.hostelId) return;
-      
-      // Get all hostels and find the specific one to avoid caching issues
-      const response = Capacitor.isNativePlatform()
-        ? await CapacitorHttpService.get(`${API_CONFIG.BASE_URL}/hostels`)
-        : await fetch(`${API_CONFIG.BASE_URL}/hostels`);
-      if (!response.ok) return;
+    // DISABLED: Prevent API calls to hostels endpoint
+    console.log('HostelStatusService: checkHostelStatus disabled to prevent periodic API calls');
+    return;
+    
+    // Original code commented out:
+    // try {
+    //   if (!user.hostelId) return;
+    //   
+    //   // Get all hostels and find the specific one to avoid caching issues
+    //   const response = Capacitor.isNativePlatform()
+    //     ? await CapacitorHttpService.get(`${API_CONFIG.BASE_URL}/hostels`)
+    //     : await fetch(`${API_CONFIG.BASE_URL}/hostels`);
+    //   if (!response.ok) return;
 
-      const hostels = await response.json();
-      const hostel = hostels.find((h: any) => h.id === user.hostelId);
-      if (!hostel) return;
-      
-      const currentStatus = hostel.status;
-      console.log('Current hostel status:', currentStatus, 'for hostel:', hostel.name);
+    //   const hostels = await response.json();
+    //   const hostel = hostels.find((h: any) => h.id === user.hostelId);
+    //   if (!hostel) return;
+    //   
+    //   const currentStatus = hostel.status;
+    //   console.log('Current hostel status:', currentStatus, 'for hostel:', hostel.name);
 
-      // If this is the first check, just store the status
-      if (this.lastKnownStatus === null) {
-        this.lastKnownStatus = currentStatus;
-        return;
-      }
+    //   // If this is the first check, just store the status
+    //   if (this.lastKnownStatus === null) {
+    //     this.lastKnownStatus = currentStatus;
+    //     return;
+    //   }
 
-      // Check if status changed
-      if (this.lastKnownStatus !== currentStatus) {
-        this.handleStatusChange(this.lastKnownStatus, currentStatus, hostel.name);
-        this.lastKnownStatus = currentStatus;
-      }
-    } catch (error) {
-      console.error('Error checking hostel status:', error);
-    }
+    //   // Check if status changed
+    //   if (this.lastKnownStatus !== currentStatus) {
+    //     this.handleStatusChange(this.lastKnownStatus, currentStatus, hostel.name);
+    //     this.lastKnownStatus = currentStatus;
+    //   }
+    // } catch (error) {
+    //   console.error('Error checking hostel status:', error);
+    // }
   }
 
   // Check user status and notify if changed
   private static async checkUserStatus(user: any): Promise<void> {
-    try {
-      const response = Capacitor.isNativePlatform()
-        ? await CapacitorHttpService.get(`${API_CONFIG.BASE_URL}/users`)
-        : await fetch(`${API_CONFIG.BASE_URL}/users`);
-      if (!response.ok) return;
+    // DISABLED: Prevent API calls to users endpoint
+    console.log('HostelStatusService: checkUserStatus disabled to prevent periodic API calls');
+    return;
+    
+    // Original code commented out:
+    // try {
+    //   const response = Capacitor.isNativePlatform()
+    //     ? await CapacitorHttpService.get(`${API_CONFIG.BASE_URL}/users`)
+    //     : await fetch(`${API_CONFIG.BASE_URL}/users`);
+    //   if (!response.ok) return;
 
-      const users = await response.json();
-      const currentUser = users.find((u: any) => u.id === user.id);
-      
-      if (!currentUser) return;
+    //   const users = await response.json();
+    //   const currentUser = users.find((u: any) => u.id === user.id);
+    //   
+    //   if (!currentUser) return;
 
-      const currentUserStatus = currentUser.status;
+    //   const currentUserStatus = currentUser.status;
 
-      // If this is the first check, just store the status
-      if (this.lastKnownUserStatus === null) {
-        this.lastKnownUserStatus = currentUserStatus;
-        return;
-      }
+    //   // If this is the first check, just store the status
+    //   if (this.lastKnownUserStatus === null) {
+    //     this.lastKnownUserStatus = currentUserStatus;
+    //     return;
+    //   }
 
-      // Check if user status changed from pending_approval to active
-      if (this.lastKnownUserStatus === 'pending_approval' && currentUserStatus === 'active') {
-        this.handleUserApprovalChange(currentUser);
-        this.lastKnownUserStatus = currentUserStatus;
-      }
-    } catch (error) {
-      console.error('Error checking user status:', error);
-    }
+    //   // Check if user status changed from pending_approval to active
+    //   if (this.lastKnownUserStatus === 'pending_approval' && currentUserStatus === 'active') {
+    //     this.handleUserApprovalChange(currentUser);
+    //     this.lastKnownUserStatus = currentUserStatus;
+    //   }
+    // } catch (error) {
+    //   console.error('Error checking user status:', error);
+    // }
   }
 
   // Handle status change and send notification
